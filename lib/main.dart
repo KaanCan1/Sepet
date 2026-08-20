@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
-import 'screens/shell.dart';
+import 'screens/root_gate.dart';
 import 'widgets/glass.dart';
 import 'theme/tokens.dart';
 
@@ -56,7 +56,7 @@ class SepetApp extends StatelessWidget {
       // Tek yerel: Türkçe. Sayı/tarih biçimlendirmesi Fmt üzerinden.
       locale: const Locale('tr', 'TR'),
       builder: (context, child) => MediaQuery.withNoTextScaling(child: child!),
-      home: const Shell(),
+      home: const RootGate(),
     );
   }
 }

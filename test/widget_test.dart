@@ -4,9 +4,19 @@ import 'package:sepet/data/fmt.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:sepet/data/session.dart';
 import 'package:sepet/main.dart';
+import 'package:sepet/screens/root_gate.dart';
+import 'package:sepet/screens/shell.dart';
+import 'package:sepet/screens/welcome_screen.dart';
 import 'package:sepet/widgets/atoms.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() {
+    // Ekran testlerinin çoğu kabuğu hedefliyor; karşılamayı görülmüş say.
+    SharedPreferences.setMockInitialValues({RootGate.seenKey: true});
+    session.value = null;
+  });
+
   group('Fmt', () {
     test('binlik ayracı nokta, ondalık virgül', () {
       expect(Fmt.money(1917.45), '1.917,45');
@@ -145,6 +155,7 @@ void main() {
   testWidgets('Rıza açılıp kapatılabilir', (tester) async {
     session.value = Session(
       email: 'kaan@sepet.app',
+      provider: AuthProvider.email,
       since: DateTime(2025, 9, 1),
       receipts: 38,
       observations: 214,
@@ -173,5 +184,53 @@ void main() {
     expect(session.value?.consentAggregate, isFalse);
 
     session.value = null;
+  });
+
+  group('Karşılama ekranı', () {
+    testWidgets('ilk açılışta çıkar, hesapsız devam kabuğa götürür', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWidget(const SepetApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(WelcomeScreen), findsOneWidget);
+      expect(find.text('Apple ile Giriş Yap'), findsOneWidget);
+      expect(find.text('Google ile oturum aç'), findsOneWidget);
+      expect(find.text('E-posta ile devam et'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('welcome-skip')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Shell), findsOneWidget);
+      // Hesapsız yol oturum açmaz — fişler cihazda kalır.
+      expect(session.value, isNull);
+    });
+
+    testWidgets('sağlayıcı seçimi açık rızaya götürür, anahtarlar kapalı', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWidget(const SepetApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('welcome-apple')));
+      await tester.pumpAndSettle();
+
+      expect(session.value?.provider, AuthProvider.apple);
+      expect(find.text('İsteğe bağlı\nizinler'), findsOneWidget);
+      // Açık rıza aydınlatmadan ayrı ve varsayılanı kapalı olmalı.
+      expect(session.value?.consentAggregate, isFalse);
+      expect(session.value?.consentMarketing, isFalse);
+    });
+
+    testWidgets('bayrak kurulduysa karşılama atlanır', (tester) async {
+      SharedPreferences.setMockInitialValues({RootGate.seenKey: true});
+      await tester.pumpWidget(const SepetApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(WelcomeScreen), findsNothing);
+      expect(find.byType(Shell), findsOneWidget);
+    });
   });
 }

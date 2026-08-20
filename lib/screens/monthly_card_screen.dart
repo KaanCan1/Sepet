@@ -193,7 +193,7 @@ class _ShareCard extends StatelessWidget {
             style: const TextStyle(fontSize: 11.5, height: 1.5, color: C.muted),
           ),
           const SizedBox(height: 14),
-          const _TearEdge(),
+          const TearEdge(),
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -206,28 +206,4 @@ class _ShareCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Fişin koparma çizgisi.
-class _TearEdge extends StatelessWidget {
-  const _TearEdge();
-
-  @override
-  Widget build(BuildContext context) => CustomPaint(
-    size: const Size(double.infinity, 9),
-    painter: _TearPainter(),
-  );
-}
-
-class _TearPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size s) {
-    final p = Paint()..color = C.ink.withValues(alpha: .18);
-    for (var x = 0.0; x < s.width; x += 8) {
-      canvas.drawRect(Rect.fromLTWH(x, 0, 4, s.height), p);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
 }

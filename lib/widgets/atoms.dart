@@ -238,3 +238,28 @@ class BigNumber extends StatelessWidget {
     style: T.bigNumber.copyWith(fontSize: size, color: color),
   );
 }
+
+/// Fişin koparma çizgisi. Aylık kartın alt kenarında ve karşılama ekranının
+/// kelime işaretinin iki yanında kullanılıyor.
+class TearEdge extends StatelessWidget {
+  const TearEdge({super.key, this.height = 9});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) =>
+      CustomPaint(size: Size(double.infinity, height), painter: _TearPainter());
+}
+
+class _TearPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size s) {
+    final p = Paint()..color = C.ink.withValues(alpha: .18);
+    for (var x = 0.0; x < s.width; x += 8) {
+      canvas.drawRect(Rect.fromLTWH(x, 0, 4, s.height), p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TearPainter old) => false;
+}
