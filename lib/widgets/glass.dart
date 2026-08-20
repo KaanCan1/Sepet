@@ -84,8 +84,12 @@ class PaperCard extends StatelessWidget {
 
 /// Basınca hafifçe küçülen dokunma katmanı — Apple'ın hissi.
 class Pressable extends StatefulWidget {
-  const Pressable(
-      {super.key, required this.child, this.onTap, this.scale = .97});
+  const Pressable({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.scale = .97,
+  });
 
   final Widget child;
   final VoidCallback? onTap;

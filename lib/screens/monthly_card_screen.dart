@@ -23,9 +23,9 @@ class MonthlyCardScreen extends StatefulWidget {
   const MonthlyCardScreen({super.key});
 
   static Route<void> route() => CupertinoPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => const MonthlyCardScreen(),
-      );
+    fullscreenDialog: true,
+    builder: (_) => const MonthlyCardScreen(),
+  );
 
   @override
   State<MonthlyCardScreen> createState() => _MonthlyCardScreenState();
@@ -57,7 +57,8 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(file.path)],
-          text: '${Fmt.monthLong(Mock.now)} ayında benim sepetim '
+          text:
+              '${Fmt.monthLong(Mock.now)} ayında benim sepetim '
               '${Fmt.pct1(Mock.headline)} zamlandı. Kendi fişimden hesapladım.',
         ),
       );
@@ -213,7 +214,9 @@ class _TearEdge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CustomPaint(
-      size: const Size(double.infinity, 9), painter: _TearPainter());
+    size: const Size(double.infinity, 9),
+    painter: _TearPainter(),
+  );
 }
 
 class _TearPainter extends CustomPainter {

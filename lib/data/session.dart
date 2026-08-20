@@ -24,13 +24,13 @@ class Session {
   final bool consentMarketing;
 
   Session copyWith({bool? consentAggregate, bool? consentMarketing}) => Session(
-        email: email,
-        since: since,
-        receipts: receipts,
-        observations: observations,
-        consentAggregate: consentAggregate ?? this.consentAggregate,
-        consentMarketing: consentMarketing ?? this.consentMarketing,
-      );
+    email: email,
+    since: since,
+    receipts: receipts,
+    observations: observations,
+    consentAggregate: consentAggregate ?? this.consentAggregate,
+    consentMarketing: consentMarketing ?? this.consentMarketing,
+  );
 
   /// "kaan" -> "Kaan"
   String get displayName {

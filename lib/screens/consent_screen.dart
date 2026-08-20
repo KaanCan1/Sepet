@@ -17,9 +17,9 @@ class ConsentScreen extends StatefulWidget {
   final bool firstRun;
 
   static Route<void> route({bool firstRun = false}) => CupertinoPageRoute(
-        fullscreenDialog: firstRun,
-        builder: (_) => ConsentScreen(firstRun: firstRun),
-      );
+    fullscreenDialog: firstRun,
+    builder: (_) => ConsentScreen(firstRun: firstRun),
+  );
 
   @override
   State<ConsentScreen> createState() => _ConsentScreenState();
@@ -38,8 +38,12 @@ class _ConsentScreenState extends State<ConsentScreen> {
                 onTap: () => Navigator.of(context).pop(),
                 child: const Padding(
                   padding: EdgeInsets.all(4),
-                  child:
-                      LineIcon(Glyph.back, size: 17, color: C.ink, stroke: 1.6),
+                  child: LineIcon(
+                    Glyph.back,
+                    size: 17,
+                    color: C.ink,
+                    stroke: 1.6,
+                  ),
                 ),
               ),
         footer: widget.firstRun
@@ -64,7 +68,8 @@ class _ConsentScreenState extends State<ConsentScreen> {
                 const SizedBox(height: 20),
                 _ConsentTile(
                   title: 'Anonim endekse katkı',
-                  body: 'Ürün ve fiyat gözlemlerin kimliğinden ayrılmış hâlde '
+                  body:
+                      'Ürün ve fiyat gözlemlerin kimliğinden ayrılmış hâlde '
                       'ülke geneli sepet endeksine katılsın. Fiş görselin ya '
                       'da e-postan paylaşılmaz.',
                   value: s?.consentAggregate ?? false,
@@ -134,38 +139,35 @@ class _ConsentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PaperCard(
-        padding: const EdgeInsets.fromLTRB(13, 12, 8, 12),
-        borderColor: value ? C.ink : C.line,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontSize: 12.5, color: C.ink),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    body,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      height: 1.5,
-                      color: C.muted,
-                    ),
-                  ),
-                ],
+    padding: const EdgeInsets.fromLTRB(13, 12, 8, 12),
+    borderColor: value ? C.ink : C.line,
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 12.5, color: C.ink)),
+              const SizedBox(height: 4),
+              Text(
+                body,
+                style: const TextStyle(
+                  fontSize: 11,
+                  height: 1.5,
+                  color: C.muted,
+                ),
               ),
-            ),
-            Switch.adaptive(
-              value: value,
-              activeColor: C.card,
-              activeTrackColor: C.ink,
-              onChanged: onChanged,
-            ),
-          ],
+            ],
+          ),
         ),
-      );
+        Switch.adaptive(
+          value: value,
+          activeColor: C.card,
+          activeTrackColor: C.ink,
+          onChanged: onChanged,
+        ),
+      ],
+    ),
+  );
 }

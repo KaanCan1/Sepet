@@ -17,9 +17,9 @@ class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
   static Route<void> route() => CupertinoPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => const SignInScreen(),
-      );
+    fullscreenDialog: true,
+    builder: (_) => const SignInScreen(),
+  );
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -107,8 +107,10 @@ class _SignInScreenState extends State<SignInScreen> {
                   decoration: const BoxDecoration(),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   style: const TextStyle(fontSize: 14, color: C.ink),
-                  placeholderStyle:
-                      const TextStyle(fontSize: 14, color: C.muted),
+                  placeholderStyle: const TextStyle(
+                    fontSize: 14,
+                    color: C.muted,
+                  ),
                   onSubmitted: (_) => ok ? _submit() : null,
                 ),
               ),
@@ -178,30 +180,26 @@ class _Bullet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 6, right: 9),
-              width: 4,
-              height: 4,
-              decoration: const BoxDecoration(
-                color: C.muted,
-                shape: BoxShape.circle,
-              ),
-            ),
-            Expanded(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  height: 1.5,
-                  color: C.muted,
-                ),
-              ),
-            ),
-          ],
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 6, right: 9),
+          width: 4,
+          height: 4,
+          decoration: const BoxDecoration(
+            color: C.muted,
+            shape: BoxShape.circle,
+          ),
         ),
-      );
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 11.5, height: 1.5, color: C.muted),
+          ),
+        ),
+      ],
+    ),
+  );
 }

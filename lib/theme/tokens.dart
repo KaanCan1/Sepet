@@ -24,7 +24,7 @@ abstract final class F {
     'Iowan Old Style',
     'Palatino',
     'Georgia',
-    'serif'
+    'serif',
   ];
   static const mono = 'Sepet Mono';
   static const monoFallback = ['SF Mono', 'Menlo', 'monospace'];

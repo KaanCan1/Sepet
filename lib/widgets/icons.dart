@@ -34,10 +34,10 @@ class LineIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        width: size,
-        height: size,
-        child: CustomPaint(painter: _GlyphPainter(glyph, color, stroke)),
-      );
+    width: size,
+    height: size,
+    child: CustomPaint(painter: _GlyphPainter(glyph, color, stroke)),
+  );
 }
 
 class _GlyphPainter extends CustomPainter {

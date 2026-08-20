@@ -27,7 +27,7 @@ abstract final class Mock {
         43.0,
         44.6,
         45.8,
-        47.2
+        47.2,
       ],
     ),
     Series(
@@ -47,7 +47,7 @@ abstract final class Mock {
         29.5,
         30.4,
         31.1,
-        31.8
+        31.8,
       ],
     ),
     Series(
@@ -66,7 +66,7 @@ abstract final class Mock {
         46.8,
         48.3,
         49.5,
-        50.5
+        50.5,
       ],
     ),
   ];

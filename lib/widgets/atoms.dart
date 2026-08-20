@@ -11,9 +11,9 @@ class Lbl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-        text,
-        style: color == null ? T.label : T.label.copyWith(color: color),
-      );
+    text,
+    style: color == null ? T.label : T.label.copyWith(color: color),
+  );
 }
 
 class Hairline extends StatelessWidget {
@@ -104,23 +104,23 @@ class MatchFlag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(left: 6),
-        padding: const EdgeInsets.fromLTRB(5, 2, 5, 2.5),
-        decoration: BoxDecoration(
-          color: C.refBg,
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontFamily: F.mono,
-            fontFamilyFallback: F.monoFallback,
-            fontSize: 8.5,
-            height: 1,
-            color: C.ref,
-          ),
-        ),
-      );
+    margin: const EdgeInsets.only(left: 6),
+    padding: const EdgeInsets.fromLTRB(5, 2, 5, 2.5),
+    decoration: BoxDecoration(
+      color: C.refBg,
+      borderRadius: BorderRadius.circular(3),
+    ),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontFamily: F.mono,
+        fontFamilyFallback: F.monoFallback,
+        fontSize: 8.5,
+        height: 1,
+        color: C.ref,
+      ),
+    ),
+  );
 }
 
 /// .row — nokta + ad + monospace değer.
@@ -138,28 +138,28 @@ class SeriesRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child: Row(
-          children: [
-            Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 7),
-            Expanded(
-              child: Text(
-                name,
-                style: const TextStyle(fontSize: 11.5, color: C.muted),
-              ),
-            ),
-            Text(value, style: T.num12),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(
+      children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
         ),
-      );
+        const SizedBox(width: 7),
+        Expanded(
+          child: Text(
+            name,
+            style: const TextStyle(fontSize: 11.5, color: C.muted),
+          ),
+        ),
+        Text(value, style: T.num12),
+      ],
+    ),
+  );
 }
 
 /// .r — sol tarafta ad + alt satır, sağda monospace tutar.
@@ -179,31 +179,30 @@ class LedgerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 7),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name,
-                      style: const TextStyle(fontSize: 12, color: C.ink)),
-                  if (sub != null) ...[
-                    const SizedBox(height: 2),
-                    Text(sub!, style: T.label),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              amount,
-              style: T.num11.copyWith(fontSize: 11.5, color: amountColor),
-            ),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 7),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(name, style: const TextStyle(fontSize: 12, color: C.ink)),
+              if (sub != null) ...[
+                const SizedBox(height: 2),
+                Text(sub!, style: T.label),
+              ],
+            ],
+          ),
         ),
-      );
+        const SizedBox(width: 10),
+        Text(
+          amount,
+          style: T.num11.copyWith(fontSize: 11.5, color: amountColor),
+        ),
+      ],
+    ),
+  );
 }
 
 /// Serif başlık + üst simge sayı ("47,2%").
@@ -215,27 +214,27 @@ class BigNumber extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(text: value),
-            // vertical-align: super — TextStyle'da baseline kaydırma yok,
-            // WidgetSpan'ı metnin tepesine hizalıyoruz.
-            WidgetSpan(
-              alignment: PlaceholderAlignment.top,
-              child: Padding(
-                padding: EdgeInsets.only(top: size * .15),
-                child: Text(
-                  '%',
-                  style: T.bigNumber.copyWith(
-                    fontSize: size * .43,
-                    color: color,
-                    height: 1,
-                  ),
-                ),
+    TextSpan(
+      children: [
+        TextSpan(text: value),
+        // vertical-align: super — TextStyle'da baseline kaydırma yok,
+        // WidgetSpan'ı metnin tepesine hizalıyoruz.
+        WidgetSpan(
+          alignment: PlaceholderAlignment.top,
+          child: Padding(
+            padding: EdgeInsets.only(top: size * .15),
+            child: Text(
+              '%',
+              style: T.bigNumber.copyWith(
+                fontSize: size * .43,
+                color: color,
+                height: 1,
               ),
             ),
-          ],
+          ),
         ),
-        style: T.bigNumber.copyWith(fontSize: size, color: color),
-      );
+      ],
+    ),
+    style: T.bigNumber.copyWith(fontSize: size, color: color),
+  );
 }

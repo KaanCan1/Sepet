@@ -177,11 +177,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         content: Text(
           signedIn
               ? 'Fişin fotoğrafı cihazdan çıkmıyor. Metin, cihaz üstünde '
-                  'okunduktan sonra yalnızca eşleşmiş satırlar (ürün, tutar, '
-                  'tarih, market) hesabına kaydediliyor. Geriye dönük analiz '
-                  've cihaz değişikliği bunun için gerekli.'
+                    'okunduktan sonra yalnızca eşleşmiş satırlar (ürün, tutar, '
+                    'tarih, market) hesabına kaydediliyor. Geriye dönük analiz '
+                    've cihaz değişikliği bunun için gerekli.'
               : 'Giriş yapmadığın için her şey yalnızca bu cihazda duruyor. '
-                  'Uygulamayı silersen geçmişin de gider.',
+                    'Uygulamayı silersen geçmişin de gider.',
           style: const TextStyle(fontSize: 12.5, height: 1.5, color: C.ink),
         ),
         actions: [
@@ -277,8 +277,10 @@ class _Identity extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(session.displayName,
-                      style: T.display.copyWith(fontSize: 20)),
+                  Text(
+                    session.displayName,
+                    style: T.display.copyWith(fontSize: 20),
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     session.email,
@@ -314,23 +316,23 @@ class _Metric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Lbl(label),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                fontFamily: F.mono,
-                fontFamilyFallback: F.monoFallback,
-                fontSize: 16,
-                color: C.ink,
-              ),
-            ),
-          ],
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Lbl(label),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontFamily: F.mono,
+            fontFamilyFallback: F.monoFallback,
+            fontSize: 16,
+            color: C.ink,
+          ),
         ),
-      );
+      ],
+    ),
+  );
 }
 
 class _SourceRow extends StatelessWidget {
@@ -400,35 +402,28 @@ class _ActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Pressable(
-        onTap: onTap,
-        scale: .99,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 13),
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: C.line)),
+    onTap: onTap,
+    scale: .99,
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 13),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: C.line)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 12.5, color: danger ? C.hot : C.ink),
+            ),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: danger ? C.hot : C.ink,
-                  ),
-                ),
-              ),
-              if (hint.isNotEmpty) ...[
-                Text(hint, style: T.label.copyWith(fontSize: 9)),
-                const SizedBox(width: 8),
-              ],
-              LineIcon(
-                Glyph.chevron,
-                size: 13,
-                color: danger ? C.hot : C.muted,
-              ),
-            ],
-          ),
-        ),
-      );
+          if (hint.isNotEmpty) ...[
+            Text(hint, style: T.label.copyWith(fontSize: 9)),
+            const SizedBox(width: 8),
+          ],
+          LineIcon(Glyph.chevron, size: 13, color: danger ? C.hot : C.muted),
+        ],
+      ),
+    ),
+  );
 }

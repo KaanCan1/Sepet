@@ -17,9 +17,9 @@ class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
 
   static Route<void> route() => CupertinoPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => const ScanScreen(),
-      );
+    fullscreenDialog: true,
+    builder: (_) => const ScanScreen(),
+  );
 
   @override
   State<ScanScreen> createState() => _ScanScreenState();
@@ -89,8 +89,8 @@ class _ScanScreenState extends State<ScanScreen> {
         label: _reading
             ? 'Okunuyor…'
             : (_pending > 0
-                ? 'Önce $_pending eşleşmeyi onayla'
-                : 'Sepete ekle'),
+                  ? 'Önce $_pending eşleşmeyi onayla'
+                  : 'Sepete ekle'),
         dark: true,
         onTap: ready ? _commit : null,
       ),
@@ -106,7 +106,7 @@ class _ScanScreenState extends State<ScanScreen> {
                 _reading
                     ? 'FİŞ OKUNUYOR…'
                     : '${_lines.length} SATIR OKUNDU'
-                        '${_pending > 0 ? ' · $_pending EŞLEŞME ONAYI BEKLİYOR' : ' · HEPSİ EŞLEŞTİ'}',
+                          '${_pending > 0 ? ' · $_pending EŞLEŞME ONAYI BEKLİYOR' : ' · HEPSİ EŞLEŞTİ'}',
               ),
               const SizedBox(height: 8),
               AnimatedOpacity(
@@ -120,8 +120,9 @@ class _ScanScreenState extends State<ScanScreen> {
                         if (i > 0) const Hairline(),
                         _ParsedRow(
                           line: _lines[i],
-                          onTap:
-                              _lines[i].needsMatch ? () => _resolve(i) : null,
+                          onTap: _lines[i].needsMatch
+                              ? () => _resolve(i)
+                              : null,
                         ),
                       ],
                     ],
@@ -247,9 +248,9 @@ class _Corners extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.all(10),
-        child: CustomPaint(size: Size.infinite, painter: _CornerPainter()),
-      );
+    padding: const EdgeInsets.all(10),
+    child: CustomPaint(size: Size.infinite, painter: _CornerPainter()),
+  );
 }
 
 class _CornerPainter extends CustomPainter {

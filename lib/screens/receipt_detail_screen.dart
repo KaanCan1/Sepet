@@ -40,8 +40,10 @@ class ReceiptDetailScreen extends StatelessWidget {
           sliver: SliverList.list(
             children: [
               const SizedBox(height: 4),
-              Lbl('${Fmt.dayMonth(receipt.date)} ${receipt.date.year} · '
-                  '${receipt.itemCount} ÜRÜN'),
+              Lbl(
+                '${Fmt.dayMonth(receipt.date)} ${receipt.date.year} · '
+                '${receipt.itemCount} ÜRÜN',
+              ),
               const SizedBox(height: 4),
               Text(receipt.heading, style: T.display),
               const SizedBox(height: 12),
