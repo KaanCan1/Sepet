@@ -19,6 +19,15 @@ abstract final class C {
 
 /// Fiş yazıcısı mantığı: sayılar monospace, başlıklar serif.
 abstract final class F {
+  /// Vitrin: Gotham'ın ücretsiz en yakın karşılığı (Montserrat). Kelime
+  /// işareti, manşet sayı ve büyük başlıklarda — gövde metninde değil.
+  static const display = 'Sepet Display';
+  static const displayFallback = [
+    'Avenir Next',
+    'Helvetica Neue',
+    'sans-serif',
+  ];
+
   static const serif = 'Sepet Serif';
   static const serifFallback = [
     'Iowan Old Style',
@@ -43,21 +52,23 @@ abstract final class T {
 
   /// .bigno — 60px serif
   static const bigNumber = TextStyle(
-    fontFamily: F.serif,
-    fontFamilyFallback: F.serifFallback,
+    fontFamily: F.display,
+    fontFamilyFallback: F.displayFallback,
+    fontWeight: FontWeight.w800,
     fontSize: 60,
     height: .95,
-    letterSpacing: -1.8,
+    letterSpacing: -2.4,
     color: C.ink,
   );
 
   /// .prod — 24px serif
   static const display = TextStyle(
-    fontFamily: F.serif,
-    fontFamilyFallback: F.serifFallback,
+    fontFamily: F.display,
+    fontFamilyFallback: F.displayFallback,
+    fontWeight: FontWeight.w700,
     fontSize: 24,
-    height: 1.15,
-    letterSpacing: -.48,
+    height: 1.2,
+    letterSpacing: -.6,
     color: C.ink,
   );
 

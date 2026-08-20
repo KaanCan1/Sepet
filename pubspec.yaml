@@ -69,6 +69,16 @@ flutter:
           weight: 400
         - asset: assets/fonts/SourceSerif4-SemiBold.ttf
           weight: 600
+    # Vitrin: Gotham'ın (Obama 2008) ücretsiz en yakın karşılığı. Yalnızca
+    # kelime işareti, manşet sayı ve büyük başlıklarda — gövde metninde değil.
+    - family: Sepet Display
+      fonts:
+        - asset: assets/fonts/Montserrat-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Montserrat-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Montserrat-ExtraBold.ttf
+          weight: 800
     # Sayılar: fiş yazıcısı mantığı — monospace.
     - family: Sepet Mono
       fonts:

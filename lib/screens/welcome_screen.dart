@@ -68,11 +68,12 @@ class WelcomeScreen extends StatelessWidget {
               const Text(
                 'Kendi enflasyonunu\nkendi fişinden ölç',
                 style: TextStyle(
-                  fontFamily: F.serif,
-                  fontFamilyFallback: F.serifFallback,
-                  fontSize: 32,
-                  height: 1.15,
-                  letterSpacing: -.7,
+                  fontFamily: F.display,
+                  fontFamilyFallback: F.displayFallback,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 31,
+                  height: 1.18,
+                  letterSpacing: -1,
                   color: C.ink,
                 ),
               ),
