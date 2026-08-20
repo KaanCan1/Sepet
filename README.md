@@ -115,6 +115,10 @@ APK + AAB üretip GitHub Release'e ekliyor.
 - [ ] TÜİK ve ENAG serilerinin aylık çekimi
 - [ ] Ayın 3'ünde aylık kart bildirimi
 - [ ] App Store / Play Store yayını
+- [ ] **Flutter'ı güncelle.** 3.32.1 Dart 3.8.1 ile geliyor; ekosistemin bir
+      kısmı Dart 3.10'a geçti (share_plus 13, path_provider 2.1.6). Yükseltme
+      yapılınca `dependabot.yml`deki `ignore` bloğu kaldırılabilir.
+- [ ] Flutter'ı güncelle (share_plus 13+ Dart 3.10 istiyor, 3.32.1 Dart 3.8.1 ile geliyor)
 
 ## Lisans
 
