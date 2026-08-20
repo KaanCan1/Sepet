@@ -1,32 +1,41 @@
 #!/usr/bin/env bash
 # CI'ın çalıştırdığı denetimlerin birebir yereli.
 #
-# Sistemde Flutter'ınkinden farklı bir Dart SDK'sı varsa `dart format`
-# başka bir biçimlendirici çalıştırır ve yerelde temiz görünen kod CI'da
-# patlar. Bu yüzden Flutter'ın kendi Dart'ını doğrudan çağırıyoruz.
+# Proje Flutter sürümü .fvmrc'de sabit. FVM kuruluysa onu kullanıyoruz; değilse
+# global flutter'a düşüp uyarı veriyoruz, çünkü sürüm farkı biçimlendiriciyi
+# değiştirip yerelde temiz görünen kodu CI'da patlatabiliyor.
 set -euo pipefail
 
-FLUTTER_BIN="$(command -v flutter)"
-FLUTTER_ROOT="$(cd "$(dirname "$(readlink "$FLUTTER_BIN" || echo "$FLUTTER_BIN")")/.." && pwd)"
-DART="$FLUTTER_ROOT/bin/cache/dart-sdk/bin/dart"
+cd "$(dirname "$0")/.."
 
-if [[ ! -x "$DART" ]]; then
-  echo "Flutter'ın Dart SDK'sı bulunamadı: $DART" >&2
-  exit 1
+PINNED="$(sed -n 's/.*"flutter"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' .fvmrc)"
+
+if command -v fvm >/dev/null 2>&1; then
+  FLUTTER=(fvm flutter)
+  DART=(fvm dart)
+else
+  echo "⚠ FVM bulunamadı, global flutter kullanılıyor."
+  echo "  Proje $PINNED sürümüne sabit. Kurmak için: brew tap leoafarias/fvm && brew install fvm && fvm use $PINNED"
+  FLUTTER=(flutter)
+  DART=(dart)
 fi
 
-echo "→ Dart: $("$DART" --version 2>&1)"
+ACTIVE="$("${FLUTTER[@]}" --version 2>/dev/null | sed -n '1s/Flutter \([0-9.]*\).*/\1/p')"
+echo "→ Flutter $ACTIVE (sabitlenen: $PINNED)"
+if [[ "$ACTIVE" != "$PINNED" ]]; then
+  echo "⚠ Sürüm uyuşmuyor — CI farklı sonuç verebilir." >&2
+fi
 
 echo "→ Bağımlılıklar"
-flutter pub get
+"${FLUTTER[@]}" pub get
 
 echo "→ Biçim"
-"$DART" format --output=none --set-exit-if-changed .
+"${DART[@]}" format --output=none --set-exit-if-changed .
 
 echo "→ Statik analiz"
-flutter analyze --fatal-infos
+"${FLUTTER[@]}" analyze --fatal-infos
 
 echo "→ Testler"
-flutter test
+"${FLUTTER[@]}" test
 
 echo "✓ Hepsi temiz"

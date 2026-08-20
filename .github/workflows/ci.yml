@@ -12,9 +12,6 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  FLUTTER_VERSION: '3.32.1'
-
 jobs:
   analyze:
     name: Analiz ve test
@@ -23,9 +20,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Sürüm .fvmrc'de tanımlı; yerel ile CI'ın ayrışmaması için oradan okunuyor.
+      - id: fvm
+        run: echo "version=$(jq -r .flutter .fvmrc)" >> "$GITHUB_OUTPUT"
+
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version: ${{ steps.fvm.outputs.version }}
           channel: stable
           cache: true
 
@@ -61,9 +62,13 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # Sürüm .fvmrc'de tanımlı; yerel ile CI'ın ayrışmaması için oradan okunuyor.
+      - id: fvm
+        run: echo "version=$(jq -r .flutter .fvmrc)" >> "$GITHUB_OUTPUT"
+
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version: ${{ steps.fvm.outputs.version }}
           channel: stable
           cache: true
 
@@ -88,9 +93,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Sürüm .fvmrc'de tanımlı; yerel ile CI'ın ayrışmaması için oradan okunuyor.
+      - id: fvm
+        run: echo "version=$(jq -r .flutter .fvmrc)" >> "$GITHUB_OUTPUT"
+
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version: ${{ steps.fvm.outputs.version }}
           channel: stable
           cache: true
 

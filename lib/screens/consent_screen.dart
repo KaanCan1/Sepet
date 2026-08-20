@@ -163,7 +163,7 @@ class _ConsentTile extends StatelessWidget {
         ),
         Switch.adaptive(
           value: value,
-          activeColor: C.card,
+          activeThumbColor: C.card,
           activeTrackColor: C.ink,
           onChanged: onChanged,
         ),

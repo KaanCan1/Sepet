@@ -12,16 +12,6 @@ updates:
     groups:
       pub:
         patterns: ['*']
-    # Bu paketlerin güncel sürümleri Dart >=3.10 istiyor; proje Flutter 3.32.1'e
-    # (Dart 3.8.1) sabitli. Flutter yükseltilince bu blok tamamen kalkacak.
-    ignore:
-      - dependency-name: share_plus
-      - dependency-name: path_provider
-    ignore:
-      # share_plus 13+ Dart >=3.10 istiyor; Flutter 3.32.1 ise Dart 3.8.1 ile
-      # geliyor. Flutter yükseltilince bu satır kaldırılacak.
-      - dependency-name: share_plus
-        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /
