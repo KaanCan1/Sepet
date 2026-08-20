@@ -1,0 +1,25 @@
+{
+  "name": "sepet-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sepet — kişisel enflasyon endeksi: veri modeli ve Laspeyres hesabı",
+  "scripts": {
+    "migrate": "node-pg-migrate -m migrations --migrations-file-language sql",
+    "migrate:up": "npm run migrate -- up",
+    "migrate:down": "npm run migrate -- down",
+    "seed": "node scripts/seed.js",
+    "db:reset": "npm run migrate:up && npm run seed",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.23.1",
+    "node-pg-migrate": "^7.9.0",
+    "typescript": "^7.0.2",
+    "vitest": "^3.0.5"
+  }
+}

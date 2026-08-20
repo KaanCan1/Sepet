@@ -197,6 +197,19 @@ lib/
 
 Her iki grafik de tek bir `CustomPainter` üzerinde; ikonlar SVG değil, çizim.
 
+## Sunucu
+
+Endeksin veri modeli ve hesabı [`server/`](server/) altında. Laspeyres mantığı
+uygulama kodunda değil **SQL fonksiyonlarında** duruyor — dört aşama: aykırı
+eleme, aylık medyan + boşluk doldurma, harcama payı ağırlıkları, zincirleme.
+
+```bash
+brew services start postgresql@14 && createdb sepet
+cd server && npm install && npm run migrate:up && npm test
+```
+
+Ayrıntı ve bilinen sınırlar: [server/README.md](server/README.md)
+
 ## Yol haritası
 
 - [ ] Gerçek kamera + ML Kit / Vision OCR
