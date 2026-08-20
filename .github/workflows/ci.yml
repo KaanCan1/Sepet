@@ -108,3 +108,47 @@ jobs:
       # CI'da imzalama sertifikası yok; --no-codesign derlemeyi yine de doğrular.
       - name: iOS
         run: flutter build ios --release --no-codesign
+
+  server:
+    name: Sunucu — şema ve endeks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sepet
+          POSTGRES_PASSWORD: sepet
+          POSTGRES_DB: sepet
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sepet -d sepet"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://sepet:sepet@localhost:5432/sepet
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - run: npm ci
+
+      - name: Migration'lar
+        run: npm run migrate:up
+
+      # Aşağı yönlü migration'ların da çalıştığını doğrula: geri alınamayan
+      # şema değişikliği fark edilmeden birikmesin.
+      - name: Geri alma denemesi
+        run: |
+          npm run migrate -- down 7
+          npm run migrate:up
+
+      - name: Endeks testleri
+        run: npm test
