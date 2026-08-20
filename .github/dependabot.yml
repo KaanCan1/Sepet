@@ -5,9 +5,13 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     commit-message:
       prefix: 'chore(deps)'
+    # Her paket için ayrı PR yerine tek toplu PR — tek CI turu, tek inceleme.
+    groups:
+      pub:
+        patterns: ['*']
 
   - package-ecosystem: github-actions
     directory: /
@@ -15,3 +19,6 @@ updates:
       interval: monthly
     commit-message:
       prefix: 'chore(ci)'
+    groups:
+      actions:
+        patterns: ['*']

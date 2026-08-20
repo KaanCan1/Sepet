@@ -46,7 +46,7 @@ class _IndexScreenState extends State<IndexScreen>
               const Lbl('SON 12 AY'),
               AnimatedBuilder(
                 animation: _c,
-                builder: (_, __) {
+                builder: (_, _) {
                   final t = Curves.easeOutCubic.transform(_c.value);
                   return Padding(
                     padding: const EdgeInsets.only(top: 6, bottom: 8),
@@ -79,7 +79,7 @@ class _IndexScreenState extends State<IndexScreen>
               const SizedBox(height: 16),
               AnimatedBuilder(
                 animation: _c,
-                builder: (_, __) => LineChart(
+                builder: (_, _) => LineChart(
                   height: 96,
                   progress: Curves.easeOutCubic.transform(_c.value),
                   series: [
