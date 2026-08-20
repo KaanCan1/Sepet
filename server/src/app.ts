@@ -1,0 +1,40 @@
+import express from 'express';
+import { authRouter } from './routes/auth.js';
+import { indexRouter } from './routes/index-routes.js';
+import { productsRouter } from './routes/products.js';
+import { receiptsRouter } from './routes/receipts.js';
+import { query } from './db.js';
+
+export function createApp() {
+  const app = express();
+  app.use(express.json({ limit: '256kb' }));
+
+  app.get('/health', async (_req, res) => {
+    await query('SELECT 1');
+    res.json({ ok: true });
+  });
+
+  app.use('/auth', authRouter);
+  app.use('/index', indexRouter);
+  app.use('/receipts', receiptsRouter);
+  app.use('/products', productsRouter);
+
+  app.use((_req, res) => {
+    res.status(404).json({ error: 'Bulunamadı' });
+  });
+
+  // Hata gövdesi istemciye iç ayrıntı sızdırmıyor; log tarafta duruyor.
+  app.use(
+    (
+      err: Error,
+      _req: express.Request,
+      res: express.Response,
+      _next: express.NextFunction,
+    ) => {
+      console.error('[sepet]', err);
+      res.status(500).json({ error: 'Beklenmeyen bir hata oldu' });
+    },
+  );
+
+  return app;
+}

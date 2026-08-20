@@ -134,4 +134,9 @@ export async function refresh(s: Scenario): Promise<void> {
 export async function cleanup(s: Scenario): Promise<void> {
   await query(`DELETE FROM users WHERE id = $1`, [s.userId]);
   await query(`DELETE FROM merchants WHERE id = $1`, [s.merchantId]);
+  // Senaryonun ürettiği kanonik ürünler referans katalogda birikmesin.
+  const ids = Object.values(s.products);
+  if (ids.length) {
+    await query(`DELETE FROM canonical_products WHERE id = ANY($1::uuid[])`, [ids]);
+  }
 }
