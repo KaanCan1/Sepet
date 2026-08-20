@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Sürüm etiketi (örn. v0.2.0)'
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: '3.32.1'
+
+jobs:
+  android:
+    name: Android çıktısı
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter build apk --release
+      - run: flutter build appbundle --release
+
+      - name: GitHub Release'e ekle
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          generate_release_notes: true
+          files: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
+
+  # Mağaza yüklemesi imzalama gerektiriyor. Sertifikalar repo secret'larına
+  # eklenene kadar bu iş atlanır — yarım yapılandırmayla kırmızı CI olmasın.
+  testflight:
+    name: TestFlight
+    runs-on: macos-15
+    timeout-minutes: 60
+    needs: android
+    if: ${{ vars.IOS_SIGNING_READY == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # TODO: App Store Connect API anahtarı ve dağıtım sertifikası
+      # secret olarak eklendiğinde fastlane match / xcodebuild adımları buraya.
+      # Gerekli secret'lar:
+      #   APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID,
+      #   APP_STORE_CONNECT_KEY_P8, IOS_DIST_CERT_P12, IOS_DIST_CERT_PASSWORD
+      - name: Arşiv
+        run: flutter build ipa --release --export-method app-store
