@@ -93,9 +93,14 @@ main ──────────────●──────────
 ```bash
 git switch -c feat/ocr
 # ...
+./tool/check.sh          # CI'ın çalıştırdığı denetimlerin aynısı
 git push -u origin feat/ocr
 gh pr create --fill
 ```
+
+> `tool/check.sh` biçimlendirmeyi **Flutter'ın kendi Dart SDK'sıyla** yapar.
+> Sistemde ayrı bir Dart kuruluysa `dart format` farklı bir sürümü çalıştırıp
+> yerelde temiz görünen kodu CI'da patlatır.
 
 CI her PR'da şunları çalıştırıyor: `dart format` denetimi, `flutter analyze
 --fatal-infos`, `flutter test --coverage`, ardından Android (APK) ve iOS
