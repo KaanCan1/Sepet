@@ -150,5 +150,10 @@ jobs:
           npm run migrate -- down 7
           npm run migrate:up
 
-      - name: Endeks testleri
+      - name: Katalog ve demo veri
+        run: |
+          psql "$DATABASE_URL" -f seeds/catalog.sql
+          npm run seed
+
+      - name: Endeks ve API testleri
         run: npm test

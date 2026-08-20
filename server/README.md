@@ -12,8 +12,34 @@ brew services start postgresql@14
 createdb sepet
 npm install
 npm run migrate:up
+psql -d sepet -f seeds/catalog.sql   # referans katalog
+npm run seed                          # 12 aylık demo hesabı
+npm run dev                           # http://localhost:3000
 npm test
 ```
+
+## Uçlar
+
+| Uç | İş |
+|---|---|
+| `POST /auth/dev-login` | Sağlayıcısız geliştirme girişi. Üretimde kapalı (`DEV_LOGIN`). |
+| `GET /index` | Ekran 01: manşet, kendi serin, resmî seriler. |
+| `GET /index/movers` | Ekran 04: bu ay en çok zamlananlar. |
+| `GET /receipts` · `GET /receipts/:id` | Fiş listesi ve satır kırılımı. |
+| `POST /receipts` | Fiş kaydı. Satırlar tek işlemde yazılır, sonra endeks tazelenir. |
+| `POST /receipts/:id/lines/:lineId/match` | "eşleşme?" cevabı — alias'a da yazılır. |
+| `GET /products` · `GET /products/:id` | Ekran 03. |
+| `GET /products/catalog/search?q=` | Eşleşme adayları. |
+
+Kimlik doğrulama Bearer JWT. Gerçek Apple/Google akışı geldiğinde değişen tek
+yer token'ı **üreten** uç olacak; doğrulayan katman aynı kalıyor.
+
+### Demo hesabı
+
+`npm run seed` 12 aylık geçmişi olan `demo@sepet.app` kullanıcısını kuruyor:
+24 fiş, 200 satır, iki tanesi bilerek `pending` bırakılmış ki "eşleşme?" akışı
+demo hesapta da görünsün. App Store incelemesine bu hesap verilecek — boş kabuk
+gönderilen uygulamalar "minimum functionality" gerekçesiyle geri dönüyor.
 
 `gen_random_uuid()` PostgreSQL 13'ten beri çekirdekte — eklenti kurmaya gerek yok.
 
