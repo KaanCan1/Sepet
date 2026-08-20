@@ -51,6 +51,7 @@ class _SignInScreenState extends State<SignInScreen> {
     if (!mounted) return;
     session.value = Session(
       email: email,
+      provider: AuthProvider.email,
       since: DateTime(2025, 9, 1),
       receipts: Mock.receiptCount,
       observations: Mock.observationCount,

@@ -16,6 +16,7 @@
 </p>
 
 <p align="center">
+  <img src="docs/screenshots/00-karsilama.png" width="200" alt="Karşılama ekranı">
   <img src="docs/screenshots/01-endeks.png" width="200" alt="Endeks ekranı">
   <img src="docs/screenshots/02-fis-okuma.png" width="200" alt="Fiş okuma ekranı">
   <img src="docs/screenshots/03-urun-gecmisi.png" width="200" alt="Ürün geçmişi ekranı">
@@ -44,6 +45,7 @@ doğrulamıyor ya da yorumlamıyor — sadece referans çizgisi olarak duruyorla
 
 | | Ekran | İş |
 |---|---|---|
+| **00** | Karşılama | Apple, Google ya da e-posta ile giriş — ya da hesapsız devam. Giriş zorunlu değil; hesapsız kullanımda fişler yalnızca cihazda kalır. |
 | **01** | Endeks | Tek sayı: son 12 ayda senin sepetin. Altında TÜİK/ENAG karşılaştırması, seri grafiği ve son fişler. |
 | **02** | Fiş okuma | Cihaz üstünde OCR, ardından satırların kanonik ürünlere eşlenmesi. Emin olunamayan satır işaretlenir. |
 | **03** | Ürün geçmişi | Tek ürünün gözlem geçmişi, marketler arası son fiyatlar, 12 aylık değişim. |
