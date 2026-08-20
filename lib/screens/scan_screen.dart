@@ -217,7 +217,7 @@ class _ViewfinderState extends State<_Viewfinder>
             if (widget.reading)
               AnimatedBuilder(
                 animation: _c,
-                builder: (_, __) => Positioned(
+                builder: (_, _) => Positioned(
                   top: 196 * _c.value,
                   left: 0,
                   right: 0,
