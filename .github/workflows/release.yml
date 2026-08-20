@@ -12,9 +12,6 @@ on:
 permissions:
   contents: write
 
-env:
-  FLUTTER_VERSION: '3.32.1'
-
 jobs:
   android:
     name: Android çıktısı
@@ -28,9 +25,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - id: fvm
+        run: echo "version=$(jq -r .flutter .fvmrc)" >> "$GITHUB_OUTPUT"
+
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version: ${{ steps.fvm.outputs.version }}
           channel: stable
           cache: true
 
@@ -58,9 +58,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - id: fvm
+        run: echo "version=$(jq -r .flutter .fvmrc)" >> "$GITHUB_OUTPUT"
+
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version: ${{ steps.fvm.outputs.version }}
           channel: stable
           cache: true
 

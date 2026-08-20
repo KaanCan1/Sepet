@@ -85,7 +85,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       Switch.adaptive(
                         value: _monthlyPush,
-                        activeColor: C.card,
+                        activeThumbColor: C.card,
                         activeTrackColor: C.ink,
                         onChanged: (v) => setState(() => _monthlyPush = v),
                       ),

@@ -66,3 +66,6 @@ android/key.properties
 
 # Yerel araç yapılandırması
 .claude/
+
+# FVM Version Cache
+.fvm/
