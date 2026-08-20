@@ -1,13 +1,31 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'screens/shell.dart';
+import 'widgets/glass.dart';
 import 'theme/tokens.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
-  runApp(const SepetApp());
+
+  // Shader'ları önden ısıt — ilk karede beyaz sıçrama olmasın.
+  await LiquidGlassWidgets.initialize();
+
+  runApp(
+    LiquidGlassWidgets.wrap(
+      // Paket Material'a bağlı değil; parlaklığı bu köprüyle okuyor.
+      brightnessResolver: Theme.maybeBrightnessOf,
+      theme: GlassThemeData(
+        light: const GlassThemeVariant(settings: GlassSettings.theme),
+        dark: const GlassThemeVariant(settings: GlassSettings.theme),
+        brightness: Brightness.light,
+      ),
+      child: const SepetApp(),
+    ),
+  );
 }
 
 class SepetApp extends StatelessWidget {

@@ -91,6 +91,7 @@ OFL. Sistem fontlarına güvenilseydi Android tarafında tipografi çökerdi.
 | Katman | Seçim | Neden |
 |---|---|---|
 | İstemci | **Flutter 3.47** (FVM ile sabit) | Tek kod tabanı, iki mağaza |
+| Krom | **liquid_glass_widgets** | Yüzen kapsül ve daire düğme gerçek kırılma/speküler kenar ile — elle yazılmış `BackdropFilter` taklidi değil |
 | OCR | **Cihaz üstünde** — ML Kit / Apple Vision | Ücretsiz, çevrimdışı, hızlı; fişin fotoğrafı cihazdan çıkmıyor |
 | Normalizasyon | **Claude API**, yalnızca belirsiz satırlar | Maliyeti gözlem başına değil, belirsizlik başına ödemek |
 | Backend | **Node.js/Express + PostgreSQL** | Kullanıcı, fiş, kanonik ürün, alias tablosu, fiyat gözlemleri, Laspeyres endeksi |
