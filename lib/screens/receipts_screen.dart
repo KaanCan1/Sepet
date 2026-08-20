@@ -25,8 +25,10 @@ class ReceiptsScreen extends StatelessWidget {
           sliver: SliverList.list(
             children: [
               const SizedBox(height: 8),
-              Lbl('${Fmt.monthLong(Mock.now).toUpperCase()} · '
-                  '${Mock.receipts.length} FİŞ'),
+              Lbl(
+                '${Fmt.monthLong(Mock.now).toUpperCase()} · '
+                '${Mock.receipts.length} FİŞ',
+              ),
               const SizedBox(height: 6),
               Text(Fmt.money(total), style: T.display),
               const SizedBox(height: 16),

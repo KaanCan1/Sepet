@@ -99,8 +99,11 @@ class ProductScreen extends StatelessWidget {
               Text(
                 'Bu ürün endekste ${product.observations} gözlemle temsil '
                 'ediliyor. Ağırlığı, senin harcamandaki payına göre.',
-                style:
-                    const TextStyle(fontSize: 11, height: 1.5, color: C.muted),
+                style: const TextStyle(
+                  fontSize: 11,
+                  height: 1.5,
+                  color: C.muted,
+                ),
               ),
             ],
           ),
@@ -118,21 +121,21 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Lbl(label),
-          const SizedBox(height: 3),
-          Text(
-            value,
-            style: TextStyle(
-              fontFamily: F.mono,
-              fontFamilyFallback: F.monoFallback,
-              fontSize: 17,
-              color: color,
-            ),
-          ),
-        ],
-      );
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Lbl(label),
+      const SizedBox(height: 3),
+      Text(
+        value,
+        style: TextStyle(
+          fontFamily: F.mono,
+          fontFamilyFallback: F.monoFallback,
+          fontSize: 17,
+          color: color,
+        ),
+      ),
+    ],
+  );
 }
 
 class _MarketRow extends StatelessWidget {
@@ -147,53 +150,50 @@ class _MarketRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 9),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: C.line)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Row(
-                children: [
-                  Text(
-                    entry.market,
-                    style: const TextStyle(fontSize: 11.5, color: C.ink),
-                  ),
-                  if (cheapest) ...[
-                    const SizedBox(width: 6),
-                    Text('EN UCUZ', style: T.label.copyWith(fontSize: 8.5)),
-                  ],
-                ],
+    padding: const EdgeInsets.symmetric(vertical: 9),
+    decoration: const BoxDecoration(
+      border: Border(bottom: BorderSide(color: C.line)),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              Text(
+                entry.market,
+                style: const TextStyle(fontSize: 11.5, color: C.ink),
               ),
-            ),
-            SizedBox(
-              width: 74,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(2),
-                child: Stack(
-                  children: [
-                    Container(height: 5, color: C.line),
-                    FractionallySizedBox(
-                      widthFactor: fraction.clamp(.08, 1),
-                      child: Container(
-                        height: 5,
-                        color: cheapest ? C.ref : C.ink,
-                      ),
-                    ),
-                  ],
+              if (cheapest) ...[
+                const SizedBox(width: 6),
+                Text('EN UCUZ', style: T.label.copyWith(fontSize: 8.5)),
+              ],
+            ],
+          ),
+        ),
+        SizedBox(
+          width: 74,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: Stack(
+              children: [
+                Container(height: 5, color: C.line),
+                FractionallySizedBox(
+                  widthFactor: fraction.clamp(.08, 1),
+                  child: Container(height: 5, color: cheapest ? C.ref : C.ink),
                 ),
-              ),
+              ],
             ),
-            SizedBox(
-              width: 60,
-              child: Text(
-                Fmt.money(entry.price),
-                textAlign: TextAlign.right,
-                style: T.num11,
-              ),
-            ),
-          ],
+          ),
         ),
-      );
+        SizedBox(
+          width: 60,
+          child: Text(
+            Fmt.money(entry.price),
+            textAlign: TextAlign.right,
+            style: T.num11,
+          ),
+        ),
+      ],
+    ),
+  );
 }

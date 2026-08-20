@@ -13,9 +13,9 @@ class PrivacyScreen extends StatelessWidget {
   const PrivacyScreen({super.key});
 
   static Route<void> route() => CupertinoPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => const PrivacyScreen(),
-      );
+    fullscreenDialog: true,
+    builder: (_) => const PrivacyScreen(),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -107,17 +107,17 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Lbl(title),
-            const SizedBox(height: 6),
-            Text(
-              body,
-              style: const TextStyle(fontSize: 12, height: 1.6, color: C.ink),
-            ),
-          ],
+    padding: const EdgeInsets.only(bottom: 20),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Lbl(title),
+        const SizedBox(height: 6),
+        Text(
+          body,
+          style: const TextStyle(fontSize: 12, height: 1.6, color: C.ink),
         ),
-      );
+      ],
+    ),
+  );
 }

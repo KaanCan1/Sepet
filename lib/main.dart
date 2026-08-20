@@ -20,10 +20,7 @@ class SepetApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: C.paper,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: C.ink,
-          surface: C.paper,
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: C.ink, surface: C.paper),
         // Sayfa geçişleri her platformda iOS gibi kaysın.
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {

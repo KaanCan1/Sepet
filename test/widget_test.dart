@@ -42,8 +42,9 @@ void main() {
     expect(find.text('Paylaş'), findsOneWidget);
   });
 
-  testWidgets('02 Fiş okuma: eşleşme onaylanmadan sepete eklenemez',
-      (tester) async {
+  testWidgets('02 Fiş okuma: eşleşme onaylanmadan sepete eklenemez', (
+    tester,
+  ) async {
     await tester.pumpWidget(const SepetApp());
     await tester.pumpAndSettle();
 
@@ -96,8 +97,9 @@ void main() {
     expect(find.text('+57%'), findsOneWidget);
   });
 
-  testWidgets('Giriş → açık rıza: aydınlatmadan ayrı, varsayılan kapalı',
-      (tester) async {
+  testWidgets('Giriş → açık rıza: aydınlatmadan ayrı, varsayılan kapalı', (
+    tester,
+  ) async {
     session.value = null;
     await tester.pumpWidget(const SepetApp());
     await tester.pumpAndSettle();

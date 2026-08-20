@@ -127,11 +127,7 @@ class _LinePainter extends CustomPainter {
       }
 
       if (s.endDot && progress > .98) {
-        canvas.drawCircle(
-          pts.last,
-          2.8,
-          Paint()..color = s.color,
-        );
+        canvas.drawCircle(pts.last, 2.8, Paint()..color = s.color);
       }
     }
 

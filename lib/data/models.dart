@@ -104,13 +104,13 @@ class ReceiptLine {
   String get rawLine => qtyLabel == null ? raw : '$raw · $qtyLabel';
 
   ReceiptLine confirmedAs(String name) => ReceiptLine(
-        raw: raw,
-        canonical: name,
-        amount: amount,
-        qtyLabel: qtyLabel,
-        needsMatch: false,
-        candidates: candidates,
-      );
+    raw: raw,
+    canonical: name,
+    amount: amount,
+    qtyLabel: qtyLabel,
+    needsMatch: false,
+    candidates: candidates,
+  );
 }
 
 /// Endeks serisi — senin sepetin, TÜİK, ENAG.

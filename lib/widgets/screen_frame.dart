@@ -132,8 +132,9 @@ class PrimaryButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 13),
         decoration: BoxDecoration(
           color: !enabled ? C.card : (dark ? C.ink : C.card),
-          border:
-              Border.all(color: !enabled ? C.line : (dark ? C.ink : C.line)),
+          border: Border.all(
+            color: !enabled ? C.line : (dark ? C.ink : C.line),
+          ),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
