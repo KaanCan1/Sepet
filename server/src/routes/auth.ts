@@ -24,6 +24,16 @@ authRouter.post('/dev-login', async (req, res) => {
     return;
   }
 
+  // Üretimde yalnızca listedeki adresler. Geliştirmede liste boş olur ve
+  // kısıt uygulanmaz.
+  if (
+    env.devLoginAllowlist.length > 0 &&
+    !env.devLoginAllowlist.includes(email)
+  ) {
+    res.status(403).json({ error: 'Bu adres için giriş açık değil' });
+    return;
+  }
+
   const existing = await query<{ id: string }>(
     `SELECT id FROM users WHERE lower(email) = $1 AND deleted_at IS NULL`,
     [email],

@@ -1,0 +1,32 @@
+# Render Blueprint. Dashboard'da "New > Blueprint" ile bu dosya okutulur.
+#
+# Veritabanı burada tanımlı DEĞİL: Render'ın ücretsiz Postgres'i 30 gün sonra
+# siliniyor. Kalıcı veri için Neon kullanılıyor; DATABASE_URL panelden gizli
+# değer olarak giriliyor.
+services:
+  - type: web
+    name: sepet-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    rootDir: server
+    buildCommand: npm ci
+    # Şema ve referans katalog her dağıtımda güncel tutuluyor. Migration'lar
+    # birikimli ve tekrar çalıştırılabilir; katalog ON CONFLICT DO NOTHING.
+    preDeployCommand: npm run deploy:prepare
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      # Gerçek Apple/Google akışı gelene kadar girişin tek yolu bu uç.
+      # Boş bırakılırsa sunucu açılışta hata verip duruyor — kapı açık kalmasın.
+      - key: DEV_LOGIN
+        value: 'true'
+      - key: DEV_LOGIN_EMAILS
+        sync: false
+      # Neon bağlantı dizesi. Panelde elle giriliyor, depoya yazılmıyor.
+      - key: DATABASE_URL
+        sync: false

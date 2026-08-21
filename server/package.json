@@ -9,15 +9,19 @@
     "migrate:up": "npm run migrate -- up",
     "migrate:down": "npm run migrate -- down",
     "seed": "tsx scripts/seed.ts",
-    "db:reset": "npm run migrate:up && npm run seed",
+    "db:reset": "npm run migrate:up && npm run catalog && npm run seed",
     "test": "vitest run",
     "dev": "tsx watch src/server.ts",
-    "start": "tsx src/server.ts"
+    "start": "tsx src/server.ts",
+    "deploy:prepare": "npm run migrate:up && npm run catalog",
+    "catalog": "tsx scripts/load-catalog.ts"
   },
   "dependencies": {
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "pg": "^8.13.1"
+    "pg": "^8.13.1",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
@@ -27,8 +31,6 @@
     "@types/supertest": "^7.2.1",
     "node-pg-migrate": "^7.9.0",
     "supertest": "^7.2.2",
-    "tsx": "^4.23.12",
-    "typescript": "^7.0.2",
     "vitest": "^3.0.5"
   }
 }

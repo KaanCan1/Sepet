@@ -18,6 +18,29 @@ npm run dev                           # http://localhost:4000
 npm test
 ```
 
+## Dağıtım
+
+Barındırma iki parça:
+
+| Katman | Servis | Neden |
+|---|---|---|
+| Veritabanı | **Neon** | Render'ın ücretsiz Postgres'i 30 gün sonra siliniyor. Neon'unki kalmıyor; 5 dk sonra askıya alıyor ama uyanması milisaniye. |
+| API | **Render** | `render.yaml` bir Blueprint; panelde "New → Blueprint" ile okutuluyor. |
+
+Sırlar depoda değil, Render panelinde: `DATABASE_URL` (Neon'dan) ve
+`DEV_LOGIN_EMAILS`. `JWT_SECRET` Render tarafından üretiliyor.
+
+Her dağıtımda `deploy:prepare` çalışıyor: migration'lar + referans katalog.
+İkisi de tekrar çalıştırılabilir.
+
+### Giriş neden hâlâ dev-login
+
+Gerçek Apple/Google akışı Apple Developer üyeliği ve Google istemci kimlikleri
+alınınca gelecek. O zamana kadar dağıtılmış sunucuya girmenin tek yolu
+`/auth/dev-login`. Üretimde bu ucu herkese açık bırakmak isteyen herkese hesap
+açmak demek olurdu; bu yüzden `DEV_LOGIN_EMAILS` listesi zorunlu — liste boşsa
+sunucu açılışta hata verip duruyor.
+
 ## Uçlar
 
 | Uç | İş |
