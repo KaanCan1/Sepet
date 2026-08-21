@@ -10,6 +10,13 @@ import {
 } from './fixtures/scenario.js';
 
 afterAll(async () => {
+  // Senaryo temizliği testin sonunda çağrılıyor; test yarıda düşerse
+  // çalışmıyor ve referans katalogda artık kalıyordu. Koşu sonunda garanti.
+  await query(
+    `DELETE FROM canonical_products
+      WHERE category_id = (SELECT id FROM categories WHERE code = 'TEST')`,
+  );
+  await query(`DELETE FROM categories WHERE code = 'TEST'`);
   await pool.end();
 });
 

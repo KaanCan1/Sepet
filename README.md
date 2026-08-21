@@ -197,6 +197,22 @@ lib/
 
 Her iki grafik de tek bir `CustomPainter` üzerinde; ikonlar SVG değil, çizim.
 
+## Telefona kurmak
+
+Uygulama sunucunun adresini derleme zamanında alıyor:
+
+```bash
+SEPET_API_URL=https://sepet-api.onrender.com ./tool/run-device.sh
+```
+
+iPhone'da önce **Ayarlar → Gizlilik ve Güvenlik → Geliştirici Modu** açık
+olmalı. Ücretsiz Apple ID ile imzalama profili **7 gün** geçerli; süre dolunca
+aynı komut yeniden çalıştırılır. Apple Developer Program üyeliğiyle bu süre bir
+yıla çıkıyor ve TestFlight açılıyor.
+
+> iOS'un ATS kuralı düz HTTP'ye izin vermiyor — adres HTTPS olmak zorunda.
+> Render ve Neon ikisi de HTTPS veriyor.
+
 ## Sunucu
 
 Endeksin veri modeli ve hesabı [`server/`](server/) altında. Laspeyres mantığı

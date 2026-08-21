@@ -6,9 +6,32 @@ import pg from 'pg';
 // toplama işlemleri zaten veritabanında yapılıyor.
 pg.types.setTypeParser(pg.types.builtins.NUMERIC, (v) => Number(v));
 
+const connectionString =
+  process.env.DATABASE_URL ?? 'postgres://localhost:5432/sepet';
+
+/// Neon gibi barındırılan Postgres'ler TLS istiyor; yerel geliştirmede yok.
+///
+/// Sunucu adını elle aramak yerine adresi ayrıştırıyoruz: yerel bağlantı
+/// dizesinde kullanıcı adı olmadığı için "@localhost" araması tutmuyordu.
+function requiresSsl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.searchParams.get('sslmode') === 'disable') return false;
+    const local = ['localhost', '127.0.0.1', '::1', ''];
+    return !local.includes(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+const needsSsl = requiresSsl(connectionString);
+
 export const pool = new pg.Pool({
-  connectionString:
-    process.env.DATABASE_URL ?? 'postgres://localhost:5432/sepet',
+  connectionString,
+  // Neon zinciri Node'un kök deposunda olmayabiliyor; şifreleme yine geçerli,
+  // yalnızca zincir doğrulaması gevşetiliyor.
+  ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
+  max: Number(process.env.PG_POOL_MAX ?? 10),
 });
 
 export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
