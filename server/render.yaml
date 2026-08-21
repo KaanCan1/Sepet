@@ -11,10 +11,14 @@ services:
     region: frankfurt
     rootDir: server
     buildCommand: npm ci
-    # Şema ve referans katalog her dağıtımda güncel tutuluyor. Migration'lar
-    # birikimli ve tekrar çalıştırılabilir; katalog ON CONFLICT DO NOTHING.
-    preDeployCommand: npm run deploy:prepare
-    startCommand: npm start
+    # Şema ve referans katalog her açılışta güncelleniyor.
+    #
+    # Normalde bunun yeri preDeployCommand ama Render ücretsiz planda o adımı
+    # desteklemiyor. Başlatma komutuna alındı: migration'lar birikimli ve
+    # tekrar çalıştırılabilir, node-pg-migrate danışma kilidi aldığı için
+    # aynı anda iki örnek açılsa da yarışmıyor. Yapacak iş yoksa bir iki
+    # saniye sürüyor.
+    startCommand: npm run deploy:prepare && npm start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV

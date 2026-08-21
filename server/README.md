@@ -30,8 +30,13 @@ Barındırma iki parça:
 Sırlar depoda değil, Render panelinde: `DATABASE_URL` (Neon'dan) ve
 `DEV_LOGIN_EMAILS`. `JWT_SECRET` Render tarafından üretiliyor.
 
-Her dağıtımda `deploy:prepare` çalışıyor: migration'lar + referans katalog.
-İkisi de tekrar çalıştırılabilir.
+Her **açılışta** `deploy:prepare` çalışıyor: migration'lar + referans katalog.
+İkisi de tekrar çalıştırılabilir ve node-pg-migrate danışma kilidi aldığı için
+aynı anda iki örnek açılsa da yarışmıyorlar.
+
+> Bunun doğru yeri `preDeployCommand` ama Render ücretsiz planda o adımı
+> desteklemiyor. Ücretli plana geçilirse oraya taşınabilir — o zaman her
+> uyanışta değil yalnızca dağıtımda çalışır.
 
 ### Giriş neden hâlâ dev-login
 
