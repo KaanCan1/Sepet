@@ -27,6 +27,12 @@ void main() {
       expect(Fmt.money(842.6), '842,60');
     });
 
+    test('miktar gereksiz sıfır yazmaz', () {
+      expect(Fmt.quantity(3), '3');
+      expect(Fmt.quantity(1.24), '1,240');
+      expect(Fmt.quantity(0.5), '0,500');
+    });
+
     test('yüzdeler işaretiyle', () {
       expect(Fmt.pct1(47.2), '47,2%');
       expect(Fmt.signedPct1(-6.2), '−6,2%');

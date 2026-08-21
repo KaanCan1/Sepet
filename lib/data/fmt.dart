@@ -17,6 +17,13 @@ abstract final class Fmt {
     return v < 0 ? '−$out' : out;
   }
 
+  /// Miktar: gereksiz sıfır yazmadan, en fazla üç ondalık.
+  /// 3 -> "3", 1.24 -> "1,240" (kilogramlı satırlar fişte böyle basılıyor)
+  static String quantity(double v) {
+    if (v == v.roundToDouble()) return v.toInt().toString();
+    return v.toStringAsFixed(3).replaceFirst('.', ',');
+  }
+
   /// 47.2 -> "47,2"
   static String dec1(double v) =>
       v.abs().toStringAsFixed(1).replaceFirst('.', ',');

@@ -24,6 +24,7 @@ class ProductsScreen extends StatelessWidget {
       slivers: [
         SliverToBoxAdapter(
           child: AsyncView<List<Product>>(
+            reloadOn: dataChanged,
             load: repo.products,
             isEmpty: (p) => p.isEmpty,
             empty: const EmptyState(

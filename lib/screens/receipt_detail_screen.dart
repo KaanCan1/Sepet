@@ -52,6 +52,7 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
         productId: productId,
       );
       _reloader.reload();
+      dataChanged.reload();
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(

@@ -145,6 +145,21 @@ async function main(): Promise<void> {
     }
   }
 
+  // Bir yıldır kullanılan hesapta bu eşleşmeler çoktan onaylanmış olurdu.
+  // Alias'lar market bazlı: aynı ham metin farklı zincirde farklı ürün olabilir.
+  let aliasCount = 0;
+  for (const merchant of merchants) {
+    for (const item of CATALOG) {
+      await query(
+        `INSERT INTO product_aliases (merchant_id, raw_text_normalized, canonical_product_id)
+         VALUES ($1, normalize_raw_text($2), $3)
+         ON CONFLICT (merchant_id, raw_text_normalized) DO NOTHING`,
+        [merchant.id, item.raw, findProduct(item.name, item.size)],
+      );
+      aliasCount++;
+    }
+  }
+
   await query(`SELECT refresh_user_index($1)`, [user.id]);
 
   const [head] = await query<{ change_pct: number; window_months: number }>(
@@ -155,6 +170,7 @@ async function main(): Promise<void> {
   console.log(`  kullanıcı      ${DEMO_EMAIL}`);
   console.log(`  fiş            ${receiptCount}`);
   console.log(`  satır          ${lineCount}`);
+  console.log(`  eşleşme kaydı  ${aliasCount}`);
   console.log(`  endeks         %${head?.change_pct} (${head?.window_months} aylık pencere)`);
 
   await pool.end();

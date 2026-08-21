@@ -235,3 +235,22 @@ class Mover {
     pct: (j['changePct'] as num).toDouble(),
   );
 }
+
+/// Market. Fiş kaydederken seçiliyor.
+class Merchant {
+  const Merchant({
+    required this.id,
+    required this.name,
+    required this.chainCode,
+  });
+
+  final String id;
+  final String name;
+  final String chainCode;
+
+  static Merchant fromJson(Map<String, dynamic> j) => Merchant(
+    id: j['id'] as String,
+    name: j['name'] as String,
+    chainCode: j['chainCode'] as String,
+  );
+}

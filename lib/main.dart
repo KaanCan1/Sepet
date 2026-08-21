@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'data/app_scope.dart';
@@ -56,6 +57,13 @@ class SepetApp extends StatelessWidget {
       ),
       // Tek yerel: Türkçe. Sayı/tarih biçimlendirmesi Fmt üzerinden.
       locale: const Locale('tr', 'TR'),
+      // Tarih seçici Türkçe olsun; delegeler olmadan İngilizce açılıyor.
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('tr', 'TR')],
       builder: (context, child) => MediaQuery.withNoTextScaling(child: child!),
       home: const RootGate(),
     );
