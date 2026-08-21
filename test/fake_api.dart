@@ -1,0 +1,147 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+import 'package:sepet/data/api.dart';
+
+/// Sunucu yerine geçen sahte istemci. Testler ağ olmadan gerçek çözümleme
+/// yolundan geçsin diye JSON döndürüyor — modelleri de birlikte doğruluyor.
+class FakeApi extends Api {
+  FakeApi({Map<String, Object?>? routes})
+    : super(
+        baseUrl: 'http://fake',
+        client: _FakeClient(routes ?? defaultRoutes),
+      );
+
+  /// İki ürün, üç ay: endeks 100 -> 116 -> 120,83 (%20,8).
+  static Map<String, Object?> get defaultRoutes => {
+    'POST /auth/dev-login': {'token': 'test-token', 'userId': 'u1'},
+    'GET /index': {
+      'headline': {
+        'changePct': 20.8,
+        'windowMonths': 2,
+        'monthDeltaPoints': 4.2,
+        'coveredWeight': 1,
+      },
+      'series': [
+        {'month': '2026-06-01', 'level': 100, 'momPct': 0},
+        {'month': '2026-07-01', 'level': 116, 'momPct': 16},
+        {'month': '2026-08-01', 'level': 120.83, 'momPct': 4.16},
+      ],
+      'official': [
+        {
+          'code': 'TUIK_TUFE',
+          'publisher': 'TÜİK',
+          'name': 'TÜFE',
+          'isOfficial': true,
+          'yoyPct': null,
+        },
+      ],
+    },
+    'GET /index/movers': [
+      {
+        'productId': 'p1',
+        'name': 'Yumurta',
+        'sizeLabel': "30'lu",
+        'changePct': 18.4,
+      },
+    ],
+    'GET /receipts': [
+      {
+        'id': 'r1',
+        'merchant': 'A101',
+        'purchasedAt': '2026-08-18',
+        'total': 842.6,
+        'itemCount': 11,
+        'pendingCount': 2,
+      },
+    ],
+    'GET /receipts/r1': {
+      'id': 'r1',
+      'merchant': 'A101',
+      'purchasedAt': '2026-08-18',
+      'total': 842.6,
+      'lines': [
+        {
+          'id': 'l1',
+          'lineNo': 1,
+          'raw': 'SUT TAM YAGLI 1L',
+          'quantity': 3,
+          'amount': 116.7,
+          'status': 'auto',
+          'canonical': 'Süt, tam yağlı 1 litre',
+        },
+        {
+          'id': 'l2',
+          'lineNo': 2,
+          'raw': 'YUMURTA 30LU',
+          'quantity': 1,
+          'amount': 184.5,
+          'status': 'pending',
+          'canonical': null,
+        },
+      ],
+    },
+    'GET /products': [
+      {
+        'id': 'p1',
+        'name': 'Ayçiçek yağı',
+        'sizeLabel': '5 litre',
+        'observations': 14,
+        'merchantCount': 4,
+        'monthSpan': 11,
+        'changePct': 57.2,
+      },
+    ],
+    'GET /products/p1': {
+      'id': 'p1',
+      'name': 'Ayçiçek yağı',
+      'sizeLabel': '5 litre',
+      'observations': 14,
+      'merchantCount': 4,
+      'monthSpan': 11,
+      'changePct': 57.2,
+      'firstPackPrice': 248.0,
+      'lastPackPrice': 389.9,
+      'history': [
+        {'date': '2025-09-12', 'unitPrice': 49.6, 'packPrice': 248.0},
+        {'date': '2026-01-15', 'unitPrice': 58.76, 'packPrice': 293.8},
+        {'date': '2026-08-14', 'unitPrice': 77.98, 'packPrice': 389.9},
+      ],
+      'byMerchant': [
+        {
+          'merchant': 'BİM',
+          'packPrice': 359.0,
+          'unitPrice': 71.8,
+          'seenOn': '2026-08-01',
+        },
+        {
+          'merchant': 'Migros',
+          'packPrice': 389.9,
+          'unitPrice': 77.98,
+          'seenOn': '2026-08-14',
+        },
+      ],
+    },
+  };
+}
+
+class _FakeClient extends http.BaseClient {
+  _FakeClient(this.routes);
+
+  final Map<String, Object?> routes;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final key = '${request.method} ${request.url.path}';
+    final body = routes[key];
+    final status = body == null ? 404 : 200;
+    final payload = jsonEncode(body ?? {'error': 'Bulunamadı'});
+    return http.StreamedResponse(
+      Stream.value(utf8.encode(payload)),
+      status,
+      request: request,
+      // Sunucu charset göndermezse ne olduğunu testte de görelim: başlık
+      // bilerek eksik. İstemci baytları kendisi UTF-8 çözüyor.
+    );
+  }
+}

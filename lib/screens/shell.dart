@@ -7,7 +7,7 @@ import 'index_screen.dart';
 import 'products_screen.dart';
 import 'profile_screen.dart';
 import 'receipts_screen.dart';
-import 'scan_screen.dart';
+import 'match_queue_screen.dart';
 
 /// Yüzen kapsülün yüksekliği ve alt boşluğu — içerik bunun altından akıyor.
 const kTabCapsuleHeight = 58.0;
@@ -108,7 +108,7 @@ class _FloatingTabBar extends StatelessWidget {
           // Ayrık düğme: taramanın her ekrandan tek dokunuşla açılması için.
           Pressable(
             key: const Key('scan-button'),
-            onTap: () => Navigator.of(context).push(ScanScreen.route()),
+            onTap: () => Navigator.of(context).push(MatchQueueScreen.route()),
             child: GlassSurface(
               radius: kTabCapsuleHeight / 2,
               child: SizedBox(

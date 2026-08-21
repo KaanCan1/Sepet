@@ -1,14 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
-import '../data/mock.dart';
 import '../data/session.dart';
 import '../theme/tokens.dart';
 import '../widgets/atoms.dart';
 import '../widgets/glass.dart';
 import '../widgets/icons.dart';
 import '../widgets/screen_frame.dart';
-import 'consent_screen.dart';
 import 'privacy_screen.dart';
 
 /// Giriş. Şimdilik e-posta ile sihirli bağlantı taklidi — gerçek uçlar
@@ -16,7 +14,7 @@ import 'privacy_screen.dart';
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
-  static Route<void> route() => CupertinoPageRoute(
+  static Route<String> route() => CupertinoPageRoute<String>(
     fullscreenDialog: true,
     builder: (_) => const SignInScreen(),
   );
@@ -27,7 +25,6 @@ class SignInScreen extends StatefulWidget {
 
 class _SignInScreenState extends State<SignInScreen> {
   final _controller = TextEditingController();
-  bool _busy = false;
 
   @override
   void initState() {
@@ -41,24 +38,11 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  /// E-postayı karşılama ekranına döndürür; girişi orası yapıyor.
+  void _submit() {
     final email = _controller.text.trim();
     if (!isValidEmail(email)) return;
-    final navigator = Navigator.of(context);
-    setState(() => _busy = true);
-    // Ağ gecikmesini taklit et.
-    await Future<void>.delayed(const Duration(milliseconds: 700));
-    if (!mounted) return;
-    session.value = Session(
-      email: email,
-      provider: AuthProvider.email,
-      since: DateTime(2025, 9, 1),
-      receipts: Mock.receiptCount,
-      observations: Mock.observationCount,
-    );
-    navigator.pop();
-    // Açık rıza aydınlatmadan ayrı ve girişten sonra sorulur (Kurul 2026/347).
-    await navigator.push<void>(ConsentScreen.route(firstRun: true));
+    Navigator.of(context).pop(email);
   }
 
   @override
@@ -74,10 +58,7 @@ class _SignInScreenState extends State<SignInScreen> {
           child: LineIcon(Glyph.close, size: 17, color: C.muted, stroke: 1.6),
         ),
       ),
-      footer: PrimaryButton(
-        label: _busy ? 'Gönderiliyor…' : 'Devam et',
-        onTap: ok && !_busy ? _submit : null,
-      ),
+      footer: PrimaryButton(label: 'Devam et', onTap: ok ? _submit : null),
       slivers: [
         SliverPadding(
           padding: kGutter,

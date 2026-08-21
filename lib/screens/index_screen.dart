@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../data/app_scope.dart';
 import '../data/fmt.dart';
-import '../data/mock.dart';
+import '../data/models.dart';
+import '../data/repository.dart';
 import '../theme/tokens.dart';
+import '../widgets/async_view.dart';
 import '../widgets/atoms.dart';
 import '../widgets/chart.dart';
 import '../widgets/glass.dart';
@@ -19,115 +22,145 @@ class IndexScreen extends StatefulWidget {
   State<IndexScreen> createState() => _IndexScreenState();
 }
 
-class _IndexScreenState extends State<IndexScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 900),
-  )..forward();
+class _IndexScreenState extends State<IndexScreen> {
+  final _reloader = Reloader();
 
   @override
   void dispose() {
-    _c.dispose();
+    _reloader.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final repo = AppScope.repoOf(context);
+
     return ScreenFrame(
       title: 'Sepetin',
       reserveTabBar: true,
       slivers: [
-        SliverPadding(
-          padding: kGutter,
-          sliver: SliverList.list(
-            children: [
-              const SizedBox(height: 8),
-              const Lbl('SON 12 AY'),
-              AnimatedBuilder(
-                animation: _c,
-                builder: (_, _) {
-                  final t = Curves.easeOutCubic.transform(_c.value);
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 6, bottom: 8),
-                    child: BigNumber(Fmt.dec1(Mock.headline * t)),
-                  );
-                },
-              ),
-              Row(
-                children: [
-                  DeltaPill(
-                    text: 'Geçen aya göre ${Fmt.dec1(Mock.monthDelta)} puan',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              PaperCard(
-                child: Column(
-                  children: [
-                    for (var i = 0; i < Mock.series.length; i++) ...[
-                      if (i > 0) const Hairline(),
-                      SeriesRow(
-                        color: Mock.series[i].color,
-                        name: Mock.series[i].name,
-                        value: Fmt.pct1(Mock.series[i].value),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              AnimatedBuilder(
-                animation: _c,
-                builder: (_, _) => LineChart(
-                  height: 96,
-                  progress: Curves.easeOutCubic.transform(_c.value),
-                  series: [
-                    ChartSeries(
-                      values: Mock.series[0].points,
-                      color: C.ink,
-                      width: 1.8,
-                      endDot: true,
-                    ),
-                    ChartSeries(
-                      values: Mock.series[1].points,
-                      color: C.ref,
-                      width: 1.4,
-                      dashed: true,
-                    ),
-                    ChartSeries(
-                      values: Mock.series[2].points,
-                      color: C.grey,
-                      width: 1.2,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              _SummaryStrip(
-                month: Fmt.monthLong(Mock.now),
-                onTap: () =>
-                    Navigator.of(context).push(MonthlyCardScreen.route()),
-              ),
-              const SizedBox(height: 18),
-              const Hairline(),
-              const SizedBox(height: 12),
-              const Lbl('SON FİŞLER'),
-              const SizedBox(height: 2),
-              for (final r in Mock.receipts)
-                Pressable(
-                  onTap: () =>
-                      Navigator.of(context).push(ReceiptDetailScreen.route(r)),
-                  child: LedgerRow(
-                    name: r.heading,
-                    sub: '${Fmt.dayMonth(r.date)} · ${r.itemCount} ÜRÜN',
-                    amount: Fmt.money(r.total),
-                  ),
-                ),
-            ],
+        SliverToBoxAdapter(
+          child: AsyncView<(IndexSnapshot, List<Receipt>)>(
+            reloadOn: _reloader,
+            load: () async => (await repo.index(), await repo.receipts()),
+            isEmpty: (d) => d.$1.isEmpty,
+            empty: const EmptyState(
+              title: 'Henüz endeks yok',
+              body:
+                  'Endeks en az iki farklı ayda fiş gerektiriyor — bir fiyatın '
+                  'değiştiğini görebilmek için önce iki kez görmek lazım.',
+            ),
+            builder: (context, data) => _Body(
+              snapshot: data.$1,
+              receipts: data.$2,
+              onChanged: _reloader.reload,
+            ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _Body extends StatelessWidget {
+  const _Body({
+    required this.snapshot,
+    required this.receipts,
+    required this.onChanged,
+  });
+
+  final IndexSnapshot snapshot;
+  final List<Receipt> receipts;
+  final VoidCallback onChanged;
+
+  /// "SON 12 AY" sabit değil: 12 ay dolmadıysa gerçek pencere yazılıyor,
+  /// yıllıklandırma yapılmıyor.
+  String get _windowLabel => snapshot.windowMonths >= 12
+      ? 'SON 12 AY'
+      : 'SON ${snapshot.windowMonths} AY';
+
+  @override
+  Widget build(BuildContext context) {
+    final delta = snapshot.monthDeltaPoints;
+
+    return Padding(
+      padding: kGutter,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          Lbl(_windowLabel),
+          Padding(
+            padding: const EdgeInsets.only(top: 6, bottom: 8),
+            child: BigNumber(Fmt.dec1(snapshot.changePct ?? 0)),
+          ),
+          if (delta != null && delta.abs() >= 0.05)
+            DeltaPill(
+              text: 'Geçen aya göre ${Fmt.dec1(delta)} puan',
+              up: delta >= 0,
+            ),
+          const SizedBox(height: 16),
+          PaperCard(
+            child: Column(
+              children: [
+                SeriesRow(
+                  color: C.ink,
+                  name: 'Senin sepetin',
+                  value: Fmt.pct1(snapshot.changePct ?? 0),
+                ),
+                for (final source in snapshot.official) ...[
+                  const Hairline(),
+                  SeriesRow(
+                    color: source.official ? C.ref : C.grey,
+                    name: source.title,
+                    // Resmî veri henüz çekilmedi — uydurmuyoruz.
+                    value: source.value == null ? '—' : Fmt.pct1(source.value!),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (snapshot.official.any((s) => s.value == null))
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                'Resmî ve bağımsız ölçümler henüz çekilmedi.',
+                style: TextStyle(fontSize: 11, color: C.muted),
+              ),
+            ),
+          const SizedBox(height: 16),
+          LineChart(
+            series: [
+              ChartSeries(values: snapshot.levels, color: C.ink, endDot: true),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _SummaryStrip(
+            month: Fmt.monthLong(DateTime.now()),
+            onTap: () => Navigator.of(context).push(MonthlyCardScreen.route()),
+          ),
+          const SizedBox(height: 18),
+          const Hairline(),
+          const SizedBox(height: 12),
+          const Lbl('SON FİŞLER'),
+          const SizedBox(height: 2),
+          for (final r in receipts.take(5))
+            Pressable(
+              onTap: () async {
+                await Navigator.of(context)
+                    .push(ReceiptDetailScreen.route(r.id));
+                onChanged();
+              },
+              child: LedgerRow(
+                name: r.merchant,
+                sub:
+                    '${Fmt.dayMonth(r.date)} · ${r.itemCount} ÜRÜN'
+                    '${r.pendingCount > 0 ? ' · ${r.pendingCount} EŞLEŞME' : ''}',
+                amount: Fmt.money(r.total),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

@@ -8,17 +8,20 @@ import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../data/app_scope.dart';
 import '../data/fmt.dart';
-import '../data/mock.dart';
+import '../data/models.dart';
+import '../data/repository.dart';
 import '../theme/tokens.dart';
+import '../widgets/async_view.dart';
 import '../widgets/atoms.dart';
 import '../widgets/glass.dart';
 import '../widgets/icons.dart';
 import '../widgets/screen_frame.dart';
 import 'product_screen.dart';
 
-/// 04 — Aylık kart. Pazarlama motoru: ayın 3'ünde TÜİK verisi çıkınca gelen
-/// bildirimin varış noktası. Kartın kenarı fişin koparma çizgisi.
+/// 04 — Aylık kart. Ayın 3'ünde resmî veri çıkınca gelen bildirimin varış
+/// noktası. Kartın alt kenarı fişin koparma çizgisi.
 class MonthlyCardScreen extends StatefulWidget {
   const MonthlyCardScreen({super.key});
 
@@ -44,22 +47,27 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
     return data?.buffer.asUint8List();
   }
 
-  Future<void> _share() async {
+  Future<File?> _writeTemp() async {
+    final bytes = await _capture();
+    if (bytes == null) return null;
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/sepet-${DateTime.now().month}.png');
+    await file.writeAsBytes(bytes);
+    return file;
+  }
+
+  Future<void> _share(double? changePct) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      final bytes = await _capture();
-      if (bytes == null) return;
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/sepet-${Mock.now.month}.png');
-      await file.writeAsBytes(bytes);
-      if (!mounted) return;
+      final file = await _writeTemp();
+      if (file == null || !mounted) return;
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(file.path)],
           text:
-              '${Fmt.monthLong(Mock.now)} ayında benim sepetim '
-              '${Fmt.pct1(Mock.headline)} zamlandı. Kendi fişimden hesapladım.',
+              '${Fmt.monthLong(DateTime.now())} ayında benim sepetim '
+              '${Fmt.pct1(changePct ?? 0)} zamlandı. Kendi fişimden hesapladım.',
         ),
       );
     } finally {
@@ -68,13 +76,11 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
   }
 
   Future<void> _save() async {
-    final bytes = await _capture();
-    if (bytes == null || !mounted) return;
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/sepet-${Mock.now.month}.png');
-    await file.writeAsBytes(bytes);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
+    final messenger = ScaffoldMessenger.of(context);
+    final file = await _writeTemp();
+    if (file == null || !mounted) return;
+    final size = await file.length();
+    messenger
       ..clearSnackBars()
       ..showSnackBar(
         SnackBar(
@@ -82,7 +88,7 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
           content: Text(
-            'Görsel kaydedildi · ${(bytes.length / 1024).round()} KB',
+            'Görsel kaydedildi · ${(size / 1024).round()} KB',
             style: const TextStyle(fontSize: 12.5, color: C.card),
           ),
         ),
@@ -91,7 +97,8 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final month = Fmt.monthLong(Mock.now);
+    final repo = AppScope.repoOf(context);
+    final month = Fmt.monthLong(DateTime.now());
 
     return ScreenFrame(
       title: '$month özeti',
@@ -103,55 +110,94 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
         ),
       ),
       slivers: [
-        SliverPadding(
-          padding: kGutter,
-          sliver: SliverList.list(
-            children: [
-              const SizedBox(height: 6),
-              RepaintBoundary(
-                key: _cardKey,
-                child: _ShareCard(month: month),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: PrimaryButton(
-                      label: 'Görseli kaydet',
-                      dark: false,
-                      onTap: _save,
+        SliverToBoxAdapter(
+          child: AsyncView<(IndexSnapshot, List<Mover>, List<Receipt>)>(
+            load: () async => (
+              await repo.index(),
+              await repo.movers(),
+              await repo.receipts(),
+            ),
+            isEmpty: (d) => d.$1.isEmpty,
+            empty: const EmptyState(
+              title: 'Paylaşacak bir şey yok',
+              body: 'Kart, endeks hesaplanabilir olduğunda hazırlanır.',
+            ),
+            builder: (context, data) {
+              final (snapshot, movers, receipts) = data;
+              return Padding(
+                padding: kGutter,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 6),
+                    RepaintBoundary(
+                      key: _cardKey,
+                      child: _ShareCard(
+                        month: month,
+                        snapshot: snapshot,
+                        receiptCount: receipts.length,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: PrimaryButton(
-                      label: _busy ? 'Hazırlanıyor…' : 'Paylaş',
-                      onTap: _busy ? null : _share,
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: PrimaryButton(
+                            label: 'Görseli kaydet',
+                            dark: false,
+                            onTap: _save,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: PrimaryButton(
+                            label: _busy ? 'Hazırlanıyor…' : 'Paylaş',
+                            onTap: _busy
+                                ? null
+                                : () => _share(snapshot.changePct),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              const Hairline(),
-              const SizedBox(height: 12),
-              const Lbl('BU AY EN ÇOK ZAMLANAN'),
-              const SizedBox(height: 2),
-              for (final m in Mock.movers)
-                Pressable(
-                  onTap: () {
-                    final p = Mock.products.firstWhere(
-                      (p) => m.name.startsWith(p.name),
-                      orElse: () => Mock.oil,
-                    );
-                    Navigator.of(context).push(ProductScreen.route(p));
-                  },
-                  child: LedgerRow(
-                    name: m.name,
-                    amount: Fmt.signedPct1(m.pct),
-                    amountColor: m.pct >= 0 ? C.hot : C.ref,
-                  ),
+                    const SizedBox(height: 20),
+                    const Hairline(),
+                    const SizedBox(height: 12),
+                    // Başlık veriye uymalı: her şey ucuzladıysa "en çok
+                    // zamlanan" demek yanlış olur.
+                    Lbl(
+                      movers.isNotEmpty && movers.first.pct > 0
+                          ? 'BU AY EN ÇOK ZAMLANAN'
+                          : 'BU AY EN ÇOK DEĞİŞEN',
+                    ),
+                    const SizedBox(height: 2),
+                    if (movers.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Text(
+                          'Bu ay iki kez gözlenmiş ürün yok — değişim ancak '
+                          'aynı ürünü iki ayda da görünce ölçülebiliyor.',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            height: 1.5,
+                            color: C.muted,
+                          ),
+                        ),
+                      ),
+                    for (final m in movers.take(5))
+                      Pressable(
+                        onTap: () =>
+                            Navigator.of(context)
+                                .push(ProductScreen.route(m.productId)),
+                        child: LedgerRow(
+                          name: m.title,
+                          amount: Fmt.signedPct1(m.pct),
+                          amountColor: m.pct >= 0 ? C.hot : C.ref,
+                        ),
+                      ),
+                  ],
                 ),
-            ],
+              );
+            },
           ),
         ),
       ],
@@ -160,36 +206,42 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
 }
 
 class _ShareCard extends StatelessWidget {
-  const _ShareCard({required this.month});
+  const _ShareCard({
+    required this.month,
+    required this.snapshot,
+    required this.receiptCount,
+  });
+
   final String month;
+  final IndexSnapshot snapshot;
+  final int receiptCount;
 
   @override
   Widget build(BuildContext context) {
-    final tuik = Mock.series[1];
-    final enag = Mock.series[2];
+    final known = snapshot.official.where((s) => s.value != null).toList();
 
     return PaperCard(
       radius: 12,
       borderColor: C.ink,
-      borderWidth: 1,
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$month ${Mock.now.year} · 12 AYLIK',
+            '$month ${DateTime.now().year} · '
+            '${snapshot.windowMonths >= 12 ? '12 AYLIK' : '${snapshot.windowMonths} AYLIK'}',
             style: T.label.copyWith(fontSize: 9, letterSpacing: 1.26),
           ),
           const SizedBox(height: 10),
-          BigNumber(Fmt.dec1(Mock.headline), size: 52),
+          BigNumber(Fmt.dec1(snapshot.changePct ?? 0), size: 52),
           const SizedBox(height: 2),
           const Lbl('BENİM SEPETİM'),
           const SizedBox(height: 8),
           Text(
-            '${Mock.receiptCount} fiş, ${Mock.observationCount} ürün gözlemi '
-            'üzerinden hesaplandı. Aynı dönemde ${tuik.name.split(' ').first} '
-            '${Fmt.pct1(tuik.value)}, ${enag.name.split(' ').first} '
-            '${Fmt.pct1(enag.value)} açıkladı.',
+            '$receiptCount fiş üzerinden hesaplandı.'
+            '${known.isEmpty ? '' : ' Aynı dönemde '
+                      '${known.map((s) => '${s.publisher} ${Fmt.pct1(s.value!)}').join(', ')} '
+                      'açıkladı.'}',
             style: const TextStyle(fontSize: 11.5, height: 1.5, color: C.muted),
           ),
           const SizedBox(height: 14),

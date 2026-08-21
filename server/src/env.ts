@@ -6,7 +6,8 @@ const dev = (process.env.NODE_ENV ?? 'development') !== 'production';
 
 export const env = {
   isDev: dev,
-  port: Number(process.env.PORT ?? 3000),
+  // 3000 sıklıkla dolu oluyor; Sepet 4000'de.
+  port: Number(process.env.PORT ?? 4000),
   databaseUrl:
     process.env.DATABASE_URL ?? 'postgres://localhost:5432/sepet',
   jwtSecret: process.env.JWT_SECRET ?? (dev ? 'dev-secret-degistir' : ''),
