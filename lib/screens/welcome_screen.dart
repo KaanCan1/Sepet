@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../data/mock.dart';
+import '../data/api.dart';
+import '../data/app_scope.dart';
 import '../data/session.dart';
 import '../theme/tokens.dart';
 import '../widgets/atoms.dart';
@@ -16,38 +17,63 @@ import 'sign_in_screen.dart';
 /// KVKK: burada yalnızca **aydınlatma metnine** link var. Aydınlatma
 /// bilgilendirmedir, rıza değildir; açık rıza [ConsentScreen]'de ayrı ve
 /// varsayılanı kapalı duruyor. Bu ekran bir onay kutusuna dönüştürülmemeli.
-class WelcomeScreen extends StatelessWidget {
-  const WelcomeScreen({super.key, required this.onDone});
+class WelcomeScreen extends StatefulWidget {
+  const WelcomeScreen({super.key});
 
-  /// İlk açılış bayrağını yazıp kabuğa geçmek için — kök geçidi veriyor.
-  final VoidCallback onDone;
+  @override
+  State<WelcomeScreen> createState() => _WelcomeScreenState();
+}
 
-  Future<void> _signInWith(BuildContext context, AuthProvider provider) async {
-    // Mock: gerçek OAuth, Apple Developer üyeliği ve Google istemci kimlikleri
-    // alındıktan sonra `sign_in_with_apple` / `google_sign_in` ile gelecek.
+class _WelcomeScreenState extends State<WelcomeScreen> {
+  bool _busy = false;
+
+  /// Sağlayıcı girişi.
+  ///
+  /// Şimdilik sunucudaki /auth/dev-login'e gidiyor; gerçek Apple/Google akışı
+  /// üyelik ve istemci kimlikleri alınınca sağlayıcının kimlik token'ını
+  /// doğrulayacak. Değişen tek yer burası olacak — jetonu saklayan ve
+  /// kullanan katman aynı kalıyor.
+  Future<void> _signIn(AuthProvider provider, {String? email}) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final scope = AppScope.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
-    session.value = Session(
-      email: switch (provider) {
-        AuthProvider.apple => 'kaan@privaterelay.appleid.com',
-        AuthProvider.google => 'kaan@gmail.com',
-        AuthProvider.email => 'kaan@ornek.com',
-      },
-      provider: provider,
-      name: provider == AuthProvider.email ? null : 'Kaan',
-      since: DateTime(2025, 9, 1),
-      receipts: Mock.receiptCount,
-      observations: Mock.observationCount,
-    );
-    await navigator.push(ConsentScreen.route(firstRun: true));
-    onDone();
+    try {
+      await scope.signIn(
+        provider: provider,
+        email:
+            email ??
+            switch (provider) {
+              AuthProvider.apple => 'kaan@privaterelay.appleid.com',
+              AuthProvider.google => 'kaan@gmail.com',
+              AuthProvider.email => 'kaan@ornek.com',
+            },
+        name: provider == AuthProvider.email ? null : 'Kaan',
+      );
+      if (!mounted) return;
+      await navigator.push(ConsentScreen.route(firstRun: true));
+    } on ApiException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: C.ink,
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            e.message,
+            style: const TextStyle(fontSize: 12.5, color: C.card),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
-  Future<void> _withEmail(BuildContext context) async {
-    final navigator = Navigator.of(context);
-    await navigator.push(SignInScreen.route());
-    if (session.value == null) return;
-    await navigator.push(ConsentScreen.route(firstRun: true));
-    onDone();
+  Future<void> _withEmail() async {
+    final email = await Navigator.of(context)
+        .push<String>(SignInScreen.route());
+    if (email == null || !mounted) return;
+    await _signIn(AuthProvider.email, email: email);
   }
 
   @override
@@ -88,14 +114,14 @@ class WelcomeScreen extends StatelessWidget {
                 glyph: Glyph.apple,
                 label: 'Apple ile Giriş Yap',
                 filled: true,
-                onTap: () => _signInWith(context, AuthProvider.apple),
+                onTap: _busy ? null : () => _signIn(AuthProvider.apple),
               ),
               const SizedBox(height: 10),
               _ProviderButton(
                 key: const Key('welcome-google'),
                 glyph: Glyph.google,
                 label: 'Google ile oturum aç',
-                onTap: () => _signInWith(context, AuthProvider.google),
+                onTap: _busy ? null : () => _signIn(AuthProvider.google),
               ),
               const SizedBox(height: 18),
               const _OrDivider(),
@@ -103,22 +129,9 @@ class WelcomeScreen extends StatelessWidget {
               _ProviderButton(
                 key: const Key('welcome-email'),
                 label: 'E-posta ile devam et',
-                onTap: () => _withEmail(context),
+                onTap: _busy ? null : _withEmail,
               ),
               const SizedBox(height: 18),
-              Pressable(
-                key: const Key('welcome-skip'),
-                onTap: onDone,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 10),
-                  child: Text(
-                    'Şimdilik hesapsız devam et',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12.5, color: C.muted),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
               Pressable(
                 onTap: () => Navigator.of(context).push(PrivacyScreen.route()),
                 child: const Padding(
@@ -197,12 +210,17 @@ class _ProviderButton extends StatelessWidget {
 
   final Glyph? glyph;
   final String label;
-  final VoidCallback onTap;
+
+  /// null ise düğme sönük ve dokunmaya kapalı — giriş sürerken.
+  final VoidCallback? onTap;
   final bool filled;
 
   @override
   Widget build(BuildContext context) {
-    final fg = filled ? C.card : C.ink;
+    final enabled = onTap != null;
+    final fg = filled
+        ? C.card.withValues(alpha: enabled ? 1 : .6)
+        : C.ink.withValues(alpha: enabled ? 1 : .4);
     return Pressable(
       onTap: onTap,
       child: Container(

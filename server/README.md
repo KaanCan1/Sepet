@@ -14,7 +14,7 @@ npm install
 npm run migrate:up
 psql -d sepet -f seeds/catalog.sql   # referans katalog
 npm run seed                          # 12 aylık demo hesabı
-npm run dev                           # http://localhost:3000
+npm run dev                           # http://localhost:4000
 npm test
 ```
 

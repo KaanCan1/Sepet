@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
+import 'data/app_scope.dart';
 import 'screens/root_gate.dart';
 import 'widgets/glass.dart';
 import 'theme/tokens.dart';
@@ -23,7 +24,7 @@ void main() async {
         dark: const GlassThemeVariant(settings: GlassSettings.theme),
         brightness: Brightness.light,
       ),
-      child: const SepetApp(),
+      child: AppScope(child: const SepetApp()),
     ),
   );
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../data/fmt.dart';
-import '../data/mock.dart';
+import '../data/app_scope.dart';
+import '../data/repository.dart';
+import '../widgets/async_view.dart';
 import '../data/models.dart';
 import '../data/session.dart';
 import '../theme/tokens.dart';
@@ -43,15 +45,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 22),
                 const Lbl('KARŞILAŞTIRMA KAYNAKLARI'),
                 const SizedBox(height: 8),
-                PaperCard(
-                  padding: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      for (var i = 0; i < Mock.sources.length; i++) ...[
-                        if (i > 0) const Hairline(),
-                        _SourceRow(source: Mock.sources[i]),
+                AsyncView<IndexSnapshot>(
+                  load: AppScope.repoOf(context).index,
+                  builder: (context, snap) => PaperCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < snap.official.length; i++) ...[
+                          if (i > 0) const Hairline(),
+                          _SourceRow(source: snap.official[i]),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -283,7 +288,7 @@ class _Identity extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    session.email,
+                    session.email ?? session.provider.label,
                     style: T.label.copyWith(fontSize: 10, letterSpacing: .3),
                   ),
                 ],
@@ -292,16 +297,22 @@ class _Identity extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
-        PaperCard(
-          child: Row(
-            children: [
-              _Metric('FİŞ', '${session.receipts}'),
-              _Metric('GÖZLEM', '${session.observations}'),
-              _Metric(
-                'ÜYELİK',
-                '${Fmt.monthShort(session.since)} ${session.since.year % 100}',
-              ),
-            ],
+        AsyncView<List<Receipt>>(
+          load: AppScope.repoOf(context).receipts,
+          builder: (context, receipts) => PaperCard(
+            child: Row(
+              children: [
+                _Metric('FİŞ', '${receipts.length}'),
+                _Metric(
+                  'ÜRÜN',
+                  '${receipts.fold<int>(0, (a, r) => a + r.itemCount)}',
+                ),
+                _Metric(
+                  'EŞLEŞME',
+                  '${receipts.fold<int>(0, (a, r) => a + r.pendingCount)}',
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -373,14 +384,18 @@ class _SourceRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'SON YAYIN ${Fmt.dayMonth(source.lastRelease)} · '
-                  'SONRAKİ ${Fmt.dayMonth(source.nextRelease)}',
+                  source.value == null ? 'VERİ BEKLENİYOR' : 'SON 12 AY',
                   style: T.label.copyWith(fontSize: 8.5),
                 ),
               ],
             ),
           ),
-          Text(Fmt.pct1(source.value), style: T.num12),
+          Text(
+            source.value == null ? '—' : Fmt.pct1(source.value!),
+            style: T.num12.copyWith(
+              color: source.value == null ? C.muted : C.ink,
+            ),
+          ),
         ],
       ),
     );

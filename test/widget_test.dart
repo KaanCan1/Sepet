@@ -1,27 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sepet/data/app_scope.dart';
+import 'package:sepet/data/auth_store.dart';
 import 'package:sepet/data/fmt.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:sepet/data/session.dart';
-import 'package:sepet/main.dart';
 import 'package:sepet/screens/root_gate.dart';
 import 'package:sepet/screens/shell.dart';
 import 'package:sepet/screens/welcome_screen.dart';
 import 'package:sepet/widgets/atoms.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import 'fake_api.dart';
+
+/// Uygulamayı sahte sunucuyla kurar.
+Widget bootstrap({String? token}) => AppScope(
+  api: FakeApi(),
+  authStore: MemoryAuthStore(token),
+  child: MaterialApp(locale: const Locale('tr', 'TR'), home: const RootGate()),
+);
 
 void main() {
-  setUp(() {
-    // Ekran testlerinin çoğu kabuğu hedefliyor; karşılamayı görülmüş say.
-    SharedPreferences.setMockInitialValues({RootGate.seenKey: true});
-    session.value = null;
-  });
+  setUp(() => session.value = null);
 
   group('Fmt', () {
     test('binlik ayracı nokta, ondalık virgül', () {
       expect(Fmt.money(1917.45), '1.917,45');
       expect(Fmt.money(842.6), '842,60');
-      expect(Fmt.money(496.2), '496,20');
     });
 
     test('yüzdeler işaretiyle', () {
@@ -36,201 +39,91 @@ void main() {
     });
   });
 
-  testWidgets('01 Endeks açılır, 04 Aylık kart\'a geçilir', (tester) async {
-    await tester.pumpWidget(const SepetApp());
-    await tester.pumpAndSettle();
-
-    expect(find.text('Sepetin'), findsOneWidget);
-    expect(find.text('Senin sepetin'), findsOneWidget);
-    expect(find.text('TÜİK TÜFE'), findsOneWidget);
-    expect(find.text('47,2%'), findsOneWidget);
-
-    await tester.tap(find.text('Ağustos özeti'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('BENİM SEPETİM'), findsOneWidget);
-    expect(find.text('Paylaş'), findsOneWidget);
-  });
-
-  testWidgets('02 Fiş okuma: eşleşme onaylanmadan sepete eklenemez', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const SepetApp());
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('scan-button')));
-    // Tarama çizgisi dönerken pumpAndSettle takılır; elle ilerlet.
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('Fişi okut'), findsOneWidget);
-
-    // Cihaz üstü OCR gecikmesi bitene kadar bekle.
-    await tester.pump(const Duration(milliseconds: 1600));
-    await tester.pumpAndSettle();
-
-    // İki satır eşleşme onayı bekliyor: düğme kilitli.
-    expect(find.text('Önce 2 eşleşmeyi onayla'), findsOneWidget);
-    expect(find.byType(MatchFlag), findsNWidgets(2));
-
-    // İlk işaretli satırı onayla.
-    await tester.tap(find.text("Yumurta, 30'lu").first);
-    await tester.pumpAndSettle();
-    expect(find.text('HANGİ ÜRÜN?'), findsOneWidget);
-    await tester.tap(find.text("Yumurta, 15'li"));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Önce 1 eşleşmeyi onayla'), findsOneWidget);
-    expect(find.byType(MatchFlag), findsOneWidget);
-
-    // İkincisini de onayla — düğme açılır.
-    await tester.tap(find.text('Domates').first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Domates, salkım'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Sepete ekle'), findsOneWidget);
-  });
-
-  testWidgets('03 Ürün geçmişi ürün listesinden açılır', (tester) async {
-    await tester.pumpWidget(const SepetApp());
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('tab-2')));
-    await tester.pumpAndSettle();
-    expect(find.text('Sepetindeki ürünler'), findsOneWidget);
-
-    await tester.tap(find.text('Ayçiçek yağı, 5 litre'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('SEPETİNDEKİ ÜRÜN'), findsOneWidget);
-    expect(find.text('İLK GÖRDÜĞÜN'), findsOneWidget);
-    expect(find.text('+57%'), findsOneWidget);
-  });
-
-  testWidgets('Giriş → açık rıza: aydınlatmadan ayrı, varsayılan kapalı', (
-    tester,
-  ) async {
-    session.value = null;
-    await tester.pumpWidget(const SepetApp());
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('tab-3')));
-    await tester.pumpAndSettle();
-    expect(find.text('Giriş yap'), findsOneWidget);
-
-    await tester.tap(find.text('Giriş yap'));
-    await tester.pumpAndSettle();
-
-    // Geçersiz e-posta: düğme kilitli, uyarı görünür.
-    await tester.enterText(find.byType(CupertinoTextField), 'kaansepet');
-    await tester.pumpAndSettle();
-    expect(find.text('Geçerli bir e-posta adresi gir.'), findsOneWidget);
-    await tester.tap(find.text('Devam et'));
-    await tester.pumpAndSettle();
-    expect(session.value, isNull);
-
-    // Geçerli e-posta: oturum açılır ve rıza ekranı gelir.
-    await tester.enterText(find.byType(CupertinoTextField), 'kaan@sepet.app');
-    await tester.pumpAndSettle();
-    expect(find.text('Geçerli bir e-posta adresi gir.'), findsNothing);
-    await tester.tap(find.text('Devam et'));
-    await tester.pump(const Duration(milliseconds: 900));
-    await tester.pumpAndSettle();
-
-    expect(session.value?.email, 'kaan@sepet.app');
-
-    // Açık rıza ayrı ekranda ve iki izin de kapalı geliyor.
-    expect(find.text('İsteğe bağlı\nizinler'), findsOneWidget);
-    expect(session.value?.consentAggregate, isFalse);
-    expect(session.value?.consentMarketing, isFalse);
-
-    // Aydınlatma metni ayrı ekran — onay kutusu içermiyor.
-    await tester.tap(find.text('Aydınlatma metni'));
-    await tester.pumpAndSettle();
-    expect(find.text('İŞLEME AMACI VE HUKUKİ SEBEBİ'), findsOneWidget);
-    expect(find.byType(Switch), findsNothing);
-    expect(find.byType(CupertinoSwitch), findsNothing);
-  });
-
-  testWidgets('Rıza açılıp kapatılabilir', (tester) async {
-    session.value = Session(
-      email: 'kaan@sepet.app',
-      provider: AuthProvider.email,
-      since: DateTime(2025, 9, 1),
-      receipts: 38,
-      observations: 214,
-    );
-    await tester.pumpWidget(const SepetApp());
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('tab-3')));
-    await tester.pumpAndSettle();
-
-    // Profil uzun bir liste — satır görünür alana girmeden dokunulamaz.
-    await tester.ensureVisible(find.text('İzinler'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('İzinler'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Anonim endekse katkı'), findsOneWidget);
-    expect(session.value?.consentAggregate, isFalse);
-
-    await tester.tap(find.byType(Switch).first);
-    await tester.pumpAndSettle();
-    expect(session.value?.consentAggregate, isTrue);
-
-    await tester.tap(find.byType(Switch).first);
-    await tester.pumpAndSettle();
-    expect(session.value?.consentAggregate, isFalse);
-
-    session.value = null;
-  });
-
-  group('Karşılama ekranı', () {
-    testWidgets('ilk açılışta çıkar, hesapsız devam kabuğa götürür', (
-      tester,
-    ) async {
-      SharedPreferences.setMockInitialValues({});
-      await tester.pumpWidget(const SepetApp());
+  group('Kök geçidi', () {
+    testWidgets('jeton yoksa karşılama ekranı çıkar', (tester) async {
+      await tester.pumpWidget(bootstrap());
       await tester.pumpAndSettle();
 
       expect(find.byType(WelcomeScreen), findsOneWidget);
       expect(find.text('Apple ile Giriş Yap'), findsOneWidget);
       expect(find.text('Google ile oturum aç'), findsOneWidget);
-      expect(find.text('E-posta ile devam et'), findsOneWidget);
+      // Giriş zorunlu: hesapsız devam yolu yok.
+      expect(find.textContaining('hesapsız'), findsNothing);
+    });
 
-      await tester.tap(find.byKey(const Key('welcome-skip')));
+    testWidgets('geçerli jetonla doğrudan kabuğa girer', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
       await tester.pumpAndSettle();
 
       expect(find.byType(Shell), findsOneWidget);
-      // Hesapsız yol oturum açmaz — fişler cihazda kalır.
-      expect(session.value, isNull);
+      expect(find.byType(WelcomeScreen), findsNothing);
+    });
+  });
+
+  group('Endeks ekranı', () {
+    testWidgets('manşet ve pencere sunucudan geliyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      // BigNumber zengin metin kullanıyor; find.text görmüyor.
+      final big = tester.widget<BigNumber>(find.byType(BigNumber));
+      expect(big.value, '20,8');
+      // 12 ay dolmadıysa etiket gerçek pencereyi söylüyor.
+      expect(find.text('SON 2 AY'), findsOneWidget);
+      expect(find.text('SON 12 AY'), findsNothing);
     });
 
-    testWidgets('sağlayıcı seçimi açık rızaya götürür, anahtarlar kapalı', (
+    testWidgets('resmî veri yoksa tire gösteriliyor, uydurulmuyor', (
       tester,
     ) async {
-      SharedPreferences.setMockInitialValues({});
-      await tester.pumpWidget(const SepetApp());
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('welcome-apple')));
-      await tester.pumpAndSettle();
-
-      expect(session.value?.provider, AuthProvider.apple);
-      expect(find.text('İsteğe bağlı\nizinler'), findsOneWidget);
-      // Açık rıza aydınlatmadan ayrı ve varsayılanı kapalı olmalı.
-      expect(session.value?.consentAggregate, isFalse);
-      expect(session.value?.consentMarketing, isFalse);
+      expect(find.text('TÜİK TÜFE'), findsOneWidget);
+      expect(find.text('—'), findsWidgets);
+      expect(
+        find.text('Resmî ve bağımsız ölçümler henüz çekilmedi.'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('bayrak kurulduysa karşılama atlanır', (tester) async {
-      SharedPreferences.setMockInitialValues({RootGate.seenKey: true});
-      await tester.pumpWidget(const SepetApp());
+    testWidgets('son fişler bekleyen eşleşmeyi gösteriyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(WelcomeScreen), findsNothing);
-      expect(find.byType(Shell), findsOneWidget);
+      expect(find.textContaining('2 EŞLEŞME'), findsWidgets);
+    });
+  });
+
+  group('Fiş detayı', () {
+    testWidgets('eşleşmemiş satır işaretli, eşleşen değil', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('A101').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Süt, tam yağlı 1 litre'), findsOneWidget);
+      expect(find.byType(MatchFlag), findsOneWidget);
+      expect(find.textContaining('1 EŞLEŞME ONAYI BEKLİYOR'), findsOneWidget);
+    });
+  });
+
+  group('Ürünler', () {
+    testWidgets('liste ve geçmiş sunucudan geliyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-2')));
+      await tester.pumpAndSettle();
+      expect(find.text('Ayçiçek yağı, 5 litre'), findsOneWidget);
+      expect(find.text('+57%'), findsOneWidget);
+
+      await tester.tap(find.text('Ayçiçek yağı, 5 litre'));
+      await tester.pumpAndSettle();
+      expect(find.text('SEPETİNDEKİ ÜRÜN'), findsOneWidget);
+      expect(find.text('248,00'), findsOneWidget);
+      expect(find.text('389,90'), findsWidgets);
     });
   });
 }

@@ -8,7 +8,8 @@
  */
 import { one, pool, query } from '../src/db.js';
 
-const DEMO_EMAIL = 'demo@sepet.app';
+// Varsayılan demo hesabı; farklı bir adres için:  npm run seed -- ad@ornek.com
+const DEMO_EMAIL = process.argv[2] ?? 'demo@sepet.app';
 
 /** Aylık enflasyon oranı — kalem bazında farklı, gerçekçi bir dağılım. */
 const CATALOG: Array<{

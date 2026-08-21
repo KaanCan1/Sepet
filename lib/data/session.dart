@@ -11,25 +11,19 @@ enum AuthProvider {
   final String label;
 }
 
-/// Oturum. Şimdilik bellekte; backend gelince `/auth` uçlarına bağlanacak
-/// (JWT + refresh, fişler kullanıcıya bağlı).
+/// Açık oturum. Sayaçlar (fiş, gözlem) burada tutulmuyor — sunucudan geliyor,
+/// iki yerde durursa biri bayatlar.
 class Session {
   const Session({
-    required this.email,
     required this.provider,
-    required this.since,
-    required this.receipts,
-    required this.observations,
+    this.email,
     this.name,
     this.consentAggregate = false,
     this.consentMarketing = false,
   });
 
-  final String email;
   final AuthProvider provider;
-  final DateTime since;
-  final int receipts;
-  final int observations;
+  final String? email;
 
   /// Sağlayıcıdan geldiyse gerçek ad. Apple "adımı gizle" derse boş kalır.
   final String? name;
@@ -41,11 +35,8 @@ class Session {
   final bool consentMarketing;
 
   Session copyWith({bool? consentAggregate, bool? consentMarketing}) => Session(
-    email: email,
     provider: provider,
-    since: since,
-    receipts: receipts,
-    observations: observations,
+    email: email,
     name: name,
     consentAggregate: consentAggregate ?? this.consentAggregate,
     consentMarketing: consentMarketing ?? this.consentMarketing,
@@ -56,8 +47,8 @@ class Session {
   String get displayName {
     final given = name?.trim();
     if (given != null && given.isNotEmpty) return given;
-    final local = email.split('@').first.split(RegExp(r'[._-]')).first;
-    if (local.isEmpty) return email;
+    final local = (email ?? '').split('@').first.split(RegExp(r'[._-]')).first;
+    if (local.isEmpty) return email ?? 'Hesabım';
     return local[0].toUpperCase() + local.substring(1);
   }
 
