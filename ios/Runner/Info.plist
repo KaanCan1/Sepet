@@ -49,6 +49,10 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Fişini okumak için kamerayı kullanıyoruz. Fotoğraf cihazdan çıkmıyor; metin cihaz üstünde okunuyor.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Kayıtlı bir fiş fotoğrafını okumak için galeriye erişiyoruz. Fotoğraf cihazdan çıkmıyor.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

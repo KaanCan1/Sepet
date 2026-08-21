@@ -53,7 +53,7 @@ class _MatchQueueScreenState extends State<MatchQueueScreen> {
       slivers: [
         SliverToBoxAdapter(
           child: AsyncView<List<Receipt>>(
-            reloadOn: _reloader,
+            reloadOn: Listenable.merge([_reloader, dataChanged]),
             load: () async => (await repo.receipts())
                 .where((r) => r.pendingCount > 0)
                 .toList(),

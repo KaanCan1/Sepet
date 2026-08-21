@@ -12,5 +12,9 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    // Cihaz üstü OCR: Apple Vision üzerinden.
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "SepetOcr") {
+      OcrPlugin.register(with: registrar)
+    }
   }
 }

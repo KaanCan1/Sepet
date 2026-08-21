@@ -1,6 +1,7 @@
 import express from 'express';
 import { authRouter } from './routes/auth.js';
 import { indexRouter } from './routes/index-routes.js';
+import { merchantsRouter } from './routes/merchants.js';
 import { productsRouter } from './routes/products.js';
 import { receiptsRouter } from './routes/receipts.js';
 import { query } from './db.js';
@@ -18,6 +19,7 @@ export function createApp() {
   app.use('/index', indexRouter);
   app.use('/receipts', receiptsRouter);
   app.use('/products', productsRouter);
+  app.use('/merchants', merchantsRouter);
 
   app.use((_req, res) => {
     res.status(404).json({ error: 'Bulunamadı' });

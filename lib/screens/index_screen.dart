@@ -41,7 +41,7 @@ class _IndexScreenState extends State<IndexScreen> {
       slivers: [
         SliverToBoxAdapter(
           child: AsyncView<(IndexSnapshot, List<Receipt>)>(
-            reloadOn: _reloader,
+            reloadOn: Listenable.merge([_reloader, dataChanged]),
             load: () async => (await repo.index(), await repo.receipts()),
             isEmpty: (d) => d.$1.isEmpty,
             empty: const EmptyState(

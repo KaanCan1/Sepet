@@ -7,7 +7,9 @@ import '../theme/tokens.dart';
 import '../widgets/async_view.dart';
 import '../widgets/atoms.dart';
 import '../widgets/glass.dart';
+import '../widgets/icons.dart';
 import '../widgets/screen_frame.dart';
+import 'match_queue_screen.dart';
 import 'receipt_detail_screen.dart';
 
 /// Fişler sekmesi — endeksin ham malzemesi.
@@ -34,10 +36,17 @@ class _ReceiptsScreenState extends State<ReceiptsScreen> {
     return ScreenFrame(
       title: 'Fişler',
       reserveTabBar: true,
+      trailing: Pressable(
+        onTap: () => Navigator.of(context).push(MatchQueueScreen.route()),
+        child: const Padding(
+          padding: EdgeInsets.all(4),
+          child: LineIcon(Glyph.check, size: 18, color: C.ink, stroke: 1.6),
+        ),
+      ),
       slivers: [
         SliverToBoxAdapter(
           child: AsyncView<List<Receipt>>(
-            reloadOn: _reloader,
+            reloadOn: Listenable.merge([_reloader, dataChanged]),
             load: repo.receipts,
             isEmpty: (r) => r.isEmpty,
             empty: const EmptyState(

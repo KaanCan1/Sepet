@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
+import '../widgets/async_view.dart';
 import '../widgets/glass.dart';
 import '../widgets/icons.dart';
 import 'index_screen.dart';
 import 'products_screen.dart';
 import 'profile_screen.dart';
 import 'receipts_screen.dart';
-import 'match_queue_screen.dart';
+import 'capture_screen.dart';
 
 /// Yüzen kapsülün yüksekliği ve alt boşluğu — içerik bunun altından akıyor.
 const kTabCapsuleHeight = 58.0;
@@ -108,7 +109,11 @@ class _FloatingTabBar extends StatelessWidget {
           // Ayrık düğme: taramanın her ekrandan tek dokunuşla açılması için.
           Pressable(
             key: const Key('scan-button'),
-            onTap: () => Navigator.of(context).push(MatchQueueScreen.route()),
+            onTap: () async {
+              final added = await Navigator.of(context)
+                  .push(CaptureScreen.route());
+              if (added == true) dataChanged.reload();
+            },
             child: GlassSurface(
               radius: kTabCapsuleHeight / 2,
               child: SizedBox(

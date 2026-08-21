@@ -47,7 +47,7 @@ doğrulamıyor ya da yorumlamıyor — sadece referans çizgisi olarak duruyorla
 |---|---|---|
 | **00** | Karşılama | Apple, Google ya da e-posta ile giriş — ya da hesapsız devam. Giriş zorunlu değil; hesapsız kullanımda fişler yalnızca cihazda kalır. |
 | **01** | Endeks | Tek sayı: son 12 ayda senin sepetin. Altında TÜİK/ENAG karşılaştırması, seri grafiği ve son fişler. |
-| **02** | Fiş | Fişin kâğıt hâli ve altında yorumlanmış satırlar. Emin olunamayan satır `eşleşme?` ile işaretlenir; onay katalogdan seçilir. |
+| **02** | Fiş ekleme ve fiş | Fotoğraf → cihaz üstünde OCR → düzeltilebilir taslak → kayıt. Fişin kâğıt hâli ve altında yorumlanmış satırlar; emin olunamayan satır `eşleşme?` ile işaretlenir. |
 | **03** | Ürün geçmişi | Tek ürünün gözlem geçmişi, marketler arası son fiyatlar, 12 aylık değişim. |
 | **04** | Aylık kart | Paylaşılabilir özet kart (PNG olarak dışa aktarılır) ve ayın en çok zamlanan kalemleri. |
 
@@ -94,8 +94,8 @@ OFL. Sistem fontlarına güvenilseydi Android tarafında tipografi çökerdi.
 |---|---|---|
 | İstemci | **Flutter 3.47** (FVM ile sabit) | Tek kod tabanı, iki mağaza |
 | Vitrin tipografisi | **Montserrat** | Gotham'ın (Obama 2008 kampanyası) ücretsiz en yakın karşılığı — kelime işareti, manşet sayı ve büyük başlıklarda |
+| OCR | **Apple Vision** (cihaz üstünde) | Fişin fotoğrafı cihazdan çıkmıyor. ML Kit yerine Vision: ek pod yok, Apple Silicon simülatöründe de çalışıyor |
 | Krom | **liquid_glass_widgets** | Yüzen kapsül ve daire düğme gerçek kırılma/speküler kenar ile — elle yazılmış `BackdropFilter` taklidi değil |
-| OCR | **Cihaz üstünde** — ML Kit / Apple Vision | Ücretsiz, çevrimdışı, hızlı; fişin fotoğrafı cihazdan çıkmıyor |
 | Normalizasyon | **Claude API**, yalnızca belirsiz satırlar | Maliyeti gözlem başına değil, belirsizlik başına ödemek |
 | Backend | **Node.js/Express + PostgreSQL** | Kullanıcı, fiş, kanonik ürün, alias tablosu, fiyat gözlemleri, Laspeyres endeksi |
 | Karşılaştırma | TÜİK TÜFE + ENAG E-TÜFE aylık serileri | Biri resmî, biri bağımsız; ikisi de yorumsuz |

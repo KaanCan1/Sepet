@@ -14,6 +14,10 @@ class Reloader extends ChangeNotifier {
   void reload() => notifyListeners();
 }
 
+/// Veri değişti — fiş eklendi ya da bir eşleşme onaylandı. Bunu dinleyen her
+/// ekran kendini tazeliyor; aksi hâlde sekme değiştirmeden eski sayı kalıyordu.
+final dataChanged = Reloader();
+
 class AsyncView<D> extends StatefulWidget {
   const AsyncView({
     super.key,

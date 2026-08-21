@@ -87,6 +87,31 @@ class Repository {
         .toList();
   }
 
+  Future<List<Merchant>> merchants() async {
+    final rows = await _api.get('/merchants') as List;
+    return rows
+        .map((e) => Merchant.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Fişi kaydeder ve kimliğini döndürür. Sunucu satırları tek işlemde yazıp
+  /// endeksi tazeliyor.
+  Future<String> createReceipt({
+    required String merchantId,
+    required DateTime purchasedAt,
+    required List<({String raw, double quantity, double amount})> lines,
+  }) async {
+    final res = await _api.post('/receipts', {
+      'merchantId': merchantId,
+      'purchasedAt': purchasedAt.toIso8601String().substring(0, 10),
+      'lines': [
+        for (final l in lines)
+          {'raw': l.raw, 'quantity': l.quantity, 'amount': l.amount},
+      ],
+    }) as Map<String, dynamic>;
+    return res['id'] as String;
+  }
+
   Future<void> confirmMatch({
     required String receiptId,
     required String lineId,
