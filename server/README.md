@@ -30,6 +30,9 @@ Barındırma iki parça:
 Sırlar depoda değil, Render panelinde: `DATABASE_URL` (Neon'dan) ve
 `DEV_LOGIN_EMAILS`. `JWT_SECRET` Render tarafından üretiliyor.
 
+İkisi eksikse sunucu açılmıyor ve logda ne eksik olduğunu tek seferde yazıyor —
+Render'da deploy "failed" görünüyorsa ilk oraya bak.
+
 Her **açılışta** `deploy:prepare` çalışıyor: migration'lar + referans katalog.
 İkisi de tekrar çalıştırılabilir ve node-pg-migrate danışma kilidi aldığı için
 aynı anda iki örnek açılsa da yarışmıyorlar.
