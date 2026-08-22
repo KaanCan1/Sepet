@@ -28,12 +28,35 @@ export const env = {
     .filter(Boolean),
 };
 
+/// Eksik yapılandırmayı tek seferde bildirir.
+///
+/// Önceden ilk eksikte patlıyordu; Render'da bir değişkeni düzeltip yeniden
+/// dağıtınca bu sefer diğeri patlıyordu. Hepsini birden söylemek tur sayısını
+/// düşürüyor.
+const problems: string[] = [];
+
 if (!env.jwtSecret) {
-  throw new Error('JWT_SECRET tanımlı değil');
+  problems.push('JWT_SECRET tanımlı değil.');
 }
+
+if (!process.env.DATABASE_URL) {
+  problems.push(
+    'DATABASE_URL tanımlı değil. Neon bağlantı dizesini Render panelinde ' +
+      'Environment altına gir (sslmode=require ile birlikte).',
+  );
+}
+
 if (!env.isDev && env.devLoginEnabled && env.devLoginAllowlist.length === 0) {
+  problems.push(
+    'DEV_LOGIN açık ama DEV_LOGIN_EMAILS boş. Gerçek Apple/Google akışı ' +
+      'gelene kadar girişin tek yolu bu uç; kimlerin girebileceği ' +
+      'belirtilmezse uç herkese açık olurdu. Kendi e-postanı gir.',
+  );
+}
+
+if (problems.length > 0) {
   throw new Error(
-    'Üretimde DEV_LOGIN açıksa DEV_LOGIN_EMAILS ile kimlerin girebileceği ' +
-      'belirtilmeli — aksi hâlde uç herkese açık olur',
+    `Sunucu başlatılamadı — eksik yapılandırma:\n` +
+      problems.map((p) => `  • ${p}`).join('\n'),
   );
 }
