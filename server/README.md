@@ -53,6 +53,8 @@ sunucu açılışta hata verip duruyor.
 
 | Uç | İş |
 |---|---|
+| `GET /health` | Canlılık. Veritabanına dokunmuyor — Render dağıtım kararını buna bakarak veriyor. |
+| `GET /health/db` | Hazırlık. Veritabanını yoklayıp gecikmeyi döndürüyor. |
 | `POST /auth/dev-login` | Sağlayıcısız geliştirme girişi. Üretimde kapalı (`DEV_LOGIN`). |
 | `GET /index` | Ekran 01: manşet, kendi serin, resmî seriler. |
 | `GET /index/movers` | Ekran 04: bu ay en çok zamlananlar. |
