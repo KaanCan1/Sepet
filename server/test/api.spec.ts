@@ -58,8 +58,16 @@ function monthsAgo(n: number, day = 14): string {
 }
 
 describe('API', () => {
-  it('sağlık ucu ayakta', async () => {
+  it('canlılık ucu veritabanına dokunmuyor', async () => {
+    // Render dağıtım kararını buna bakarak veriyor; Neon askıdayken bile
+    // 200 dönmeli, yoksa soğuk başlatma dağıtımı öldürür.
     await request(app).get('/health').expect(200, { ok: true });
+  });
+
+  it('hazırlık ucu veritabanını gerçekten yokluyor', async () => {
+    const res = await request(app).get('/health/db').expect(200);
+    expect(res.body.ok).toBe(true);
+    expect(typeof res.body.latencyMs).toBe('number');
   });
 
   it('oturumsuz istek 401 döner', async () => {
