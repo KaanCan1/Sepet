@@ -157,3 +157,61 @@ jobs:
 
       - name: Endeks ve API testleri
         run: npm test
+
+  # Render'ın yaptığını birebir tekrar eder. Sebebi somut: NODE_ENV=production
+  # altında "npm ci" devDependencies'i atlıyor, node-pg-migrate orada durduğu
+  # için başlatma komutu "not found" ile ölüyordu ve iki dağıtım üst üste bu
+  # yüzden battı. Normal "server" işi devDependencies'le kurduğu için bunu
+  # göremiyor.
+  deploy-check:
+    name: Sunucu — üretim kurulumu
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sepet
+          POSTGRES_PASSWORD: sepet
+          POSTGRES_DB: sepet
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U sepet -d sepet"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      NODE_ENV: production
+      DATABASE_URL: postgres://sepet:sepet@localhost:5432/sepet?sslmode=disable
+      JWT_SECRET: ci-testi-icin-gecici-anahtar
+      DEV_LOGIN: 'true'
+      DEV_LOGIN_EMAILS: demo@sepet.app
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      # render.yaml'daki buildCommand ile aynı, NODE_ENV=production altında.
+      - run: npm ci
+
+      # startCommand'ın ilk yarısı.
+      - name: Başlatma hazırlığı
+        run: npm run deploy:prepare
+
+      # İkinci yarısı: süreç gerçekten ayağa kalkıyor ve /health cevap veriyor mu.
+      - name: Sunucu açılıyor mu
+        run: |
+          npm start &
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:4000/health; then
+              echo && echo "sunucu ayakta" && exit 0
+            fi
+            sleep 2
+          done
+          echo "sunucu 60 saniyede açılmadı" >&2
+          exit 1
