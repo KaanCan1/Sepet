@@ -17,6 +17,7 @@ import '../widgets/glass.dart';
 import '../widgets/icons.dart';
 import '../widgets/screen_frame.dart';
 import 'consent_screen.dart';
+import 'official_screen.dart';
 import 'privacy_screen.dart';
 import 'sign_in_screen.dart';
 
@@ -75,8 +76,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const Text(
                     'Resmî ve bağımsız iki ölçüm yan yana duruyor. Uygulama '
                     'hiçbirini doğrulamıyor ya da yorumlamıyor — senin sepetin '
-                    'için referans çizgisi olarak çekiliyorlar.',
+                    'için referans çizgisi.',
                     style: TextStyle(fontSize: 11, height: 1.5, color: C.muted),
+                  ),
+                  const SizedBox(height: 8),
+                  _ActionRow(
+                    label: 'Resmî verileri gir',
+                    hint: 'Elle',
+                    onTap: () =>
+                        Navigator.of(context).push(OfficialScreen.route()),
                   ),
                   const SizedBox(height: 22),
                   const Lbl('BİLDİRİM'),
@@ -137,12 +145,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   if (s != null) ...[
                     _ActionRow(
+                      key: const Key('clear-receipts'),
                       label: 'Fişleri sil',
                       hint: 'Hesap kalır',
                       danger: true,
                       onTap: () => _confirmClearReceipts(context),
                     ),
                     _ActionRow(
+                      key: const Key('delete-account'),
                       label: 'Hesabı sil',
                       hint: '',
                       danger: true,
@@ -482,6 +492,7 @@ class _SourceRow extends StatelessWidget {
 
 class _ActionRow extends StatelessWidget {
   const _ActionRow({
+    super.key,
     required this.label,
     required this.hint,
     required this.onTap,

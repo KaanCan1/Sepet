@@ -86,10 +86,10 @@ void main() {
 
       expect(find.text('TÜİK TÜFE'), findsOneWidget);
       expect(find.text('—'), findsWidgets);
-      expect(
-        find.text('Resmî ve bağımsız ölçümler henüz çekilmedi.'),
-        findsOneWidget,
-      );
+      // Eksik seri adıyla söylenmeli. Eski metin "henüz çekilmedi" diyordu:
+      // hem yanlış (çekilmiyorlar, elle giriliyorlar) hem de biri girildikten
+      // sonra bile aynı kalıyordu.
+      expect(find.textContaining('elle giriliyor'), findsOneWidget);
     });
 
     testWidgets('son fişler bekleyen eşleşmeyi gösteriyor', (tester) async {
@@ -218,8 +218,17 @@ void main() {
       await tester.tap(find.byKey(const Key('tab-3')));
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(find.text('Fişleri sil'), 120);
-      await tester.tap(find.text('Fişleri sil'));
+      // Konuma değil anahtara bakıyoruz: profile satır eklendikçe metin
+      // kaydırmanın altına düşüyor ve dokunuş sessizce ıskalıyordu.
+      //
+      // scrollUntilVisible yetmiyor: SliverList.list bütün çocukları kuruyor,
+      // yani satır ağaçta ama ekran dışında. Görünür olması da yetmiyor —
+      // yüzen sekme çubuğu alt şeridi kapatıyor, dokunuş ıskalıyor. Listeyi
+      // sonuna kadar kaydırıyoruz; ScreenFrame altta çubuk kadar boşluk
+      // ayırdığı için satır o zaman açıkta kalıyor.
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -1200));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('clear-receipts')));
       await tester.pumpAndSettle();
 
       // Onay penceresi çıkmalı; vazgeçince hiçbir şey olmamalı.
@@ -228,7 +237,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.calls, isNot(contains('DELETE /receipts')));
 
-      await tester.tap(find.text('Fişleri sil'));
+      await tester.tap(find.byKey(const Key('clear-receipts')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Sil'));
       await tester.pumpAndSettle();

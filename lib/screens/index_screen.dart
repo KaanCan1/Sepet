@@ -13,6 +13,7 @@ import '../widgets/icons.dart';
 import '../widgets/screen_frame.dart';
 import 'breakdown_screen.dart';
 import 'monthly_card_screen.dart';
+import 'official_screen.dart';
 import 'receipt_detail_screen.dart';
 
 /// 01 — Endeks. Uygulamanın cevabı tek sayı; geri kalanı o sayının kanıtı.
@@ -62,6 +63,7 @@ class _Body extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final delta = snapshot.monthDeltaPoints;
+    final missing = snapshot.official.where((s) => s.value == null).toList();
 
     return Padding(
       padding: kGutter,
@@ -100,12 +102,31 @@ class _Body extends StatelessWidget {
               ],
             ),
           ),
-          if (snapshot.official.any((s) => s.value == null))
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text(
-                'Resmî ve bağımsız ölçümler henüz çekilmedi.',
-                style: TextStyle(fontSize: 11, color: C.muted),
+          // Eksik seriyi adıyla söyleyip girişe götürüyor. Eski metin
+          // "henüz çekilmedi" diyordu: hem yanlış (çekilmiyorlar, elle
+          // giriliyorlar) hem de biri girildiğinde bile aynı kalıyordu.
+          if (missing.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Pressable(
+                onTap: () => Navigator.of(context).push(OfficialScreen.route()),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text(
+                    missing.length == snapshot.official.length
+                        ? 'Resmî ve bağımsız ölçümler elle giriliyor — '
+                              'girmek için dokun.'
+                        : '${missing.map((s) => s.title).join(', ')} için '
+                              'ay girilmedi — girmek için dokun.',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      height: 1.4,
+                      color: C.muted,
+                      decoration: TextDecoration.underline,
+                      decorationColor: C.line,
+                    ),
+                  ),
+                ),
               ),
             ),
           const SizedBox(height: 16),

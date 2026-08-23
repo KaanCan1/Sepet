@@ -94,6 +94,29 @@ class FakeApi extends Api {
     ],
     'DELETE /receipts': {'ok': true, 'deletedReceipts': 1},
     'DELETE /account': {'ok': true},
+    'GET /official': [
+      {
+        'code': 'TUIK_TUFE',
+        'publisher': 'TÜİK',
+        'name': 'TÜFE',
+        'isOfficial': true,
+        'entries': [
+          {'month': '2026-08-01', 'yoyPct': 33.5},
+          {'month': '2026-07-01', 'yoyPct': 34.1},
+        ],
+      },
+      {
+        'code': 'ENAG_ETUFE',
+        'publisher': 'ENAG',
+        'name': 'E-TÜFE',
+        'isOfficial': false,
+        'entries': <Map<String, Object?>>[],
+      },
+    ],
+    'PUT /official/TUIK_TUFE/2026-06-01': {
+      'month': '2026-06-01',
+      'yoyPct': 35.0,
+    },
     'GET /receipts': [
       {
         'id': 'r1',
