@@ -311,6 +311,30 @@ describe('API', () => {
   // Seriler şimdilik elle giriliyor: TÜİK'in kendi portalı otomatik erişime
   // kapalı, resmî kanal olan TCMB EVDS ise API anahtarı istiyor. Sayı
   // uydurmak seçenek değil, o yüzden bu yol ürünün parçası.
+  // İlk açılışta ekranın bomboş kalmaması için: resmî seri kullanıcının
+  // verisine bağlı değil, endeksi olmayan hesapta da gönderilmeli.
+  it('endeksi olmayan hesapta da resmî seri geliyor', async () => {
+    const email = `bos-${Date.now()}@sepet.test`;
+    const login = await request(app).post('/auth/dev-login').send({ email });
+    const fresh = { Authorization: `Bearer ${login.body.token}` };
+
+    const res = await request(app).get('/index').set(fresh).expect(200);
+    expect(res.body.headline, 'fişi yok, manşet olmamalı').toBeNull();
+    expect(res.body.series).toHaveLength(0);
+    expect(res.body.official.length, 'resmî seri yine de gelmeli')
+      .toBeGreaterThan(0);
+    // Alan adları istemcinin beklediği biçimde olmalı. İlk yazışta çevirme
+    // yalnızca dolu daldaydı; boş dalda ham satır gidiyor ve girilmiş TÜİK
+    // sayısı ekranda "—" görünüyordu.
+    const tuik = res.body.official.find(
+      (s: { code: string }) => s.code === 'TUIK_TUFE',
+    );
+    expect(tuik).toHaveProperty('isOfficial');
+    expect(tuik).toHaveProperty('yoyPct');
+
+    await query(`DELETE FROM users WHERE lower(email) = $1`, [email]);
+  });
+
   describe('Resmî seriler', () => {
     it('girdisi olmayan seri de listede görünüyor', async () => {
       const res = await request(app).get('/official').set(auth()).expect(200);

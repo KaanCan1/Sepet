@@ -118,6 +118,12 @@ class _FloatingTabBar extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           // Ayrık düğme: taramanın her ekrandan tek dokunuşla açılması için.
+          //
+          // Camdan mürekkebe çevrildi. Uygulamanın yaptığı tek iş fiş
+          // okumak, ama düğme sekmelerle aynı ağırlıkta durunca beşinci bir
+          // sekme gibi okunuyordu; ilk kez açan kullanıcı nereden
+          // başlayacağını göremiyordu. Dolu daire onu tek birincil eylem
+          // yapıyor — sayfadaki tek koyu yüzey.
           Pressable(
             key: const Key('scan-button'),
             onTap: () async {
@@ -125,18 +131,26 @@ class _FloatingTabBar extends StatelessWidget {
                   .push(CaptureScreen.route());
               if (added == true && context.mounted) refreshUserData(context);
             },
-            child: GlassSurface(
-              radius: kTabCapsuleHeight / 2,
-              child: SizedBox(
-                width: kTabCapsuleHeight,
-                height: kTabCapsuleHeight,
-                child: const Center(
-                  child: LineIcon(
-                    Glyph.camera,
-                    size: 22,
-                    color: C.ink,
-                    stroke: 1.5,
+            child: Container(
+              width: kTabCapsuleHeight,
+              height: kTabCapsuleHeight,
+              decoration: BoxDecoration(
+                color: C.ink,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: C.ink.withValues(alpha: .22),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4),
                   ),
+                ],
+              ),
+              child: const Center(
+                child: LineIcon(
+                  Glyph.camera,
+                  size: 23,
+                  color: C.card,
+                  stroke: 1.7,
                 ),
               ),
             ),

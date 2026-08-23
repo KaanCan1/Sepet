@@ -16,15 +16,25 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/00-karsilama.png" width="200" alt="Karşılama ekranı">
-  <img src="docs/screenshots/01-endeks.png" width="200" alt="Endeks ekranı">
-  <img src="docs/screenshots/02-fis.png" width="200" alt="Fiş ekranı">
-  <img src="docs/screenshots/03-urun-gecmisi.png" width="200" alt="Ürün geçmişi ekranı">
-  <img src="docs/screenshots/04-aylik-kart.png" width="200" alt="Aylık kart ekranı">
+  <img src="docs/screenshots/01-endeks.png" width="196" alt="Endeks ekranı">
+  <img src="docs/screenshots/07-kirilim.png" width="196" alt="Kategori ve marka kırılımı">
+  <img src="docs/screenshots/02-fis.png" width="196" alt="Fiş ekranı">
+  <img src="docs/screenshots/03-urun-gecmisi.png" width="196" alt="Ürün geçmişi ekranı">
 </p>
 
 <p align="center">
-  <sub><b>Endeks</b> · <b>Fiş okuma</b> · <b>Ürün geçmişi</b> · <b>Aylık kart</b></sub>
+  <sub><b>Endeks</b> · <b>Kırılım</b> · <b>Fiş</b> · <b>Ürün geçmişi</b></sub>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/09-ilk-acilis.png" width="196" alt="İlk açılış ekranı">
+  <img src="docs/screenshots/00-karsilama.png" width="196" alt="Karşılama ekranı">
+  <img src="docs/screenshots/04-aylik-kart.png" width="196" alt="Aylık kart ekranı">
+  <img src="docs/screenshots/08-profil.png" width="196" alt="Profil ekranı">
+</p>
+
+<p align="center">
+  <sub><b>İlk açılış</b> · <b>Karşılama</b> · <b>Aylık kart</b> · <b>Profil</b></sub>
 </p>
 
 ---
@@ -45,14 +55,39 @@ doğrulamıyor ya da yorumlamıyor — sadece referans çizgisi olarak duruyorla
 
 | | Ekran | İş |
 |---|---|---|
-| **00** | Karşılama | Apple, Google ya da e-posta ile giriş — ya da hesapsız devam. Giriş zorunlu değil; hesapsız kullanımda fişler yalnızca cihazda kalır. |
+| **00** | Karşılama | Apple, Google ya da e-posta ile giriş. Sağlayıcı akışı henüz sahte; jetonu üreten uç değişecek, saklayan katman aynı kalacak. |
 | **01** | Endeks | Tek sayı: son 12 ayda senin sepetin. Altında TÜİK karşılaştırması, seri grafiği ve son fişler. |
 | **02** | Fiş ekleme ve fiş | Fotoğraf → cihaz üstünde OCR → düzeltilebilir taslak → kayıt. Fişin kâğıt hâli ve altında yorumlanmış satırlar; emin olunamayan satır `eşleşme?` ile işaretlenir. |
 | **03** | Ürün geçmişi | Tek ürünün gözlem geçmişi, marketler arası son fiyatlar, 12 aylık değişim. |
 | **04** | Aylık kart | Paylaşılabilir özet kart (PNG olarak dışa aktarılır) ve ayın en çok zamlanan kalemleri. |
+| **05** | Kırılım | Hangi kategori, hangi marka. Her seri kendi kümesinde yeniden ağırlıklandırılıyor — yüzdeler birbirine eklenmez. |
+
+Fiş yokken ekran boş kalmıyor: yapılacak tek iş, tek bir birincil eylem ve
+zaten bağımsız olan resmî karşılaştırma çizgisi gösteriliyor.
 
 Yanlarında: fiş ve ürün listeleri, fiş detayı, profil ve oturum, KVKK aydınlatma
 ve açık rıza ekranları.
+
+## Mimari
+
+<p align="center">
+  <img src="docs/diagrams/mimari.svg" width="880" alt="Sepet mimarisi: fişin fotoğrafı cihazdan çıkmıyor, sunucuya yalnızca eşleşmiş satırlar gidiyor, endeks Postgres fonksiyonlarında hesaplanıyor">
+</p>
+
+Kesikli çerçeve bilerek orada: **fişin fotoğrafı cihaz sınırını geçmiyor.**
+Metin cihaz üstünde okunuyor, sunucuya yalnızca eşleşmiş satırlar gidiyor —
+ürün, tutar, tarih. KVKK'daki veri minimizasyonu bir politika metni değil,
+mimarinin bir özelliği.
+
+Mavi kutu ikinci karar: **endeks uygulama kodunda değil, verinin yanında.**
+Dört SQL fonksiyonu, tek işlemde:
+
+<p align="center">
+  <img src="docs/diagrams/endeks-hatti.svg" width="920" alt="Laspeyres endeksinin dört SQL aşaması ve her birinin engellediği hata">
+</p>
+
+Gri satırlar o aşama olmasaydı sayıya ne olacağını söylüyor. Şemaların
+kaynağı ve renk eşlemesi: [`docs/diagrams/`](docs/diagrams/).
 
 ## Projenin kalbi: `eşleşme?`
 

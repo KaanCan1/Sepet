@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 360" width="980" height="360"
+     role="img" aria-label="Laspeyres endeksinin dört SQL aşaması: aykırı eleme, aylık medyan ve boşluk doldurma, harcama payı ağırlıkları, zincirleme. Her aşamanın altında engellediği hata yazıyor.">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#16181A"/>
+    </marker>
+  </defs>
+
+  <rect width="980" height="360" fill="#F7F6F3"/>
+  <text x="30" y="34" font-family="ui-monospace, Menlo, monospace" font-size="10" letter-spacing="1.4" fill="#7A7975">refresh_user_index(user) · TEK İŞLEMDE, SIRAYLA</text>
+
+  <!-- 1 -->
+  <rect x="30" y="52" width="200" height="132" rx="10" fill="#FFFFFF" stroke="#E8E6E1" stroke-width="1.5"/>
+  <text x="46" y="76" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#46586B">01</text>
+  <text x="130" y="98" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#16181A">Aykırı eleme</text>
+  <text x="130" y="120" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#16181A">Her gözlem, aynı ürünün</text>
+  <text x="130" y="134" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#16181A">diğer gözlemlerinin medyanıyla</text>
+  <text x="130" y="148" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#16181A">karşılaştırılıyor.</text>
+  <text x="130" y="169" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#7A7975">[1/3, 3] dışı işaretlenir</text>
+
+  <text x="130" y="216" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#7A7975">Kendi medyanına girmiyor:</text>
+  <text x="130" y="231" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#7A7975">iki gözlemden biri bozuksa</text>
+  <text x="130" y="246" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#7A7975">ikisi de normal görünürdü.</text>
+
+  <!-- 2 -->
+  <rect x="275" y="52" width="200" height="132" rx="10" fill="#FFFFFF" stroke="#E8E6E1" stroke-width="1.5"/>
+  <text x="291" y="76" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#46586B">02</text>
+  <text x="375" y="98" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#16181A">Aylık medyan</text>
+  <text x="375" y="120" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#16181A">Ayın fiyatı = medyan.</text>
+  <text x="375" y="134" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#16181A">Alınmayan ay bir öncekinden</text>
+  <text x="375" y="148" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#16181A">taşınıyor, 6 ay sonra düşüyor.</text>
+  <text x="375" y="169" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#7A7975">percentile_cont(0.5)</text>
+
+  <text x="375" y="216" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#7A7975">Ortalama değil medyan:</text>
+  <text x="375" y="231" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#7A7975">tek bir kampanya ayı</text>
+  <text x="375" y="246" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#7A7975">bükmesin diye.</text>
+
+  <!-- 3 -->
+  <rect x="520" y="52" width="200" height="132" rx="10" fill="#FFFFFF" stroke="#E8E6E1" stroke-width="1.5"/>
+  <text x="536" y="76" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#46586B">03</text>
+  <text x="620" y="98" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#16181A">Ağırlıklar</text>
+  <text x="620" y="120" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#16181A">Her kalemin ağırlığı, senin</text>
+  <text x="620" y="134" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#16181A">harcamandaki payı.</text>
+  <text x="620" y="148" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#16181A">Son 12 ay üzerinden.</text>
+  <text x="620" y="169" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#9F2F2D">bu ay HARİÇ</text>
+
+  <text x="620" y="216" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#7A7975">Bu ayki alışverişin</text>
+  <text x="620" y="231" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#7A7975">kendi ağırlığını</text>
+  <text x="620" y="246" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#7A7975">şişirmesin diye.</text>
+
+  <!-- 4 -->
+  <rect x="765" y="52" width="200" height="132" rx="10" fill="#ECEFF2" stroke="#46586B" stroke-width="1.8"/>
+  <text x="781" y="76" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#46586B">04</text>
+  <text x="865" y="98" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#16181A">Zincirleme</text>
+  <text x="865" y="120" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#16181A">Aylık bağların birikimli</text>
+  <text x="865" y="134" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#16181A">çarpımı. Taban ay 100.</text>
+  <text x="865" y="169" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="11" fill="#46586B">100 · exp(Σ ln(bağ))</text>
+
+  <text x="865" y="216" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#7A7975">Postgres’te birikimli çarpım</text>
+  <text x="865" y="231" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#7A7975">penceresi yok; logaritma</text>
+  <text x="865" y="246" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="10.5" fill="#7A7975">toplamı aynı işi görüyor.</text>
+
+  <!-- Oklar -->
+  <line x1="230" y1="118" x2="273" y2="118" stroke="#16181A" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="475" y1="118" x2="518" y2="118" stroke="#16181A" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="720" y1="118" x2="763" y2="118" stroke="#16181A" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- Alt açıklama -->
+  <line x1="30" y1="290" x2="965" y2="290" stroke="#E8E6E1" stroke-width="1"/>
+  <text x="30" y="313" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="11" fill="#16181A">Dördü de SQL fonksiyonu — hesap uygulama kodunda değil, verinin yanında.</text>
+  <text x="30" y="331" font-family="ui-sans-serif, -apple-system, Helvetica, Arial, sans-serif" font-size="11" fill="#7A7975">Gri satırlar: o aşama olmasaydı sayıya ne olurdu.</text>
+</svg>
