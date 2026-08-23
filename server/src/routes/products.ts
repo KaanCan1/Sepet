@@ -98,13 +98,86 @@ productsRouter.get('/:id', async (req: AuthedRequest, res) => {
 /** Eşleşme sorusundaki adaylar — kanonik ürün araması. */
 productsRouter.get('/catalog/search', async (req, res) => {
   const q = String(req.query.q ?? '').trim();
+  // Arama görünen adın tamamında: marka + grup + boy. Böylece "sutas"
+  // da "yogurt" da "1.5 kg" da aynı kalemi buluyor.
+  const brand = String(req.query.brand ?? '').trim();
   const rows = await query(
-    `SELECT id, name, size_label FROM canonical_products
-      WHERE normalize_raw_text(name || ' ' || size_label) LIKE '%' || normalize_raw_text($1) || '%'
-      ORDER BY name LIMIT 20`,
-    [q],
+    `SELECT id, short_name, group_name, brand_name, size_label, size_value
+       FROM v_canonical_products
+      WHERE normalize_raw_text(display_name)
+            LIKE '%' || normalize_raw_text($1) || '%'
+        AND ($2 = '' OR normalize_raw_text(coalesce(brand_name, ''))
+            LIKE '%' || normalize_raw_text($2) || '%')
+      ORDER BY group_name, brand_name NULLS FIRST, size_value
+      LIMIT 20`,
+    [q, brand],
   );
   res.json(
-    rows.map((r) => ({ id: r.id, name: r.name, sizeLabel: r.size_label })),
+    rows.map((r) => ({
+      id: r.id,
+      name: r.short_name,
+      groupName: r.group_name,
+      brand: r.brand_name,
+      sizeLabel: r.size_label,
+    })),
   );
+});
+
+/**
+ * Aynı grup ve boyda markalar arası fiyat farkı: "1,5 kg yoğurt kimde kaça".
+ *
+ * Karşılaştırma birim fiyat üzerinden, çünkü 1 kg ile 1,5 kg paketin
+ * etiket fiyatı doğrudan kıyaslanamaz. Yalnızca kullanıcının kendi
+ * gözlemleri — raftan çekilmiş fiyat yok.
+ */
+productsRouter.get('/groups/:id/spread', async (req: AuthedRequest, res) => {
+  const rows = await query<{
+    canonical_product_id: string;
+    group_name: string;
+    brand_name: string | null;
+    size_label: string;
+    unit_price: number;
+    pack_price: number;
+    observed_on: Date;
+    merchant_name: string;
+  }>(
+    `SELECT canonical_product_id, group_name, brand_name, size_label,
+            unit_price, pack_price, observed_on, merchant_name
+       FROM v_group_price_spread
+      WHERE user_id = $1 AND group_id = $2
+      ORDER BY unit_price`,
+    [req.userId, req.params.id],
+  );
+
+  if (!rows.length) {
+    res.status(404).json({ error: 'Bu grupta gözlemin yok' });
+    return;
+  }
+
+  const items = rows.map((r) => ({
+    productId: r.canonical_product_id,
+    brand: r.brand_name,
+    sizeLabel: r.size_label,
+    unitPrice: r.unit_price,
+    packPrice: r.pack_price,
+    seenOn: r.observed_on,
+    merchant: r.merchant_name,
+  }));
+
+  const cheapest = items[0]!;
+  const dearest = items[items.length - 1]!;
+
+  res.json({
+    groupName: rows[0]!.group_name,
+    items,
+    cheapest,
+    dearest,
+    // Tek marka gözlendiyse fark yok; 0 dönmek "aynı fiyat" demek değil,
+    // "kıyaslayacak ikinci kalem yok" demek. İstemci bunu ayırt etsin diye
+    // spreadPct yalnızca en az iki kalem varken dolu.
+    spreadPct:
+      items.length > 1 && cheapest.unitPrice > 0
+        ? Math.round(((dearest.unitPrice / cheapest.unitPrice) - 1) * 1000) / 10
+        : null,
+  });
 });

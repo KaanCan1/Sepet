@@ -24,14 +24,19 @@ beforeAll(async () => {
       `SELECT id FROM merchants WHERE chain_code = 'BIM'`,
     )
   ).id;
+  // Katalogda aynı grubun birden çok markası var; test tek bir kaleme
+  // bağlanmalı, o yüzden marka da belirtiliyor.
   sutId = (
     await one<{ id: string }>(
-      `SELECT id FROM canonical_products WHERE name = 'Süt, tam yağlı'`,
+      `SELECT id FROM v_canonical_products
+        WHERE group_name = 'Süt, tam yağlı' AND brand_name = 'Sütaş'
+          AND size_label = '1 litre'`,
     )
   ).id;
   yumurtaId = (
     await one<{ id: string }>(
-      `SELECT id FROM canonical_products WHERE name = 'Yumurta' AND size_label = '30''lu'`,
+      `SELECT id FROM v_canonical_products
+        WHERE group_name = 'Yumurta' AND size_label = '30''lu'`,
     )
   ).id;
 });
@@ -157,7 +162,8 @@ describe('API', () => {
     expect(detail.body.lines[0].canonical).toBeNull();
 
     const zeytin = await one<{ id: string }>(
-      `SELECT id FROM canonical_products WHERE name = 'Zeytinyağı'`,
+      `SELECT id FROM v_canonical_products
+        WHERE group_name = 'Zeytinyağı' AND brand_name = 'Komili'`,
     );
     await request(app)
       .post(`/receipts/${created.body.id}/lines/${detail.body.lines[0].id}/match`)
@@ -212,7 +218,53 @@ describe('API', () => {
       .get('/products/catalog/search?q=aycicek')
       .set(auth())
       .expect(200);
-    expect(res.body.some((p: { name: string }) => p.name === 'Ayçiçek yağı')).toBe(true);
+    // Görünen ad marka + grup + boy: "Yudum Ayçiçek yağı 5 litre".
+    expect(
+      res.body.some((p: { groupName: string }) => p.groupName === 'Ayçiçek yağı'),
+    ).toBe(true);
+  });
+
+  it('kategori kırılımı seri döndürüyor', async () => {
+    const res = await request(app)
+      .get('/index/by-category')
+      .set(auth())
+      .expect(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    // Bu test kullanıcısının tek kategorisi var (süt/yumurta kalemleri).
+    if (res.body.length) {
+      const first = res.body[0];
+      expect(first).toHaveProperty('code');
+      expect(first).toHaveProperty('name');
+      expect(Array.isArray(first.series)).toBe(true);
+      // Zincirin ilk halkası her zaman 100.
+      expect(first.series[0].level).toBe(100);
+      // Liste en yüksek seviyeden başlıyor.
+      const levels = res.body.map((c: { latestLevel: number }) => c.latestLevel);
+      expect([...levels].sort((a: number, b: number) => b - a)).toEqual(levels);
+    }
+  });
+
+  it('marka kırılımında markasız kalem yok', async () => {
+    const res = await request(app)
+      .get('/index/by-brand')
+      .set(auth())
+      .expect(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    // Markasız kalemler (kasada tartılan sebze) bu seride hiç görünmemeli.
+    for (const b of res.body) {
+      expect(b.name).toBeTruthy();
+      expect(b.brandId).toBeTruthy();
+    }
+  });
+
+  it('grupta gözlem yoksa fiyat dağılımı 404', async () => {
+    const bos = await one<{ id: string }>(
+      `SELECT id FROM product_groups WHERE name = 'Diş macunu'`,
+    );
+    await request(app)
+      .get(`/products/groups/${bos.id}/spread`)
+      .set(auth())
+      .expect(404);
   });
 
   it('başka kullanıcının fişi görünmez', async () => {

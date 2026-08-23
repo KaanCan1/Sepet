@@ -107,3 +107,97 @@ indexRouter.get('/movers', async (req: AuthedRequest, res) => {
     })),
   );
 });
+
+/**
+ * Kategori kırılımı: hangi harcama kalemi kişisel enflasyonu sürüklüyor.
+ *
+ * Aynı zincirleme, kategoriye kısıtlanmış küme üzerinde ve ağırlıklar küme
+ * içinde yeniden normalize edilerek hesaplanıyor. Genel endeksin alt
+ * kalemleri değil, bağımsız serileri — biri diğerine toplanmıyor.
+ */
+indexRouter.get('/by-category', async (req: AuthedRequest, res) => {
+  const rows = await query<{
+    category_id: string;
+    category_code: string;
+    category_name: string;
+    month: Date;
+    level: number;
+    covered_weight: number;
+  }>(
+    `SELECT category_id, category_code, category_name, month, level, covered_weight
+       FROM v_index_by_category
+      WHERE user_id = $1
+      ORDER BY category_name, month`,
+    [req.userId],
+  );
+
+  // Kategori başına tek nesne; seri içinde aylar sırada.
+  const byCategory = new Map<string, {
+    categoryId: string;
+    code: string;
+    name: string;
+    latestLevel: number;
+    series: Array<{ month: string; level: number; coveredWeight: number }>;
+  }>();
+
+  for (const r of rows) {
+    const month = r.month.toISOString().slice(0, 10);
+    let entry = byCategory.get(r.category_id);
+    if (!entry) {
+      entry = {
+        categoryId: r.category_id,
+        code: r.category_code,
+        name: r.category_name,
+        latestLevel: r.level,
+        series: [],
+      };
+      byCategory.set(r.category_id, entry);
+    }
+    entry.series.push({ month, level: r.level, coveredWeight: r.covered_weight });
+    entry.latestLevel = r.level;
+  }
+
+  res.json(
+    [...byCategory.values()].sort((a, b) => b.latestLevel - a.latestLevel),
+  );
+});
+
+/**
+ * Marka kırılımı. Yalnızca markalı kalemler: kasada tartılan sebzenin
+ * markası yok, uydurulmuyor — o kalemler bu seride hiç yer almıyor.
+ */
+indexRouter.get('/by-brand', async (req: AuthedRequest, res) => {
+  const rows = await query<{
+    brand_id: string;
+    brand_name: string;
+    month: Date;
+    level: number;
+    covered_weight: number;
+  }>(
+    `SELECT brand_id, brand_name, month, level, covered_weight
+       FROM v_index_by_brand
+      WHERE user_id = $1
+      ORDER BY brand_name, month`,
+    [req.userId],
+  );
+
+  const byBrand = new Map<string, {
+    brandId: string;
+    name: string;
+    latestLevel: number;
+    series: Array<{ month: string; level: number; coveredWeight: number }>;
+  }>();
+
+  for (const r of rows) {
+    const month = r.month.toISOString().slice(0, 10);
+    let entry = byBrand.get(r.brand_id);
+    if (!entry) {
+      entry = { brandId: r.brand_id, name: r.brand_name, latestLevel: r.level, series: [] };
+      byBrand.set(r.brand_id, entry);
+    }
+    entry.series.push({ month, level: r.level, coveredWeight: r.covered_weight });
+    entry.latestLevel = r.level;
+  }
+
+  res.json([...byBrand.values()].sort((a, b) => b.latestLevel - a.latestLevel));
+});

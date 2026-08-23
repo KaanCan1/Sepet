@@ -77,6 +77,11 @@ SELECT cp.id,
        b.name        AS brand_name,
        cp.size_label,
        cp.size_value,
+       -- İki ad: biri boyla, biri boysuz. İstemci adı ve boyu ayrı
+       -- gösteriyor ("Sütaş Yoğurt" + "1,5 kg"); tek alanda birleşik ad
+       -- döndürülürse boy iki kez yazılıyor.
+       trim(coalesce(b.name || ' ', '') || g.name)
+                     AS short_name,
        trim(
          coalesce(b.name || ' ', '') || g.name || ' ' || cp.size_label
        )             AS display_name
@@ -88,7 +93,7 @@ SELECT cp.id,
 CREATE VIEW v_product_summary AS
 SELECT o.user_id,
        o.canonical_product_id,
-       p.display_name                       AS name,
+       p.short_name                         AS name,
        p.group_name,
        p.brand_name,
        p.size_label,
@@ -107,7 +112,7 @@ SELECT o.user_id,
   JOIN v_canonical_products p ON p.id = o.canonical_product_id
  WHERE NOT o.is_outlier
  GROUP BY o.user_id, o.canonical_product_id,
-          p.display_name, p.group_name, p.brand_name, p.size_label;
+          p.short_name, p.group_name, p.brand_name, p.size_label;
 
 CREATE VIEW v_product_by_merchant AS
 SELECT DISTINCT ON (o.user_id, o.canonical_product_id, o.merchant_id)
@@ -122,7 +127,7 @@ CREATE VIEW v_monthly_movers AS
 SELECT cur.user_id,
        cur.month,
        cur.canonical_product_id,
-       p.display_name AS name,
+       p.short_name AS name,
        p.size_label,
        p.brand_name,
        round((cur.unit_price / prev.unit_price - 1) * 100, 1) AS change_pct,
@@ -159,13 +164,23 @@ ALTER TABLE canonical_products
   ADD COLUMN category_id uuid REFERENCES categories (id) ON DELETE RESTRICT,
   ADD COLUMN substitute_group_id uuid;
 
+-- Marka adı gruba geri katlanıyor. Eski şemada UNIQUE (name, size_label)
+-- var; aynı grubun dört markası "Süt, tam yağlı 1 litre" olarak çakışırdı,
+-- o yüzden marka adı isme giriyor. Geri alma bu yüzden kayıplı: yukarı
+-- yönde tekrar çalıştırılırsa marka, grup adının parçası olarak kalır.
+--
+-- Marka aramasi ilişkili alt sorgu; LEFT JOIN ... ON true çapraz birleşim
+-- üretiyordu ve markasız her ürün her markayla eşleşip UPDATE'i belirsiz
+-- bırakıyordu.
 UPDATE canonical_products cp
-   SET name = trim(coalesce(b.name || ' ', '') || g.name),
+   SET name = trim(
+         coalesce((SELECT b.name || ' ' FROM brands b WHERE b.id = cp.brand_id), '')
+         || g.name
+       ),
        unit = g.unit,
        category_id = g.category_id
   FROM product_groups g
-  LEFT JOIN brands b ON true
- WHERE g.id = cp.group_id AND (b.id = cp.brand_id OR cp.brand_id IS NULL);
+ WHERE g.id = cp.group_id;
 
 ALTER TABLE canonical_products
   ALTER COLUMN name SET NOT NULL,

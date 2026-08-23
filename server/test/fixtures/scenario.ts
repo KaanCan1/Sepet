@@ -60,23 +60,55 @@ async function ensureCategory(): Promise<string> {
   return categoryId;
 }
 
-/** Kanonik ürün ekler. [sizeValue] kanonik birim cinsinden paket içeriği. */
+/**
+ * Kanonik ürün ekler. [sizeValue] kanonik birim cinsinden paket içeriği.
+ *
+ * Ürün grubu ve marka artık ayrı tablolarda; test her çağrıda kendine ait
+ * bir grup açıyor (ad kullanıcı kimliğiyle tekilleştiriliyor, paralel testler
+ * birbirinin grubuna düşmesin). [brand] verilirse marka da oluşturuluyor —
+ * marka kırılımı testleri bunu kullanıyor.
+ */
 export async function addProduct(
   s: Scenario,
   key: string,
-  opts: { name: string; sizeLabel: string; unit: string; sizeValue: number },
+  opts: {
+    name: string;
+    sizeLabel: string;
+    unit: string;
+    sizeValue: number;
+    brand?: string;
+    /** Aynı gruba birden çok marka bağlamak için grubu elle adlandır. */
+    groupName?: string;
+  },
 ): Promise<string> {
   const cat = await ensureCategory();
+  const groupName = `${opts.groupName ?? opts.name} ${s.userId.slice(0, 8)}`;
+
+  const group = await one<{ id: string }>(
+    `INSERT INTO product_groups (name, unit, category_id)
+     VALUES ($1, $2::product_unit, $3)
+     ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+     RETURNING id`,
+    [groupName, opts.unit, cat],
+  );
+
+  let brandId: string | null = null;
+  if (opts.brand) {
+    const brandName = `${opts.brand} ${s.userId.slice(0, 8)}`;
+    const brand = await one<{ id: string }>(
+      `INSERT INTO brands (name, normalized_name)
+       VALUES ($1, trim(normalize_raw_text($1)))
+       ON CONFLICT (normalized_name) DO UPDATE SET name = EXCLUDED.name
+       RETURNING id`,
+      [brandName],
+    );
+    brandId = brand.id;
+  }
+
   const p = await one<{ id: string }>(
-    `INSERT INTO canonical_products (name, size_label, unit, size_value, category_id)
-     VALUES ($1, $2, $3::product_unit, $4, $5) RETURNING id`,
-    [
-      `${opts.name} ${s.userId.slice(0, 8)}`,
-      opts.sizeLabel,
-      opts.unit,
-      opts.sizeValue,
-      cat,
-    ],
+    `INSERT INTO canonical_products (group_id, brand_id, size_label, size_value)
+     VALUES ($1, $2, $3, $4) RETURNING id`,
+    [group.id, brandId, opts.sizeLabel, opts.sizeValue],
   );
   s.products[key] = p.id;
   return p.id;
@@ -134,9 +166,15 @@ export async function refresh(s: Scenario): Promise<void> {
 export async function cleanup(s: Scenario): Promise<void> {
   await query(`DELETE FROM users WHERE id = $1`, [s.userId]);
   await query(`DELETE FROM merchants WHERE id = $1`, [s.merchantId]);
-  // Senaryonun ürettiği kanonik ürünler referans katalogda birikmesin.
+  // Senaryonun ürettiği katalog kayıtları referans katalogda birikmesin.
+  // Sıra önemli: önce ürünler, sonra bağlı oldukları grup ve markalar
+  // (yabancı anahtarlar ON DELETE RESTRICT).
   const ids = Object.values(s.products);
   if (ids.length) {
     await query(`DELETE FROM canonical_products WHERE id = ANY($1::uuid[])`, [ids]);
   }
+  // Ad soneki senaryoya özel; başka testin kaydına dokunmuyor.
+  const suffix = `% ${s.userId.slice(0, 8)}`;
+  await query(`DELETE FROM product_groups WHERE name LIKE $1`, [suffix]);
+  await query(`DELETE FROM brands WHERE name LIKE $1`, [suffix]);
 }

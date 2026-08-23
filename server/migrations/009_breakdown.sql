@@ -40,21 +40,38 @@ WITH links AS (
               ELSE 1 END                               AS link
     FROM v_monthly_relatives
    GROUP BY user_id, category_id, month
+),
+-- Serinin başı: ana endeks (rebuild_index_levels) taban ayını halkası 1,
+-- seviyesi 100 olan bir satırla çapalıyor. Kırılımlar da çapalanmalı,
+-- yoksa aynı grafikte yan yana çizildiklerinde biri 100'den, diğeri ilk
+-- artışın üstünden başlar ve karşılaştırma yanlış okunur.
+base AS (
+  SELECT r.user_id, p.category_id, min(r.month) - interval '1 month' AS month
+    FROM monthly_product_prices r
+    JOIN v_canonical_products p ON p.id = r.canonical_product_id
+   GROUP BY r.user_id, p.category_id
+),
+series AS (
+  SELECT user_id, category_id, month::date AS month,
+         1::numeric AS link, 0::numeric AS covered_weight
+    FROM base
+   UNION ALL
+  SELECT user_id, category_id, month, link, covered_weight FROM links
 )
-SELECT l.user_id,
-       l.category_id,
+SELECT s.user_id,
+       s.category_id,
        c.code  AS category_code,
        c.name  AS category_name,
-       l.month,
-       round(l.link, 8) AS link,
+       s.month,
+       round(s.link, 8) AS link,
        round(
-         100 * exp(sum(ln(l.link)) OVER (
-           PARTITION BY l.user_id, l.category_id ORDER BY l.month
+         100 * exp(sum(ln(s.link)) OVER (
+           PARTITION BY s.user_id, s.category_id ORDER BY s.month
          )), 4
        ) AS level,
-       round(l.covered_weight, 6) AS covered_weight
-  FROM links l
-  JOIN categories c ON c.id = l.category_id;
+       round(s.covered_weight, 6) AS covered_weight
+  FROM series s
+  JOIN categories c ON c.id = s.category_id;
 
 CREATE VIEW v_index_by_brand AS
 WITH links AS (
@@ -66,20 +83,35 @@ WITH links AS (
     FROM v_monthly_relatives
    WHERE brand_id IS NOT NULL
    GROUP BY user_id, brand_id, month
+),
+-- Kategori kırılımıyla aynı gerekçe: taban ayı 100 ile çapalanıyor.
+base AS (
+  SELECT r.user_id, p.brand_id, min(r.month) - interval '1 month' AS month
+    FROM monthly_product_prices r
+    JOIN v_canonical_products p ON p.id = r.canonical_product_id
+   WHERE p.brand_id IS NOT NULL
+   GROUP BY r.user_id, p.brand_id
+),
+series AS (
+  SELECT user_id, brand_id, month::date AS month,
+         1::numeric AS link, 0::numeric AS covered_weight
+    FROM base
+   UNION ALL
+  SELECT user_id, brand_id, month, link, covered_weight FROM links
 )
-SELECT l.user_id,
-       l.brand_id,
+SELECT s.user_id,
+       s.brand_id,
        b.name AS brand_name,
-       l.month,
-       round(l.link, 8) AS link,
+       s.month,
+       round(s.link, 8) AS link,
        round(
-         100 * exp(sum(ln(l.link)) OVER (
-           PARTITION BY l.user_id, l.brand_id ORDER BY l.month
+         100 * exp(sum(ln(s.link)) OVER (
+           PARTITION BY s.user_id, s.brand_id ORDER BY s.month
          )), 4
        ) AS level,
-       round(l.covered_weight, 6) AS covered_weight
-  FROM links l
-  JOIN brands b ON b.id = l.brand_id;
+       round(s.covered_weight, 6) AS covered_weight
+  FROM series s
+  JOIN brands b ON b.id = s.brand_id;
 
 -- Aynı grup + boyda markalar arası fiyat farkı: "1,5 kg yoğurt kimde kaça".
 -- En son görülen fiyatı esas alıyor; endeksle ilgisi yok, karşılaştırma için.
