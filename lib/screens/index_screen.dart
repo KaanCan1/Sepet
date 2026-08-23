@@ -11,7 +11,9 @@ import '../widgets/chart.dart';
 import '../widgets/glass.dart';
 import '../widgets/icons.dart';
 import '../widgets/screen_frame.dart';
+import '../state/app_data.dart';
 import 'breakdown_screen.dart';
+import 'capture_screen.dart';
 import 'monthly_card_screen.dart';
 import 'official_screen.dart';
 import 'receipt_detail_screen.dart';
@@ -31,16 +33,14 @@ class IndexScreen extends StatelessWidget {
       reserveTabBar: true,
       slivers: [
         SliverToBoxAdapter(
+          // Boş durum DataView'a bırakılmıyor: o yalnızca ortada bir metin
+          // gösteriyor ve ekran bomboş kalıyordu — kullanıcı ne yapacağını
+          // göremiyordu. _FirstRun hem yapılacak işi hem de karşılaştırma
+          // çizgisini gösteriyor.
           child: DataView<IndexCubit, IndexHome>(
-            isEmpty: (d) => d.isEmpty,
-            empty: const EmptyState(
-              title: 'Henüz endeks yok',
-              body:
-                  'Endeks en az iki farklı ayda fiş gerektiriyor — bir fiyatın '
-                  'değiştiğini görebilmek için önce iki kez görmek lazım.',
-            ),
-            builder: (context, data) =>
-                _Body(snapshot: data.snapshot, receipts: data.receipts),
+            builder: (context, data) => data.isEmpty
+                ? _FirstRun(snapshot: data.snapshot, receipts: data.receipts)
+                : _Body(snapshot: data.snapshot, receipts: data.receipts),
           ),
         ),
       ],
@@ -63,7 +63,6 @@ class _Body extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final delta = snapshot.monthDeltaPoints;
-    final missing = snapshot.official.where((s) => s.value == null).toList();
 
     return Padding(
       padding: kGutter,
@@ -82,53 +81,7 @@ class _Body extends StatelessWidget {
               up: delta >= 0,
             ),
           const SizedBox(height: 16),
-          PaperCard(
-            child: Column(
-              children: [
-                SeriesRow(
-                  color: C.ink,
-                  name: 'Senin sepetin',
-                  value: Fmt.pct1(snapshot.changePct ?? 0),
-                ),
-                for (final source in snapshot.official) ...[
-                  const Hairline(),
-                  SeriesRow(
-                    color: source.official ? C.ref : C.grey,
-                    name: source.title,
-                    // Resmî veri henüz çekilmedi — uydurmuyoruz.
-                    value: source.value == null ? '—' : Fmt.pct1(source.value!),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          // Eksik seriyi adıyla söyleyip girişe götürüyor. Eski metin
-          // "henüz çekilmedi" diyordu: hem yanlış (çekilmiyorlar, elle
-          // giriliyorlar) hem de biri girildiğinde bile aynı kalıyordu.
-          if (missing.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Pressable(
-                onTap: () => Navigator.of(context).push(OfficialScreen.route()),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text(
-                    missing.length == snapshot.official.length
-                        ? 'Karşılaştırma serileri elle giriliyor — girmek '
-                              'için dokun.'
-                        : '${missing.map((s) => s.title).join(', ')} için '
-                              'ay girilmedi — girmek için dokun.',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      height: 1.4,
-                      color: C.muted,
-                      decoration: TextDecoration.underline,
-                      decorationColor: C.line,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          _SourcesCard(snapshot: snapshot, showOwn: true),
           const SizedBox(height: 16),
           LineChart(
             series: [
@@ -206,6 +159,173 @@ class _SummaryStrip extends StatelessWidget {
             const LineIcon(Glyph.chevron, size: 15, color: C.muted),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Karşılaştırma kartı. Endeks varken kendi sayınla birlikte, ilk açılışta
+/// tek başına — resmî çizgi kullanıcının verisine bağlı değil.
+class _SourcesCard extends StatelessWidget {
+  const _SourcesCard({required this.snapshot, required this.showOwn});
+
+  final IndexSnapshot snapshot;
+  final bool showOwn;
+
+  @override
+  Widget build(BuildContext context) {
+    final missing = snapshot.official.where((s) => s.value == null).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        PaperCard(
+          child: Column(
+            children: [
+              if (showOwn)
+                SeriesRow(
+                  color: C.ink,
+                  name: 'Senin sepetin',
+                  value: Fmt.pct1(snapshot.changePct ?? 0),
+                ),
+              for (var i = 0; i < snapshot.official.length; i++) ...[
+                if (showOwn || i > 0) const Hairline(),
+                SeriesRow(
+                  color: snapshot.official[i].official ? C.ref : C.grey,
+                  name: snapshot.official[i].title,
+                  // Girilmemiş ay uydurulmuyor.
+                  value: snapshot.official[i].value == null
+                      ? '—'
+                      : Fmt.pct1(snapshot.official[i].value!),
+                ),
+              ],
+            ],
+          ),
+        ),
+        // Eksik seriyi adıyla söyleyip girişe götürüyor.
+        if (missing.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Pressable(
+              onTap: () => Navigator.of(context).push(OfficialScreen.route()),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text(
+                  missing.length == snapshot.official.length
+                      ? 'Karşılaştırma serileri elle giriliyor — girmek '
+                            'için dokun.'
+                      : '${missing.map((s) => s.title).join(', ')} için ay '
+                            'girilmedi — girmek için dokun.',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    height: 1.4,
+                    color: C.muted,
+                    decoration: TextDecoration.underline,
+                    decorationColor: C.line,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Endeks henüz hesaplanamıyorken görünen ekran.
+///
+/// Eskiden burada ortalanmış iki satır metin vardı ve ekranın geri kalanı
+/// bomboştu: fişini silen ya da yeni giren kullanıcı ne yapacağını
+/// göremiyordu. Şimdi üç şey var — kaç fiş kaldığı, tek bir birincil eylem,
+/// ve zaten bağımsız olan karşılaştırma çizgisi.
+class _FirstRun extends StatelessWidget {
+  const _FirstRun({required this.snapshot, required this.receipts});
+
+  final IndexSnapshot snapshot;
+  final List<Receipt> receipts;
+
+  /// Endeks iki FARKLI ayda fiş istiyor: bir fiyatın değiştiğini görmek için
+  /// onu iki kez görmek gerekiyor.
+  int get _monthsCovered =>
+      receipts.map((r) => '${r.date.year}-${r.date.month}').toSet().length;
+
+  @override
+  Widget build(BuildContext context) {
+    final need = 2 - _monthsCovered;
+
+    return Padding(
+      padding: kGutter,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          const Lbl('SEPETİN'),
+          const SizedBox(height: 6),
+          Text(
+            receipts.isEmpty ? 'İlk fişini ekle' : 'Bir ay daha lazım',
+            style: T.display,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            receipts.isEmpty
+                ? 'Kendi enflasyonun, senin ödediğin fiyatlardan hesaplanıyor. '
+                      'Market fişini çek, gerisini uygulama yapıyor.'
+                : '${receipts.length} fiş eklendi. Endeks için en az iki '
+                      'FARKLI ayda fiş gerekiyor — bir fiyatın değiştiğini '
+                      'görebilmek için onu iki kez görmek lazım.',
+            style: const TextStyle(
+              fontSize: 12.5,
+              height: 1.55,
+              color: C.muted,
+            ),
+          ),
+          const SizedBox(height: 18),
+          PrimaryButton(
+            label: receipts.isEmpty ? 'Fiş çek' : 'Fiş ekle',
+            onTap: () async {
+              final added = await Navigator.of(context)
+                  .push<bool>(CaptureScreen.route());
+              if (added == true && context.mounted) refreshUserData(context);
+            },
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: Text(
+              receipts.isEmpty
+                  ? 'Fişin fotoğrafı cihazından çıkmıyor.'
+                  : 'Kalan: $need farklı ay',
+              style: T.label.copyWith(fontSize: 9.5),
+            ),
+          ),
+          const SizedBox(height: 26),
+          const Hairline(),
+          const SizedBox(height: 14),
+          const Lbl('KARŞILAŞTIRMA'),
+          const SizedBox(height: 6),
+          const Text(
+            'Senin sayın çıkana kadar resmî ölçüm burada duruyor.',
+            style: TextStyle(fontSize: 11.5, height: 1.5, color: C.muted),
+          ),
+          const SizedBox(height: 10),
+          _SourcesCard(snapshot: snapshot, showOwn: false),
+          if (receipts.isNotEmpty) ...[
+            const SizedBox(height: 22),
+            const Hairline(),
+            const SizedBox(height: 12),
+            const Lbl('EKLEDİĞİN FİŞLER'),
+            const SizedBox(height: 2),
+            for (final r in receipts.take(5))
+              Pressable(
+                onTap: () =>
+                    Navigator.of(context).push(ReceiptDetailScreen.route(r.id)),
+                child: LedgerRow(
+                  name: r.merchant,
+                  sub: '${Fmt.dayMonth(r.date)} · ${r.itemCount} ÜRÜN',
+                  amount: Fmt.money(r.total),
+                ),
+              ),
+          ],
+        ],
       ),
     );
   }

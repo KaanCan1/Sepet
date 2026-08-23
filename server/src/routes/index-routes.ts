@@ -29,7 +29,10 @@ indexRouter.get('/', async (req: AuthedRequest, res) => {
   );
 
   if (!headline) {
-    res.json({ headline: null, series: [], official: [] });
+    // Resmî seri kullanıcının verisine bağlı değil; hiç fişi olmayan
+    // hesapta da gönderiliyor. Eskiden boş dizi dönüyordu ve ilk açılışta
+    // ekran tamamen boş kalıyordu — kullanıcı ne yapacağını göremiyordu.
+    res.json({ headline: null, series: [], official: await officialSeries() });
     return;
   }
 
@@ -54,19 +57,7 @@ indexRouter.get('/', async (req: AuthedRequest, res) => {
     [userId],
   );
 
-  const official = await query<{
-    code: string;
-    publisher: string;
-    name: string;
-    is_official: boolean;
-    yoy_pct: number | null;
-  }>(
-    `SELECT DISTINCT ON (s.id)
-            s.code, s.publisher, s.name, s.is_official, l.yoy_pct
-       FROM official_series s
-       LEFT JOIN official_index_levels l ON l.series_id = s.id
-      ORDER BY s.id, l.month DESC NULLS LAST`,
-  );
+  const official = await officialSeries();
 
   res.json({
     headline: {
@@ -81,13 +72,7 @@ indexRouter.get('/', async (req: AuthedRequest, res) => {
       level: r.level,
       momPct: r.mom_pct,
     })),
-    official: official.map((r) => ({
-      code: r.code,
-      publisher: r.publisher,
-      name: r.name,
-      isOfficial: r.is_official,
-      yoyPct: r.yoy_pct,
-    })),
+    official,
   });
 });
 
@@ -217,3 +202,42 @@ indexRouter.get('/by-brand', async (req: AuthedRequest, res) => {
 
   res.json([...byBrand.values()].sort((a, b) => b.latestLevel - a.latestLevel));
 });
+
+/// Karşılaştırma serileri ve her birinin en son girilmiş yıllık değişimi.
+///
+/// Kullanıcıdan bağımsız: endeksi olmayan hesapta da gönderiliyor, çünkü
+/// TÜİK sayısı o hesabın fişlerine bağlı değil.
+async function officialSeries(): Promise<
+  Array<{
+    code: string;
+    publisher: string;
+    name: string;
+    isOfficial: boolean;
+    yoyPct: number | null;
+  }>
+> {
+  // Alan adları BURADA çevriliyor, çağıranda değil. İlk yazışta çevirme
+  // yalnızca dolu daldaydı; boş dalda ham satırlar gidiyor ve uygulama
+  // yoyPct yerine yoy_pct görüp değeri null sanıyordu — TÜİK sayısı
+  // girilmiş olmasına rağmen ekranda "—" çıkıyordu.
+  const rows = await query<{
+    code: string;
+    publisher: string;
+    name: string;
+    is_official: boolean;
+    yoy_pct: number | null;
+  }>(
+    `SELECT DISTINCT ON (s.id)
+            s.code, s.publisher, s.name, s.is_official, l.yoy_pct
+       FROM official_series s
+       LEFT JOIN official_index_levels l ON l.series_id = s.id
+      ORDER BY s.id, l.month DESC NULLS LAST`,
+  );
+  return rows.map((r) => ({
+    code: r.code,
+    publisher: r.publisher,
+    name: r.name,
+    isOfficial: r.is_official,
+    yoyPct: r.yoy_pct,
+  }));
+}

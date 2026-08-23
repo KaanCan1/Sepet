@@ -100,6 +100,65 @@ void main() {
     });
   });
 
+  // Fişini silen ya da yeni giren kullanıcı bomboş bir ekranla karşılaşıyor
+  // ve ne yapacağını göremiyordu. Boş durumun üç şeyi taşıması gerekiyor:
+  // yapılacak iş, tek bir birincil eylem ve zaten bağımsız olan
+  // karşılaştırma çizgisi.
+  group('İlk açılış', () {
+    Widget emptyApp() => AppScope(
+      api: FakeApi(
+        routes: {
+          ...FakeApi.defaultRoutes,
+          'GET /index': {
+            'headline': null,
+            'series': <Object>[],
+            'official': [
+              {
+                'code': 'TUIK_TUFE',
+                'publisher': 'TÜİK',
+                'name': 'TÜFE',
+                'isOfficial': true,
+                'yoyPct': 34.1,
+              },
+            ],
+          },
+          'GET /receipts': <Object>[],
+        },
+      ),
+      authStore: MemoryAuthStore('test-token'),
+      child: MaterialApp(
+        locale: const Locale('tr', 'TR'),
+        home: const RootGate(),
+      ),
+    );
+
+    testWidgets('fiş yokken yapılacak iş ve eylem görünüyor', (tester) async {
+      await tester.pumpWidget(emptyApp());
+      await tester.pumpAndSettle();
+
+      expect(find.text('İlk fişini ekle'), findsOneWidget);
+      expect(find.text('Fiş çek'), findsOneWidget);
+      expect(find.textContaining('cihazından çıkmıyor'), findsOneWidget);
+    });
+
+    testWidgets('fiş yokken bile TÜİK sayısı görünüyor', (tester) async {
+      await tester.pumpWidget(emptyApp());
+      await tester.pumpAndSettle();
+
+      // Resmî seri kullanıcının verisine bağlı değil; sunucu endeksi
+      // olmayan hesapta da gönderiyor.
+      expect(find.text('TÜİK TÜFE'), findsOneWidget);
+      expect(find.text('34,1%'), findsOneWidget);
+    });
+
+    testWidgets('kamera düğmesi kabukta duruyor', (tester) async {
+      await tester.pumpWidget(emptyApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('scan-button')), findsOneWidget);
+    });
+  });
+
   group('Fiş detayı', () {
     testWidgets('eşleşmemiş satır işaretli, eşleşen değil', (tester) async {
       await tester.pumpWidget(bootstrap(token: 'test-token'));
