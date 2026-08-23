@@ -254,3 +254,67 @@ class Merchant {
     chainCode: j['chainCode'] as String,
   );
 }
+
+/// Kırılım serisindeki tek ay.
+class BreakdownPoint {
+  const BreakdownPoint({
+    required this.month,
+    required this.level,
+    required this.coveredWeight,
+  });
+
+  final DateTime month;
+
+  /// Zincirlenmiş endeks seviyesi; taban ayı 100.
+  final double level;
+
+  /// O ay hesaba giren ağırlık payı, 0..1. Düşükse seri ince buzda —
+  /// ekranda uyarı olarak gösteriliyor.
+  final double coveredWeight;
+
+  static BreakdownPoint fromJson(Map<String, dynamic> j) => BreakdownPoint(
+    month: DateTime.parse(j['month'] as String),
+    level: (j['level'] as num).toDouble(),
+    coveredWeight: (j['coveredWeight'] as num?)?.toDouble() ?? 0,
+  );
+}
+
+/// Kategori ya da marka bazında endeks serisi.
+///
+/// Bunlar genel endeksin alt kalemleri DEĞİL, bağımsız serileri: her biri
+/// kendi içinde yeniden ağırlıklandırılıyor, dolayısıyla toplandıklarında
+/// genel endeksi vermezler. Ekrandaki metin bunu söylüyor.
+class Breakdown {
+  const Breakdown({
+    required this.id,
+    required this.name,
+    required this.series,
+    this.code,
+  });
+
+  final String id;
+  final String name;
+
+  /// Kategori kodu (TÜİK COICOP). Markada yok.
+  final String? code;
+
+  final List<BreakdownPoint> series;
+
+  /// Taban aydan bugüne toplam değişim, yüzde. Taban 100 olduğu için
+  /// son seviyeden doğrudan okunuyor.
+  double get changePct => series.isEmpty ? 0 : series.last.level - 100;
+
+  List<double> get levels => series.map((p) => p.level).toList();
+
+  /// Serinin son ayındaki kapsama. Ekranda "ince buz" uyarısı için.
+  double get lastCoverage => series.isEmpty ? 0 : series.last.coveredWeight;
+
+  static Breakdown fromJson(Map<String, dynamic> j) => Breakdown(
+    id: (j['categoryId'] ?? j['brandId']) as String,
+    name: j['name'] as String,
+    code: j['code'] as String?,
+    series: (j['series'] as List? ?? const [])
+        .map((e) => BreakdownPoint.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
+}

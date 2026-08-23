@@ -11,6 +11,7 @@ import '../widgets/chart.dart';
 import '../widgets/glass.dart';
 import '../widgets/icons.dart';
 import '../widgets/screen_frame.dart';
+import 'breakdown_screen.dart';
 import 'monthly_card_screen.dart';
 import 'receipt_detail_screen.dart';
 
@@ -136,8 +137,15 @@ class _Body extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           _SummaryStrip(
-            month: Fmt.monthLong(DateTime.now()),
+            title: '${Fmt.monthLong(DateTime.now())} özeti',
+            sub: 'Paylaşılabilir kartı gör',
             onTap: () => Navigator.of(context).push(MonthlyCardScreen.route()),
+          ),
+          const SizedBox(height: 8),
+          _SummaryStrip(
+            title: 'Kırılım',
+            sub: 'Hangi kategori, hangi marka',
+            onTap: () => Navigator.of(context).push(BreakdownScreen.route()),
           ),
           const SizedBox(height: 18),
           const Hairline(),
@@ -165,11 +173,16 @@ class _Body extends StatelessWidget {
   }
 }
 
-/// Ayın 3'ünde gelen bildirimin varış noktası.
+/// Endeksin altındaki iki kapı: aylık kart ve kırılım.
 class _SummaryStrip extends StatelessWidget {
-  const _SummaryStrip({required this.month, required this.onTap});
+  const _SummaryStrip({
+    required this.title,
+    required this.sub,
+    required this.onTap,
+  });
 
-  final String month;
+  final String title;
+  final String sub;
   final VoidCallback onTap;
 
   @override
@@ -184,11 +197,11 @@ class _SummaryStrip extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('$month özeti', style: T.title),
+                  Text(title, style: T.title),
                   const SizedBox(height: 3),
-                  const Text(
-                    'Paylaşılabilir kartı gör',
-                    style: TextStyle(fontSize: 11, color: C.muted),
+                  Text(
+                    sub,
+                    style: const TextStyle(fontSize: 11, color: C.muted),
                   ),
                 ],
               ),

@@ -44,9 +44,9 @@ receiptsRouter.get('/:id', async (req: AuthedRequest, res) => {
 
   const lines = await query(
     `SELECT l.id, l.line_no, l.raw_text, l.quantity, l.line_amount, l.status,
-            cp.name, cp.size_label
+            cp.display_name AS name, cp.brand_name, cp.size_label
        FROM receipt_lines l
-       LEFT JOIN canonical_products cp ON cp.id = l.canonical_product_id
+       LEFT JOIN v_canonical_products cp ON cp.id = l.canonical_product_id
       WHERE l.receipt_id = $1
       ORDER BY l.line_no`,
     [req.params.id],
@@ -64,7 +64,9 @@ receiptsRouter.get('/:id', async (req: AuthedRequest, res) => {
       quantity: l.quantity,
       amount: l.line_amount,
       status: l.status,
-      canonical: l.name ? `${l.name} ${l.size_label}` : null,
+      // display_name zaten marka + grup + boy; ayrıca boy eklenmiyor.
+      canonical: l.name ?? null,
+      brand: l.brand_name ?? null,
     })),
   });
 });

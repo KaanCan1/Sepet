@@ -17,17 +17,25 @@ indexRouter.get('/', async (req: AuthedRequest, res) => {
   const [headline] = await query<{
     change_pct: number | null;
     window_months: number;
-    current_month: Date;
+    current_month: string;
     covered_weight: number;
-  }>(`SELECT * FROM v_index_headline WHERE user_id = $1`, [userId]);
+  }>(
+    // to_char: DATE'i Date nesnesine çevirtmiyoruz, saat dilimi kaydırması
+    // ayın 1'ini bir önceki aya düşürüyor.
+    `SELECT change_pct, window_months, covered_weight,
+            to_char(current_month, 'YYYY-MM-DD') AS current_month
+       FROM v_index_headline WHERE user_id = $1`,
+    [userId],
+  );
 
   if (!headline) {
     res.json({ headline: null, series: [], official: [] });
     return;
   }
 
-  const series = await query<{ month: Date; level: number; mom_pct: number }>(
-    `SELECT month, level, mom_pct FROM v_index_series
+  const series = await query<{ month: string; level: number; mom_pct: number }>(
+    `SELECT to_char(month, 'YYYY-MM-DD') AS month, level, mom_pct
+       FROM v_index_series
       WHERE user_id = $1 ORDER BY month`,
     [userId],
   );
@@ -106,4 +114,106 @@ indexRouter.get('/movers', async (req: AuthedRequest, res) => {
       changePct: r.change_pct,
     })),
   );
+});
+
+/**
+ * Kategori kırılımı: hangi harcama kalemi kişisel enflasyonu sürüklüyor.
+ *
+ * Aynı zincirleme, kategoriye kısıtlanmış küme üzerinde ve ağırlıklar küme
+ * içinde yeniden normalize edilerek hesaplanıyor. Genel endeksin alt
+ * kalemleri değil, bağımsız serileri — biri diğerine toplanmıyor.
+ */
+indexRouter.get('/by-category', async (req: AuthedRequest, res) => {
+  // Ay SQL'de metne çevriliyor, Date olarak değil. pg bir DATE sütununu
+  // YEREL geceyarısı Date'i yapıyor; JSON'a giderken toISOString() bunu
+  // UTC'ye çevirdiği için UTC+3'te ayın 1'i bir önceki ayın 31'ine kayıyor
+  // ve ekranda Ağustos seviyesi "Temmuz" diye etiketleniyordu.
+  const rows = await query<{
+    category_id: string;
+    category_code: string;
+    category_name: string;
+    month: string;
+    level: number;
+    covered_weight: number;
+  }>(
+    `SELECT category_id, category_code, category_name,
+            to_char(month, 'YYYY-MM-DD') AS month,
+            level, covered_weight
+       FROM v_index_by_category
+      WHERE user_id = $1
+      ORDER BY category_name, month`,
+    [req.userId],
+  );
+
+  // Kategori başına tek nesne; seri içinde aylar sırada.
+  const byCategory = new Map<string, {
+    categoryId: string;
+    code: string;
+    name: string;
+    latestLevel: number;
+    series: Array<{ month: string; level: number; coveredWeight: number }>;
+  }>();
+
+  for (const r of rows) {
+    const month = r.month;
+    let entry = byCategory.get(r.category_id);
+    if (!entry) {
+      entry = {
+        categoryId: r.category_id,
+        code: r.category_code,
+        name: r.category_name,
+        latestLevel: r.level,
+        series: [],
+      };
+      byCategory.set(r.category_id, entry);
+    }
+    entry.series.push({ month, level: r.level, coveredWeight: r.covered_weight });
+    entry.latestLevel = r.level;
+  }
+
+  res.json(
+    [...byCategory.values()].sort((a, b) => b.latestLevel - a.latestLevel),
+  );
+});
+
+/**
+ * Marka kırılımı. Yalnızca markalı kalemler: kasada tartılan sebzenin
+ * markası yok, uydurulmuyor — o kalemler bu seride hiç yer almıyor.
+ */
+indexRouter.get('/by-brand', async (req: AuthedRequest, res) => {
+  const rows = await query<{
+    brand_id: string;
+    brand_name: string;
+    month: string;
+    level: number;
+    covered_weight: number;
+  }>(
+    `SELECT brand_id, brand_name,
+            to_char(month, 'YYYY-MM-DD') AS month,
+            level, covered_weight
+       FROM v_index_by_brand
+      WHERE user_id = $1
+      ORDER BY brand_name, month`,
+    [req.userId],
+  );
+
+  const byBrand = new Map<string, {
+    brandId: string;
+    name: string;
+    latestLevel: number;
+    series: Array<{ month: string; level: number; coveredWeight: number }>;
+  }>();
+
+  for (const r of rows) {
+    const month = r.month;
+    let entry = byBrand.get(r.brand_id);
+    if (!entry) {
+      entry = { brandId: r.brand_id, name: r.brand_name, latestLevel: r.level, series: [] };
+      byBrand.set(r.brand_id, entry);
+    }
+    entry.series.push({ month, level: r.level, coveredWeight: r.covered_weight });
+    entry.latestLevel = r.level;
+  }
+
+  res.json([...byBrand.values()].sort((a, b) => b.latestLevel - a.latestLevel));
 });

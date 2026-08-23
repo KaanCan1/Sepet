@@ -12,8 +12,16 @@ import {
 afterAll(async () => {
   // Senaryo temizliği testin sonunda çağrılıyor; test yarıda düşerse
   // çalışmıyor ve referans katalogda artık kalıyordu. Koşu sonunda garanti.
+  // Kategori artık ürün grubunda; silme sırası ürün → grup → marka → kategori.
   await query(
     `DELETE FROM canonical_products
+      WHERE group_id IN (
+        SELECT g.id FROM product_groups g
+          JOIN categories c ON c.id = g.category_id
+         WHERE c.code = 'TEST')`,
+  );
+  await query(
+    `DELETE FROM product_groups
       WHERE category_id = (SELECT id FROM categories WHERE code = 'TEST')`,
   );
   await query(`DELETE FROM categories WHERE code = 'TEST'`);
@@ -296,6 +304,59 @@ describe('Laspeyres endeksi', () => {
       [s.userId],
     );
     expect(head).toHaveLength(0);
+
+    await cleanup(s);
+  });
+
+  // Tasarımın çekirdek iddiası. Kullanıcı Sütaş yoğurttan Eker yoğurda
+  // geçtiğinde endeks DÜŞMEMELİ: Eker daha pahalı olsa bile bu bir zam
+  // değil, marka değişikliği. İki kalem ayrı seri; Eker kendi serisini
+  // 100'den başlatır, Sütaş gözlenmeyi bırakınca bayatlayıp düşer.
+  //
+  // Model yanlış kurulmuş olsaydı (marka yok sayılıp tek "yoğurt" kalemi
+  // tutulsaydı) bu geçiş sahte bir %13 zam olarak görünürdü.
+  it('marka değiştirmek endekse zam olarak yazılmıyor', async () => {
+    const s = await startScenario('marka');
+    await addProduct(s, 'sutas', {
+      name: 'Yoğurt',
+      groupName: 'Yoğurt',
+      brand: 'Sutas',
+      sizeLabel: '1,5 kg',
+      unit: 'kilogram',
+      sizeValue: 1.5,
+    });
+    await addProduct(s, 'eker', {
+      name: 'Yoğurt',
+      groupName: 'Yoğurt',
+      brand: 'Eker',
+      sizeLabel: '1,5 kg',
+      unit: 'kilogram',
+      sizeValue: 1.5,
+    });
+
+    // Üç ay Sütaş, sonra üç ay Eker. Eker %13 daha pahalı ama ikisi de
+    // kendi içinde ayda %2 artıyor.
+    await addReceipt(s, -5, [{ product: 'sutas', amount: 100 }]);
+    await addReceipt(s, -4, [{ product: 'sutas', amount: 102 }]);
+    await addReceipt(s, -3, [{ product: 'sutas', amount: 104.04 }]);
+    await addReceipt(s, -2, [{ product: 'eker', amount: 113 }]);
+    await addReceipt(s, -1, [{ product: 'eker', amount: 115.26 }]);
+    await addReceipt(s, 0, [{ product: 'eker', amount: 117.57 }]);
+    await refresh(s);
+
+    const series = await levels(s);
+    expect(series.length).toBeGreaterThan(0);
+
+    // Hiçbir ayda tek seferde %13'lük bir sıçrama olmamalı — marka geçişi
+    // fiyat hareketi gibi okunsaydı tam orada görünürdü.
+    for (let i = 1; i < series.length; i++) {
+      const jump = series[i]!.level / series[i - 1]!.level - 1;
+      expect(jump, `${series[i]!.month} ayında marka geçişi zam sayılmış`)
+        .toBeLessThan(0.05);
+    }
+
+    // Ve seri düşmemeli: her iki markanın kendi fiyatı da artıyordu.
+    expect(series[series.length - 1]!.level).toBeGreaterThanOrEqual(100);
 
     await cleanup(s);
   });
