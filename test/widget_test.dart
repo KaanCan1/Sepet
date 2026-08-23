@@ -198,4 +198,43 @@ void main() {
       expect(find.textContaining('zincirlenmiş endekstir'), findsOneWidget);
     });
   });
+
+  group('Profil', () {
+    // Bu düğme sunucuya hiç istek atmıyordu: yalnızca oturumu kapatıyor,
+    // ekranda ise "kalıcı olarak silinir" yazıyordu. Veri sunucuda duruyordu.
+    testWidgets('fişleri silme onay ister ve sunucuya gider', (tester) async {
+      final api = FakeApi();
+      await tester.pumpWidget(
+        AppScope(
+          api: api,
+          authStore: MemoryAuthStore('test-token'),
+          child: MaterialApp(
+            locale: const Locale('tr', 'TR'),
+            home: const RootGate(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-3')));
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(find.text('Fişleri sil'), 120);
+      await tester.tap(find.text('Fişleri sil'));
+      await tester.pumpAndSettle();
+
+      // Onay penceresi çıkmalı; vazgeçince hiçbir şey olmamalı.
+      expect(find.textContaining('endeks geçmişin silinir'), findsOneWidget);
+      await tester.tap(find.text('Vazgeç'));
+      await tester.pumpAndSettle();
+      expect(api.calls, isNot(contains('DELETE /receipts')));
+
+      await tester.tap(find.text('Fişleri sil'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sil'));
+      await tester.pumpAndSettle();
+
+      expect(api.calls, contains('DELETE /receipts'));
+    });
+  });
 }

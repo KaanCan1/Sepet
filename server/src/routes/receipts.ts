@@ -202,3 +202,45 @@ receiptsRouter.post('/:id/lines/:lineId/match', async (req: AuthedRequest, res) 
 
   res.json({ ok: true });
 });
+
+/// Kullanıcının bütün fişlerini ve türetilmiş endeksini siler; hesabı bırakır.
+///
+/// Demo veriyle denendikten sonra gerçek fişlere geçerken gereken şey bu:
+/// hesap, izinler ve öğrenilmiş eşleşmeler kalsın, ama endeks sıfırdan
+/// kendi harcamanla kurulsun.
+///
+/// Öğrenilmiş eşleşmeler (product_aliases) BİLEREK duruyor. Onlar kullanıcıya
+/// değil markete bağlı ve "şu ham metin şu üründür" bilgisi demo veriyle
+/// öğrenilmiş olsa da doğru; silmek ilk gerçek fişte gereksiz soru sordururdu.
+receiptsRouter.delete('/', async (req: AuthedRequest, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Fiş satırları ve fiyat gözlemleri basamaklı olarak gidiyor.
+    const { rowCount } = await client.query(
+      `DELETE FROM receipts WHERE user_id = $1`,
+      [req.userId],
+    );
+
+    // Türetilmiş tablolar fişe değil kullanıcıya bağlı; basamak onları
+    // götürmüyor, tek tek boşaltılıyorlar.
+    for (const table of [
+      'monthly_product_prices',
+      'basket_weights',
+      'index_levels',
+    ]) {
+      await client.query(`DELETE FROM ${table} WHERE user_id = $1`, [
+        req.userId,
+      ]);
+    }
+
+    await client.query('COMMIT');
+    res.json({ ok: true, deletedReceipts: rowCount ?? 0 });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+});

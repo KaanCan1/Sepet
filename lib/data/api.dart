@@ -108,6 +108,10 @@ class Api {
   Future<dynamic> get(String path) =>
       _send(() => _client.get(Uri.parse('$baseUrl$path'), headers: _headers));
 
+  Future<dynamic> delete(String path) => _send(
+    () => _client.delete(Uri.parse('$baseUrl$path'), headers: _headers),
+  );
+
   Future<dynamic> post(String path, [Object? body]) => _send(
     () => _client.post(
       Uri.parse('$baseUrl$path'),

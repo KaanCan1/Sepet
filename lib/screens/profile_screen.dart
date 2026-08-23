@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/api.dart';
 import '../data/fmt.dart';
 import '../data/app_scope.dart';
 import '../data/repository.dart';
@@ -123,13 +124,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   hint: s == null ? 'Cihazda' : 'Cihaz + hesap',
                   onTap: () => _explainStorage(context, s != null),
                 ),
-                if (s != null)
+                if (s != null) ...[
+                  _ActionRow(
+                    label: 'Fişleri sil',
+                    hint: 'Hesap kalır',
+                    danger: true,
+                    onTap: () => _confirmClearReceipts(context),
+                  ),
                   _ActionRow(
                     label: 'Hesabı sil',
                     hint: '',
                     danger: true,
                     onTap: () => _confirmDelete(context),
                   ),
+                ],
                 const SizedBox(height: 18),
                 if (s != null)
                   PrimaryButton(
@@ -199,33 +207,91 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _confirmDelete(BuildContext context) {
-    showDialog<void>(
+  /// Ortak onay penceresi. [onConfirm] yalnızca kullanıcı "Sil" derse çalışır.
+  Future<bool> _confirm(
+    BuildContext context, {
+    required String title,
+    required String body,
+  }) async {
+    final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: C.card,
-        title: const Text('Hesabı sil', style: T.title),
-        content: const Text(
-          'Tüm fişlerin ve endeks geçmişin kalıcı olarak silinir. '
-          'Bu işlem geri alınamaz.',
-          style: TextStyle(fontSize: 12.5, height: 1.5, color: C.ink),
+        title: Text(title, style: T.title),
+        content: Text(
+          body,
+          style: const TextStyle(fontSize: 12.5, height: 1.5, color: C.ink),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Vazgeç', style: TextStyle(color: C.muted)),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              session.value = null;
-            },
+            onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Sil', style: TextStyle(color: C.hot)),
           ),
         ],
       ),
     );
+    return ok ?? false;
   }
+
+  /// Fişleri siler, hesabı bırakır. Demo veriden gerçek kullanıma geçiş yolu.
+  Future<void> _confirmClearReceipts(BuildContext context) async {
+    final repo = AppScope.repoOf(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    final ok = await _confirm(
+      context,
+      title: 'Fişleri sil',
+      body:
+          'Bütün fişlerin ve endeks geçmişin silinir. Hesabın, izinlerin ve '
+          'öğrenilmiş ürün eşleşmelerin kalır — endeks bir sonraki fişinden '
+          'itibaren sıfırdan kurulur. Bu işlem geri alınamaz.',
+    );
+    if (!ok) return;
+
+    try {
+      final n = await repo.clearReceipts();
+      dataChanged.reload();
+      messenger.showSnackBar(_snack('$n fiş silindi'));
+    } on ApiException catch (e) {
+      messenger.showSnackBar(_snack(e.message));
+    }
+  }
+
+  /// Hesabı gerçekten siler.
+  ///
+  /// Eskiden bu düğme sunucuya hiç istek atmıyor, yalnızca oturumu
+  /// kapatıyordu — oysa metin "kalıcı olarak silinir" diyordu. Veri
+  /// sunucuda duruyordu.
+  Future<void> _confirmDelete(BuildContext context) async {
+    final repo = AppScope.repoOf(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    final ok = await _confirm(
+      context,
+      title: 'Hesabı sil',
+      body:
+          'Tüm fişlerin ve endeks geçmişin kalıcı olarak silinir. '
+          'Bu işlem geri alınamaz.',
+    );
+    if (!ok) return;
+
+    try {
+      await repo.deleteAccount();
+      session.value = null;
+    } on ApiException catch (e) {
+      messenger.showSnackBar(_snack(e.message));
+    }
+  }
+
+  SnackBar _snack(String text) => SnackBar(
+    backgroundColor: C.ink,
+    behavior: SnackBarBehavior.floating,
+    content: Text(text, style: const TextStyle(fontSize: 12.5, color: C.card)),
+  );
 }
 
 class _SignedOut extends StatelessWidget {

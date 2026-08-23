@@ -1,4 +1,5 @@
 import express from 'express';
+import { accountRouter } from './routes/account.js';
 import { authRouter } from './routes/auth.js';
 import { indexRouter } from './routes/index-routes.js';
 import { merchantsRouter } from './routes/merchants.js';
@@ -34,6 +35,7 @@ export function createApp() {
   });
 
   app.use('/auth', authRouter);
+  app.use('/account', accountRouter);
   app.use('/index', indexRouter);
   app.use('/receipts', receiptsRouter);
   app.use('/products', productsRouter);

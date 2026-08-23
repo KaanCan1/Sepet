@@ -68,7 +68,13 @@ class AsyncViewState<D> extends State<AsyncView<D>> {
 
   /// Bir değişiklikten sonra yeniden yükler.
   void reload() {
-    if (mounted) setState(() => _future = widget.load());
+    if (!mounted) return;
+    // Gövdeli yazım şart: ok-fonksiyonu atamanın değerini, yani Future'ı
+    // döndürüyor ve Flutter bunu "setState'e async geri çağrım verildi"
+    // sanıp hata atıyor.
+    setState(() {
+      _future = widget.load();
+    });
   }
 
   @override

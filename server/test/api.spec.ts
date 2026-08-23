@@ -304,4 +304,34 @@ describe('API', () => {
 
     await query(`DELETE FROM users WHERE id = $1`, [other.body.userId]);
   });
+
+  // Profil ekranındaki "Hesabı sil" düğmesi sunucuya hiç istek atmıyordu:
+  // sadece oturumu kapatıyor, ekranda ise "kalıcı olarak silinir" yazıyordu.
+  // Aşağıdakiler o sözün gerçekten tutulduğunu tutuyor.
+  describe('Veri silme', () => {
+    it('fişleri siliyor, hesabı bırakıyor', async () => {
+      const before = await request(app).get('/receipts').set(auth()).expect(200);
+      expect(before.body.length).toBeGreaterThan(0);
+
+      const res = await request(app).delete('/receipts').set(auth()).expect(200);
+      expect(res.body.deletedReceipts).toBe(before.body.length);
+
+      const after = await request(app).get('/receipts').set(auth()).expect(200);
+      expect(after.body).toHaveLength(0);
+
+      // Türetilmiş endeks fişe değil kullanıcıya bağlı; basamak onu
+      // götürmüyor, elle temizlenmesi gerekiyordu.
+      const index = await request(app).get('/index').set(auth()).expect(200);
+      expect(index.body.series).toHaveLength(0);
+      expect(index.body.headline).toBeNull();
+
+      // Hesap duruyor: jeton hâlâ geçerli.
+      await request(app).get('/products').set(auth()).expect(200);
+    });
+
+    it('hesabı silince jeton artık iş görmüyor', async () => {
+      await request(app).delete('/account').set(auth()).expect(200);
+      await request(app).get('/receipts').set(auth()).expect(401);
+    });
+  });
 });
