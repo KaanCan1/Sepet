@@ -46,8 +46,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         email:
             email ??
             switch (provider) {
+              // Sağlayıcı akışı henüz sahte; adresler bilerek ayrı seçildi.
+              // Apple → telefonda kullanılan gerçek hesap, boş başlıyor.
+              // Google → simülatördeki demo hesabı, örnek veriyle dolu.
+              // İkisi ayrı sunucuya bakıyor (telefon Render, simülatör yerel),
+              // dolayısıyla demo fişler gerçek endekse hiç karışmıyor.
               AuthProvider.apple => 'kaan@privaterelay.appleid.com',
-              AuthProvider.google => 'kaan@gmail.com',
+              AuthProvider.google => 'demo@sepet.app',
               AuthProvider.email => 'kaan@ornek.com',
             },
         name: provider == AuthProvider.email ? null : 'Kaan',

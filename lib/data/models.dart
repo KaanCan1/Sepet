@@ -318,3 +318,52 @@ class Breakdown {
         .toList(),
   );
 }
+
+/// Elle girilmiş tek bir ay: "2026 Temmuz, %33,5".
+class OfficialEntry {
+  const OfficialEntry({required this.month, required this.yoyPct});
+
+  final DateTime month;
+
+  /// Yıllık değişim. Seviye değil bu tutuluyor: kaynaklar zaten yıllık
+  /// yüzdeyi açıklıyor, seviyeden yeniden hesaplamak yuvarlama farkı üretir.
+  final double yoyPct;
+
+  static OfficialEntry fromJson(Map<String, dynamic> j) => OfficialEntry(
+    month: DateTime.parse(j['month'] as String),
+    yoyPct: (j['yoyPct'] as num).toDouble(),
+  );
+}
+
+/// Resmî ya da bağımsız bir seri ve girilmiş bütün ayları.
+class OfficialSeries {
+  const OfficialSeries({
+    required this.code,
+    required this.publisher,
+    required this.name,
+    required this.official,
+    required this.entries,
+  });
+
+  final String code;
+  final String publisher;
+  final String name;
+
+  /// Resmî kurum mu (TÜİK), bağımsız ölçüm mü (ENAG).
+  final bool official;
+
+  /// En yeniden eskiye.
+  final List<OfficialEntry> entries;
+
+  String get title => '$publisher $name';
+
+  static OfficialSeries fromJson(Map<String, dynamic> j) => OfficialSeries(
+    code: j['code'] as String,
+    publisher: j['publisher'] as String,
+    name: j['name'] as String,
+    official: j['isOfficial'] as bool? ?? false,
+    entries: (j['entries'] as List? ?? const [])
+        .map((e) => OfficialEntry.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
+}

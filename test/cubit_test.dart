@@ -1,12 +1,14 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sepet/data/auth_store.dart';
+import 'package:sepet/data/models.dart';
 import 'package:sepet/data/repository.dart';
 import 'package:sepet/data/session.dart';
 import 'package:sepet/state/auth_cubit.dart';
 import 'package:sepet/state/breakdown_cubit.dart';
 import 'package:sepet/state/data_cubit.dart';
 import 'package:sepet/state/index_cubit.dart';
+import 'package:sepet/state/official_cubit.dart';
 
 import 'fake_api.dart';
 
@@ -130,6 +132,37 @@ void main() {
 
       cubit.setConsents(aggregate: false);
       expect(cubit.session!.consentAggregate, isFalse);
+      await cubit.close();
+    });
+  });
+
+  group('OfficialCubit', () {
+    // TÜİK ve ENAG otomatik çekilemiyor; elle giriliyor. Girdisi olmayan seri
+    // de listede görünmeli, yoksa kullanıcı nereye gireceğini bulamaz.
+    test('girdisi olmayan seri de geliyor', () async {
+      final cubit = OfficialCubit(repo);
+      await cubit.load();
+
+      final series = (cubit.state as DataReady<List<OfficialSeries>>).value;
+      expect(series, hasLength(2));
+      expect(
+        series.firstWhere((s) => s.code == 'TUIK_TUFE').entries,
+        hasLength(2),
+      );
+      expect(series.firstWhere((s) => s.code == 'ENAG_ETUFE').entries, isEmpty);
+      await cubit.close();
+    });
+
+    test('kaydettikten sonra listeyi tazeliyor', () async {
+      final cubit = OfficialCubit(repo);
+      await cubit.load();
+      final before = api.calls.length;
+
+      await cubit.save(code: 'TUIK_TUFE', month: DateTime(2026, 6), yoyPct: 35);
+
+      // Bir yazma, bir okuma.
+      expect(api.calls.length - before, 2);
+      expect(api.calls, contains('PUT /official/TUIK_TUFE/2026-06-01'));
       await cubit.close();
     });
   });

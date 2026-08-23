@@ -87,6 +87,34 @@ class Repository {
   /// Hesabı ve ona bağlı her şeyi siler.
   Future<void> deleteAccount() => _api.delete('/account');
 
+  /// Resmî ve bağımsız seriler, girilmiş aylarıyla.
+  ///
+  /// Bu iki seri elle giriliyor: TÜİK'in ve ENAG'ın makine okunur, güvenilir
+  /// bir akışı yok. Sayı uydurmak seçenek değil — uygulamanın bütün iddiası
+  /// ölçülen sayıların gerçek olması.
+  Future<List<OfficialSeries>> officialSeries() async {
+    final rows = await _api.get('/official') as List;
+    return rows
+        .map((e) => OfficialSeries.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Bir ayı yazar ya da düzeltir. [month] ayın ilk günü olmalı.
+  Future<void> saveOfficial({
+    required String code,
+    required DateTime month,
+    required double yoyPct,
+  }) => _api.put('/official/$code/${_monthKey(month)}', {'yoyPct': yoyPct});
+
+  Future<void> deleteOfficial({
+    required String code,
+    required DateTime month,
+  }) => _api.delete('/official/$code/${_monthKey(month)}');
+
+  static String _monthKey(DateTime m) =>
+      '${m.year.toString().padLeft(4, '0')}-'
+      '${m.month.toString().padLeft(2, '0')}-01';
+
   Future<List<Receipt>> receipts() async {
     final rows = await _api.get('/receipts') as List;
     return rows
