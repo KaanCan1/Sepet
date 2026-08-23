@@ -5,12 +5,12 @@ import { one, query } from '../db.js';
 export const officialRouter = Router();
 officialRouter.use(requireAuth);
 
-/// Resmî ve bağımsız enflasyon serileri: TÜİK TÜFE ve ENAG E-TÜFE.
+/// Karşılaştırma serileri. Şimdilik yalnızca TÜİK TÜFE.
 ///
-/// Neden elle giriliyor: ikisinin de makine okunur, güvenilir bir akışı yok.
-/// TÜİK'in veri portalı otomatik erişimde yönlendirmeye düşüyor, MEDAS oturum
-/// tabanlı bir arayüz, ENAG'ın sitesi bu ortamdan hiç açılmıyor. Sayfa
-/// kazımak kullanım koşullarına takılır ve her tasarım değişikliğinde kırılır.
+/// Neden elle giriliyor: TÜİK'in kendi veri portalı otomatik erişimde
+/// yönlendirmeye düşüyor, MEDAS oturum tabanlı bir arayüz. Resmî ve makine
+/// okunur kanal TCMB'nin EVDS'i; ücretsiz bir API anahtarı istiyor ve o
+/// anahtar tanımlanana kadar giriş yolu burası.
 ///
 /// Uydurmak seçenek değildi: uygulamanın bütün iddiası ölçülen sayıların
 /// gerçek olması. Ekranda "—" durması, yanlış bir sayı durmasından iyi.

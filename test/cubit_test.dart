@@ -137,8 +137,8 @@ void main() {
   });
 
   group('OfficialCubit', () {
-    // TÜİK ve ENAG otomatik çekilemiyor; elle giriliyor. Girdisi olmayan seri
-    // de listede görünmeli, yoksa kullanıcı nereye gireceğini bulamaz.
+    // Seriler şimdilik elle giriliyor. Girdisi olmayan seri de listede
+    // görünmeli, yoksa kullanıcı nereye gireceğini bulamaz.
     test('girdisi olmayan seri de geliyor', () async {
       final cubit = OfficialCubit(repo);
       await cubit.load();
@@ -149,7 +149,7 @@ void main() {
         series.firstWhere((s) => s.code == 'TUIK_TUFE').entries,
         hasLength(2),
       );
-      expect(series.firstWhere((s) => s.code == 'ENAG_ETUFE').entries, isEmpty);
+      expect(series.firstWhere((s) => s.code == 'TUIK_UFE').entries, isEmpty);
       await cubit.close();
     });
 

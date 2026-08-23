@@ -308,14 +308,17 @@ describe('API', () => {
   // Profil ekranındaki "Hesabı sil" düğmesi sunucuya hiç istek atmıyordu:
   // sadece oturumu kapatıyor, ekranda ise "kalıcı olarak silinir" yazıyordu.
   // Aşağıdakiler o sözün gerçekten tutulduğunu tutuyor.
-  // TÜİK ve ENAG'ın makine okunur, güvenilir bir akışı yok; ikisi de elle
-  // giriliyor. Sayı uydurmak seçenek değil, o yüzden bu yol ürünün parçası.
+  // Seriler şimdilik elle giriliyor: TÜİK'in kendi portalı otomatik erişime
+  // kapalı, resmî kanal olan TCMB EVDS ise API anahtarı istiyor. Sayı
+  // uydurmak seçenek değil, o yüzden bu yol ürünün parçası.
   describe('Resmî seriler', () => {
     it('girdisi olmayan seri de listede görünüyor', async () => {
       const res = await request(app).get('/official').set(auth()).expect(200);
       const codes = res.body.map((s: { code: string }) => s.code);
       expect(codes).toContain('TUIK_TUFE');
-      expect(codes).toContain('ENAG_ETUFE');
+      // ENAG kaldırıldı: alan adı artık kayıtlı değil, yeni adresleri de
+      // ayakta değil ve hiçbir zaman makine okunur bir akışları olmadı.
+      expect(codes).not.toContain('ENAG_ETUFE');
     });
 
     it('ay yazılıyor ve düzeltilebiliyor', async () => {
@@ -374,16 +377,16 @@ describe('API', () => {
 
     it('yanlış girilen ay silinebiliyor', async () => {
       await request(app)
-        .put('/official/ENAG_ETUFE/2026-06-01')
+        .put('/official/TUIK_TUFE/2026-05-01')
         .set(auth())
         .send({ yoyPct: 58.2 })
         .expect(200);
       await request(app)
-        .delete('/official/ENAG_ETUFE/2026-06-01')
+        .delete('/official/TUIK_TUFE/2026-05-01')
         .set(auth())
         .expect(200);
       await request(app)
-        .delete('/official/ENAG_ETUFE/2026-06-01')
+        .delete('/official/TUIK_TUFE/2026-05-01')
         .set(auth())
         .expect(404);
     });

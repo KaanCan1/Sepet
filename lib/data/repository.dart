@@ -89,9 +89,10 @@ class Repository {
 
   /// Resmî ve bağımsız seriler, girilmiş aylarıyla.
   ///
-  /// Bu iki seri elle giriliyor: TÜİK'in ve ENAG'ın makine okunur, güvenilir
-  /// bir akışı yok. Sayı uydurmak seçenek değil — uygulamanın bütün iddiası
-  /// ölçülen sayıların gerçek olması.
+  /// Şimdilik elle giriliyor: TÜİK'in kendi portalı otomatik erişime kapalı,
+  /// resmî kanal olan TCMB EVDS ise API anahtarı istiyor. Sayı uydurmak
+  /// seçenek değil — uygulamanın bütün iddiası ölçülen sayıların gerçek
+  /// olması.
   Future<List<OfficialSeries>> officialSeries() async {
     final rows = await _api.get('/official') as List;
     return rows

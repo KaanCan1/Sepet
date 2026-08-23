@@ -74,9 +74,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Resmî ve bağımsız iki ölçüm yan yana duruyor. Uygulama '
-                    'hiçbirini doğrulamıyor ya da yorumlamıyor — senin sepetin '
-                    'için referans çizgisi.',
+                    'Resmî ölçüm senin sayının yanında duruyor. Uygulama onu '
+                    'doğrulamıyor ya da yorumlamıyor — yalnızca referans '
+                    'çizgisi.',
                     style: TextStyle(fontSize: 11, height: 1.5, color: C.muted),
                   ),
                   const SizedBox(height: 8),

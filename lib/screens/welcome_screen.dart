@@ -111,7 +111,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
               const SizedBox(height: 12),
               const Text(
-                'TÜİK ve ENAG herkes için tek bir sepet varsayar.\nSeninki o değil.',
+                'TÜİK herkes için tek bir sepet varsayar.\nSeninki o değil.',
                 style: TextStyle(fontSize: 13, height: 1.55, color: C.muted),
               ),
               const Spacer(flex: 3),

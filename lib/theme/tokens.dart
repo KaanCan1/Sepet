@@ -13,7 +13,7 @@ abstract final class C {
   static const ref = Color(0xFF46586B);
   static const refBg = Color(0xFFECEFF2);
 
-  /// Üçüncü seri (ENAG) ve pasif bar dolgusu.
+  /// Pasif bar dolgusu ve ikincil seri rengi.
   static const grey = Color(0xFFB9B6AE);
 }
 

@@ -14,15 +14,15 @@ import '../widgets/glass.dart';
 import '../widgets/icons.dart';
 import '../widgets/screen_frame.dart';
 
-/// Resmî ve bağımsız serilerin elle girildiği ekran.
+/// Karşılaştırma serilerinin elle girildiği ekran.
 ///
-/// Neden elle: TÜİK'in ve ENAG'ın makine okunur, güvenilir bir akışı yok.
-/// TÜİK'in veri portalı otomatik erişimde yönlendirmeye düşüyor, MEDAS oturum
-/// tabanlı, ENAG'ın sitesi erişilemiyor. Sayfa kazımak kullanım koşullarına
-/// takılır ve her tasarım değişikliğinde kırılır.
+/// Neden elle: TÜİK'in kendi veri portalı otomatik erişimde yönlendirmeye
+/// düşüyor, MEDAS oturum tabanlı bir arayüz. Resmî ve makine okunur kanal
+/// TCMB'nin EVDS'i ve ücretsiz bir API anahtarı istiyor; anahtar
+/// tanımlanana kadar tek yol burası.
 ///
 /// Uydurmak seçenek değildi: uygulamanın bütün iddiası ölçülen sayıların
-/// gerçek olması. Ayda bir, iki sayı — elle girmek makul bir bedel.
+/// gerçek olması. Ayda bir sayı — elle girmek makul bir bedel.
 class OfficialScreen extends StatelessWidget {
   const OfficialScreen({super.key});
 
@@ -54,9 +54,8 @@ class OfficialScreen extends StatelessWidget {
                 children: [
                   const SizedBox(height: 4),
                   const Text(
-                    'TÜİK ve ENAG sayılarını otomatik çekmiyoruz: ikisinin de '
-                    'makine okunur, güvenilir bir akışı yok. Uydurmak yerine '
-                    'boş bırakıyoruz — buraya sen giriyorsun.',
+                    'TÜİK sayısını henüz otomatik çekmiyoruz. Uydurmak '
+                    'yerine boş bırakıyoruz — buraya sen giriyorsun.',
                     style: TextStyle(fontSize: 12, height: 1.5, color: C.muted),
                   ),
                   const SizedBox(height: 20),

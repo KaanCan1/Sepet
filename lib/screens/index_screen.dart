@@ -114,8 +114,8 @@ class _Body extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Text(
                     missing.length == snapshot.official.length
-                        ? 'Resmî ve bağımsız ölçümler elle giriliyor — '
-                              'girmek için dokun.'
+                        ? 'Karşılaştırma serileri elle giriliyor — girmek '
+                              'için dokun.'
                         : '${missing.map((s) => s.title).join(', ')} için '
                               'ay girilmedi — girmek için dokun.',
                     style: const TextStyle(
