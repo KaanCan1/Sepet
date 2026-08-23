@@ -22,6 +22,14 @@ class OfficialCubit extends DataCubit<List<OfficialSeries>> {
     await load();
   }
 
+  /// TCMB EVDS'ten çeker. Anahtar sunucuda tanımlı değilse ApiException
+  /// atıyor ve ekran elle giriş yolunu göstermeye devam ediyor.
+  Future<int> refreshFromSource() async {
+    final written = await _repo.refreshOfficial();
+    await load();
+    return written;
+  }
+
   Future<void> remove({required String code, required DateTime month}) async {
     await _repo.deleteOfficial(code: code, month: month);
     await load();

@@ -107,6 +107,12 @@ class Repository {
     required double yoyPct,
   }) => _api.put('/official/$code/${_monthKey(month)}', {'yoyPct': yoyPct});
 
+  /// TÜİK TÜFE'yi TCMB EVDS'ten çeker. Yazılan ay sayısını döndürür.
+  Future<int> refreshOfficial() async {
+    final res = await _api.post('/official/refresh') as Map<String, dynamic>;
+    return (res['written'] as num?)?.toInt() ?? 0;
+  }
+
   Future<void> deleteOfficial({
     required String code,
     required DateTime month,

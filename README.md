@@ -89,6 +89,21 @@ Dört SQL fonksiyonu, tek işlemde:
 Gri satırlar o aşama olmasaydı sayıya ne olacağını söylüyor. Şemaların
 kaynağı ve renk eşlemesi: [`docs/diagrams/`](docs/diagrams/).
 
+### Karşılaştırma serisi
+
+TÜİK TÜFE, **TCMB EVDS** üzerinden çekiliyor — TÜİK'in kendi veri portalı
+otomatik erişimde yönlendirmeye düşüyor, MEDAS oturum tabanlı bir arayüz.
+Resmî ve makine okunur kanal TCMB'ninki.
+
+`EVDS_API_KEY` tanımlıysa sunucu açılışta seriyi tazeliyor; tazelik kontrolü
+20 gün, yani seri ayda bir açıklandığı için ağa ayda bir kez çıkılıyor.
+Anahtar yoksa uygulama çalışmayı sürdürüyor ve aylar Profil → *Resmî
+verileri gir* ekranından elle girilebiliyor. İki yol birbirini dışlamıyor.
+
+Sözleşme belgelenmemiş; EVDS uygulamasının kendi paketinden çıkarılıp
+gerçek anahtarla doğrulandı ve [`test/evds.spec.ts`](server/test/evds.spec.ts)
+ile sabitlendi.
+
 ## Projenin kalbi: `eşleşme?`
 
 <img src="docs/screenshots/05-eslesme.png" width="230" align="right" alt="Eşleşme onayı alt sayfası">
@@ -133,7 +148,7 @@ OFL. Sistem fontlarına güvenilseydi Android tarafında tipografi çökerdi.
 | Krom | **liquid_glass_widgets** | Yüzen kapsül ve daire düğme gerçek kırılma/speküler kenar ile — elle yazılmış `BackdropFilter` taklidi değil |
 | Normalizasyon | **Claude API**, yalnızca belirsiz satırlar | Maliyeti gözlem başına değil, belirsizlik başına ödemek |
 | Backend | **Node.js/Express + PostgreSQL** | Kullanıcı, fiş, kanonik ürün, alias tablosu, fiyat gözlemleri, Laspeyres endeksi |
-| Karşılaştırma | TÜİK TÜFE aylık serisi | Resmî sayı, yorumsuz; senin sayının yanında referans çizgisi |
+| Karşılaştırma | TÜİK TÜFE, **TCMB EVDS** üzerinden | Resmî dağıtım kanalı; TÜİK'in kendi portalı otomatik erişime kapalı |
 
 > API anahtarı hiçbir koşulda istemciye gömülmüyor — derlenmiş uygulamadan
 > çıkarılabilir. Her model çağrısı kendi backend'imiz üzerinden geçiyor.
@@ -287,7 +302,7 @@ Ayrıntı ve bilinen sınırlar: [server/README.md](server/README.md)
 - [ ] Gerçek kamera + ML Kit / Vision OCR
 - [ ] Node/Express + Postgres backend, JWT oturum
 - [ ] Kanonik ürün + alias şeması, Laspeyres endeks SQL'i
-- [ ] TÜİK TÜFE serisinin TCMB EVDS üzerinden aylık çekimi
+- [x] TÜİK TÜFE serisinin TCMB EVDS üzerinden aylık çekimi
 - [ ] Ayın 3'ünde aylık kart bildirimi
 - [ ] App Store / Play Store yayını
 

@@ -34,3 +34,8 @@ services:
       # Neon bağlantı dizesi. Panelde elle giriliyor, depoya yazılmıyor.
       - key: DATABASE_URL
         sync: false
+      # TCMB EVDS anahtarı — TÜİK TÜFE'nin resmî dağıtım kanalı.
+      # Tanımlı değilse otomatik çekim sessizce atlanıyor ve aylar
+      # uygulamadan elle girilebiliyor; sunucu yine açılıyor.
+      - key: EVDS_API_KEY
+        sync: false

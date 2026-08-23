@@ -14,7 +14,9 @@
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "deploy:prepare": "npm run migrate:up && npm run catalog",
-    "catalog": "tsx scripts/load-catalog.ts"
+    "catalog": "tsx scripts/load-catalog.ts",
+    "official": "tsx scripts/fetch-official.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "express": "^5.2.1",
