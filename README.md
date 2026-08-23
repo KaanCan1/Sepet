@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>Fişlerinden kendi enflasyonunu hesaplayan mobil uygulama.</strong><br>
-  TÜİK ve ENAG herkes için tek bir sepeti varsayar. Seninki o değil.
+  TÜİK herkes için tek bir sepeti varsayar. Seninki o değil.
 </p>
 
 <p align="center">
@@ -36,7 +36,7 @@ fiyat değişimi. Ama sen o sepeti almıyorsun. Kirada mı oturuyorsun, arabanla
 işe gidiyorsun, çocuğun var mı — hepsi senin sepetini ortalamadan uzaklaştırıyor.
 
 Sepet, market fişlerini okuyup **senin fiilen aldığın ürünlerden** bir fiyat
-endeksi kuruyor ve resmî/bağımsız ölçümlerin yanına koyuyor. Hiçbirini
+endeksi kuruyor ve resmî ölçümün yanına koyuyor. Hiçbirini
 doğrulamıyor ya da yorumlamıyor — sadece referans çizgisi olarak duruyorlar.
 
 ## Çekirdek döngü
@@ -46,7 +46,7 @@ doğrulamıyor ya da yorumlamıyor — sadece referans çizgisi olarak duruyorla
 | | Ekran | İş |
 |---|---|---|
 | **00** | Karşılama | Apple, Google ya da e-posta ile giriş — ya da hesapsız devam. Giriş zorunlu değil; hesapsız kullanımda fişler yalnızca cihazda kalır. |
-| **01** | Endeks | Tek sayı: son 12 ayda senin sepetin. Altında TÜİK/ENAG karşılaştırması, seri grafiği ve son fişler. |
+| **01** | Endeks | Tek sayı: son 12 ayda senin sepetin. Altında TÜİK karşılaştırması, seri grafiği ve son fişler. |
 | **02** | Fiş ekleme ve fiş | Fotoğraf → cihaz üstünde OCR → düzeltilebilir taslak → kayıt. Fişin kâğıt hâli ve altında yorumlanmış satırlar; emin olunamayan satır `eşleşme?` ile işaretlenir. |
 | **03** | Ürün geçmişi | Tek ürünün gözlem geçmişi, marketler arası son fiyatlar, 12 aylık değişim. |
 | **04** | Aylık kart | Paylaşılabilir özet kart (PNG olarak dışa aktarılır) ve ayın en çok zamlanan kalemleri. |
@@ -98,7 +98,7 @@ OFL. Sistem fontlarına güvenilseydi Android tarafında tipografi çökerdi.
 | Krom | **liquid_glass_widgets** | Yüzen kapsül ve daire düğme gerçek kırılma/speküler kenar ile — elle yazılmış `BackdropFilter` taklidi değil |
 | Normalizasyon | **Claude API**, yalnızca belirsiz satırlar | Maliyeti gözlem başına değil, belirsizlik başına ödemek |
 | Backend | **Node.js/Express + PostgreSQL** | Kullanıcı, fiş, kanonik ürün, alias tablosu, fiyat gözlemleri, Laspeyres endeksi |
-| Karşılaştırma | TÜİK TÜFE + ENAG E-TÜFE aylık serileri | Biri resmî, biri bağımsız; ikisi de yorumsuz |
+| Karşılaştırma | TÜİK TÜFE aylık serisi | Resmî sayı, yorumsuz; senin sayının yanında referans çizgisi |
 
 > API anahtarı hiçbir koşulda istemciye gömülmüyor — derlenmiş uygulamadan
 > çıkarılabilir. Her model çağrısı kendi backend'imiz üzerinden geçiyor.
@@ -252,7 +252,7 @@ Ayrıntı ve bilinen sınırlar: [server/README.md](server/README.md)
 - [ ] Gerçek kamera + ML Kit / Vision OCR
 - [ ] Node/Express + Postgres backend, JWT oturum
 - [ ] Kanonik ürün + alias şeması, Laspeyres endeks SQL'i
-- [ ] TÜİK ve ENAG serilerinin aylık çekimi
+- [ ] TÜİK TÜFE serisinin TCMB EVDS üzerinden aylık çekimi
 - [ ] Ayın 3'ünde aylık kart bildirimi
 - [ ] App Store / Play Store yayını
 

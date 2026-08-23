@@ -233,10 +233,22 @@ SELECT g.id, b.id, p.size_label, p.size_value
   LEFT JOIN brands b ON b.name = p.brand_name
 ON CONFLICT DO NOTHING;
 
+-- ── Karşılaştırma serileri ─────────────────────────────────────────────────
+-- Yalnızca TÜİK. ENAG kaldırıldı: alan adları enag.org.tr artık kayıtlı
+-- değil (yetkili org.tr sunucusu NXDOMAIN dönüyor), yeni adresleri
+-- enagrup.org ise sunucuya ulaşamıyor (HTTP 525). Zaten hiçbir zaman
+-- makine okunur bir akışları olmadı; sayılar basın bültenleriyle
+-- duyuruluyor. Haber sitesinden kazınmış, kaynağı doğrulanamayan bir sayıyı
+-- "ENAG verisi" diye göstermek uydurmaktan çok da iyi olmazdı.
+--
+-- TÜİK'in resmî ve makine okunur kanalı var: TCMB EVDS.
 INSERT INTO official_series (code, publisher, name, is_official) VALUES
-  ('TUIK_TUFE',  'TÜİK', 'TÜFE',   true),
-  ('ENAG_ETUFE', 'ENAG', 'E-TÜFE', false)
+  ('TUIK_TUFE', 'TÜİK', 'TÜFE', true)
 ON CONFLICT (code) DO NOTHING;
+
+-- Katalog official_series'in de sahibi: burada yazmayan seri kalmasın.
+-- Basamaklı silme girilmiş aylarını da götürüyor.
+DELETE FROM official_series WHERE code <> ALL (ARRAY['TUIK_TUFE']);
 
 -- ── Marka öncesi artıklar ──────────────────────────────────────────────────
 -- Marka modeline geçmeden önce kurulmuş bir veritabanında eski kanonik

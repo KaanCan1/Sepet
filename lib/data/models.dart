@@ -349,7 +349,8 @@ class OfficialSeries {
   final String publisher;
   final String name;
 
-  /// Resmî kurum mu (TÜİK), bağımsız ölçüm mü (ENAG).
+  /// Resmî kurum mu, bağımsız ölçüm mü. Şimdilik yalnızca TÜİK var; alan
+  /// duruyor çünkü bağımsız bir kaynak eklendiğinde ayrım gerekecek.
   final bool official;
 
   /// En yeniden eskiye.
