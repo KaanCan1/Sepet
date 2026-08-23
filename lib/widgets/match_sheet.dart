@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../data/repository.dart';
 import '../data/api.dart';
-import '../data/app_scope.dart';
 import '../data/models.dart';
 import '../theme/tokens.dart';
 import 'atoms.dart';
@@ -64,7 +65,7 @@ class _MatchSheetState extends State<MatchSheet> {
       _loading = true;
       _error = null;
     });
-    final repo = AppScope.repoOf(context);
+    final repo = context.read<Repository>();
     try {
       final rows = await repo.searchCatalog(q);
       if (mounted) setState(() => _results = rows);

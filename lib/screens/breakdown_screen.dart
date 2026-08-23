@@ -1,26 +1,17 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../data/app_scope.dart';
+import '../data/repository.dart';
+import '../state/breakdown_cubit.dart';
 import '../data/fmt.dart';
 import '../data/models.dart';
 import '../theme/tokens.dart';
-import '../widgets/async_view.dart';
+import '../widgets/data_view.dart';
 import '../widgets/atoms.dart';
 import '../widgets/chart.dart';
 import '../widgets/glass.dart';
 import '../widgets/icons.dart';
 import '../widgets/screen_frame.dart';
-
-/// Kırılımın hangi eksende okunduğu.
-enum BreakdownAxis {
-  category('Kategori', 'KATEGORİ'),
-  brand('Marka', 'MARKA');
-
-  const BreakdownAxis(this.tab, this.label);
-
-  final String tab;
-  final String label;
-}
 
 /// 05 — Kırılım. Genel sayı "ne kadar" diyor; bu ekran "nereden" diyor.
 ///
@@ -28,22 +19,20 @@ enum BreakdownAxis {
 /// kendi kümesinde yeniden ağırlıklandırılıyor, toplandıklarında genel
 /// endeksi vermezler. Alttaki not bunu söylüyor — aksi halde okuyan
 /// yüzdeleri toplamaya kalkar.
-class BreakdownScreen extends StatefulWidget {
+class BreakdownScreen extends StatelessWidget {
   const BreakdownScreen({super.key});
 
-  static Route<void> route() =>
-      CupertinoPageRoute(builder: (_) => const BreakdownScreen());
-
-  @override
-  State<BreakdownScreen> createState() => _BreakdownScreenState();
-}
-
-class _BreakdownScreenState extends State<BreakdownScreen> {
-  BreakdownAxis _axis = BreakdownAxis.category;
+  static Route<void> route() => CupertinoPageRoute(
+    builder: (context) => BlocProvider(
+      create: (_) => BreakdownCubit(context.read<Repository>())..load(),
+      child: const BreakdownScreen(),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
-    final repo = AppScope.repoOf(context);
+    final cubit = context.watch<BreakdownCubit>();
+    final axis = cubit.axis;
 
     return ScreenFrame(
       title: 'Kırılım',
@@ -62,32 +51,24 @@ class _BreakdownScreenState extends State<BreakdownScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 4),
-                _AxisToggle(
-                  value: _axis,
-                  onChanged: (a) => setState(() => _axis = a),
-                ),
+                _AxisToggle(value: axis, onChanged: cubit.select),
                 const SizedBox(height: 16),
-                // Eksen değişince AsyncView baştan yüklensin diye anahtar
-                // ekseni taşıyor; yoksa aynı durum nesnesi eski listeyi
-                // gösterip yeni veriyi hiç istemiyor.
-                AsyncView<List<Breakdown>>(
-                  key: ValueKey(_axis),
-                  load: () => _axis == BreakdownAxis.category
-                      ? repo.indexByCategory()
-                      : repo.indexByBrand(),
+                // Eksen de veri de cubit'te: seçim değişince yeni liste
+                // gelene kadar eskisi yeni başlığın altında görünmüyor.
+                DataView<BreakdownCubit, List<Breakdown>>(
                   isEmpty: (rows) => rows.isEmpty,
                   empty: EmptyState(
-                    title: _axis == BreakdownAxis.category
+                    title: axis == BreakdownAxis.category
                         ? 'Kategori kırılımı için veri yok'
                         : 'Marka kırılımı için veri yok',
-                    body: _axis == BreakdownAxis.category
+                    body: axis == BreakdownAxis.category
                         ? 'Bir kategorinin serisi için o kategoride en az iki '
                               'farklı ayda fiş gerekiyor.'
                         : 'Markalı ürünlerde en az iki farklı ayda fiş '
                               'gerekiyor. Kasada tartılan sebze ve meyvenin '
                               'markası olmadığı için bu listede yer almaz.',
                   ),
-                  builder: (context, rows) => _List(axis: _axis, rows: rows),
+                  builder: (context, rows) => _List(axis: axis, rows: rows),
                 ),
               ],
             ),

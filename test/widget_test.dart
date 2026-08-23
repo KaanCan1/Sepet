@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sepet/data/app_scope.dart';
 import 'package:sepet/data/auth_store.dart';
 import 'package:sepet/data/fmt.dart';
-import 'package:sepet/data/session.dart';
 import 'package:sepet/screens/root_gate.dart';
 import 'package:sepet/screens/shell.dart';
 import 'package:sepet/screens/welcome_screen.dart';
@@ -19,8 +18,8 @@ Widget bootstrap({String? token}) => AppScope(
 );
 
 void main() {
-  setUp(() => session.value = null);
-
+  // Oturum artık global bir bildirici değil, AuthCubit'te — her test kendi
+  // ağacını kurduğu için sıfırlamaya gerek kalmadı.
   group('Fmt', () {
     test('binlik ayracı nokta, ondalık virgül', () {
       expect(Fmt.money(1917.45), '1.917,45');

@@ -189,13 +189,34 @@ ekliyor. TestFlight adımı imzalama sertifikaları eklenene kadar atlanıyor.
 
 ```
 lib/
-├── data/          modeller, biçimlendirme, oturum, demo verisi
+├── data/          modeller, biçimlendirme, API istemcisi, depo
+├── state/         cubit'ler — oturum, endeks, fişler, ürünler, kırılım
 ├── screens/       ekranlar
 ├── theme/         tasarım belirteçleri (renk, tipografi)
 └── widgets/       cam yüzeyler, grafik motoru, çizgi ikonlar, ekran kabuğu
 ```
 
 Her iki grafik de tek bir `CustomPainter` üzerinde; ikonlar SVG değil, çizim.
+
+**Durum yönetimi: Bloc (Cubit).** Uygulama durumu — oturum, endeks, fiş
+listesi, ürünler, kırılım — widget ağacının dışında, `lib/state/` altındaki
+cubit'lerde. Böylece uygulamayı ayağa kaldırmadan, kare beklemeden birim
+testi yazılabiliyor (`test/cubit_test.dart`).
+
+Sunucudan veri çeken her ekran aynı üç hâli yaşıyor, o yüzden ortak bir taban
+var: `DataCubit<T>` yalnızca `fetch()` istiyor, hata yakalamayı ve
+`DataLoading / DataFailure / DataReady` geçişlerini kendisi yapıyor. Durumlar
+mühürlü sınıf, yani derleyici eksik dal bırakılmasına izin vermiyor ve "hem
+yükleniyor hem hatalı" gibi geçersiz bileşimler kurulamıyor.
+
+`setState` tamamen kalkmadı, kalkmamalı da: sekme indeksi, basılma
+animasyonu, açılır pencerenin açıklığı gibi tek bir widget'ın içinde doğup
+ölen geçici durumlar yerinde duruyor. Bloc'a taşınan şey uygulama durumu.
+
+Sekme ekranlarının cubit'leri kabuğun üstünde, ayrıntı ekranlarınınki
+yönlendirmeyle birlikte doğup ölüyor. Sebebi somut: fiş eklendiğinde hem
+endeks hem fiş listesi bayatlıyor, ikisi ekrana bağlı olsaydı sekme
+değiştirmeden tazelenemezlerdi.
 
 ## Telefona kurmak
 

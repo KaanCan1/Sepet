@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../data/app_scope.dart';
 import '../data/fmt.dart';
 import '../data/models.dart';
 import '../theme/tokens.dart';
-import '../widgets/async_view.dart';
+import '../state/products_cubit.dart';
+import '../widgets/data_view.dart';
 import '../widgets/atoms.dart';
 import '../widgets/glass.dart';
 import '../widgets/screen_frame.dart';
@@ -16,16 +16,12 @@ class ProductsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final repo = AppScope.repoOf(context);
-
     return ScreenFrame(
       title: 'Sepetindeki ürünler',
       reserveTabBar: true,
       slivers: [
         SliverToBoxAdapter(
-          child: AsyncView<List<Product>>(
-            reloadOn: dataChanged,
-            load: repo.products,
+          child: DataView<ProductsCubit, List<Product>>(
             isEmpty: (p) => p.isEmpty,
             empty: const EmptyState(
               title: 'Sepetin boş',
