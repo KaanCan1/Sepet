@@ -32,6 +32,10 @@ export const pool = new pg.Pool({
   // yalnızca zincir doğrulaması gevşetiliyor.
   ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
   max: Number(process.env.PG_POOL_MAX ?? 10),
+  // Neon askıdan uyanırken ilk bağlantı saniyeler sürebiliyor; varsayılan
+  // süre dolup istek düşüyordu.
+  connectionTimeoutMillis: Number(process.env.PG_CONNECT_TIMEOUT_MS ?? 15000),
+  idleTimeoutMillis: 30000,
 });
 
 export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
