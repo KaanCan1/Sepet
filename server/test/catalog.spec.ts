@@ -85,14 +85,30 @@ describe('Referans katalog', () => {
     expect(rows, 'eşleşmesi olan satır silinmemeliydi').toHaveLength(1);
   });
 
-  it('tekrar çalıştırınca ürün sayısı değişmiyor', async () => {
-    const before = await one<{ n: number }>(
-      `SELECT count(*)::int AS n FROM canonical_products`,
-    );
+  it('tekrar çalıştırınca katalog ürünleri çoğalmıyor', async () => {
+    // Global ürün sayısı ölçülemez: vitest test dosyalarını paralel
+    // çalıştırıyor ve diğerleri aynı anda kendi kanonik ürünlerini yaratıp
+    // siliyor. Sayı katalog yüzünden değil komşu testin temizliği yüzünden
+    // oynuyordu ve bu test kararsız biçimde düşüyordu.
+    //
+    // Katalogun kendi grubuna bakmak güvenli: fixture'lar grup adlarını
+    // kullanıcı kimliğiyle tekilleştiriyor, katalog gruplarına hiç
+    // dokunmuyorlar.
+    const count = async () =>
+      (
+        await one<{ n: number }>(
+          `SELECT count(*)::int AS n
+             FROM canonical_products cp
+             JOIN product_groups g ON g.id = cp.group_id
+            WHERE g.name = 'Yoğurt'`,
+        )
+      ).n;
+
+    const before = await count();
+    expect(before, 'katalog yüklenmemiş görünüyor').toBeGreaterThan(1);
+
     await pool.query(await catalogSql());
-    const after = await one<{ n: number }>(
-      `SELECT count(*)::int AS n FROM canonical_products`,
-    );
-    expect(after.n).toBe(before.n);
+
+    expect(await count()).toBe(before);
   });
 });
