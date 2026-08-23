@@ -153,6 +153,21 @@ void main() {
       await cubit.close();
     });
 
+    // Otomatik çekim geldi ama elle giriş yolu kalkmadı: anahtar sunucuda
+    // tanımlı değilse ya da TCMB'ye ulaşılamıyorsa kullanıcı yine girebiliyor.
+    test('EVDS çekimi listeyi tazeliyor', () async {
+      final cubit = OfficialCubit(repo);
+      await cubit.load();
+
+      final written = await cubit.refreshFromSource();
+
+      expect(written, 14);
+      expect(api.calls, contains('POST /official/refresh'));
+      // Çekimden sonra liste yeniden okunuyor.
+      expect(api.calls.last, 'GET /official');
+      await cubit.close();
+    });
+
     test('kaydettikten sonra listeyi tazeliyor', () async {
       final cubit = OfficialCubit(repo);
       await cubit.load();

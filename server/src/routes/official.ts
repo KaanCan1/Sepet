@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth, type AuthedRequest } from '../auth.js';
 import { one, query } from '../db.js';
+import { refreshOfficial } from '../official/refresh.js';
 
 export const officialRouter = Router();
 officialRouter.use(requireAuth);
@@ -72,7 +73,11 @@ officialRouter.get('/', async (_req: AuthedRequest, res) => {
 /// Seviye değil yıllık yüzde tutuluyor: kaynaklar zaten yıllık değişimi
 /// açıklıyor ve seviyeden yeniden hesaplamak yuvarlama farkı üretiyor.
 officialRouter.put('/:code/:month', async (req: AuthedRequest, res) => {
-  const { code, month } = req.params;
+  // Express 5'te yol parametreleri string | string[] tipinde; regex'e
+  // doğrudan verilemiyor. Bu tip hatası bir süre fark edilmeden durdu
+  // çünkü sunucu tarafında tip denetimi hiç çalıştırılmıyordu.
+  const code = String(req.params.code);
+  const month = String(req.params.month);
   const yoyPct = Number(req.body?.yoyPct);
 
   if (!Number.isFinite(yoyPct)) {
@@ -84,7 +89,7 @@ officialRouter.put('/:code/:month', async (req: AuthedRequest, res) => {
     res.status(400).json({ error: 'Yıllık değişim −100 ile 1000 arasında olmalı' });
     return;
   }
-  if (!/^\d{4}-\d{2}-01$/.test(month ?? '')) {
+  if (!/^\d{4}-\d{2}-01$/.test(month)) {
     res.status(400).json({ error: 'Ay YYYY-MM-01 biçiminde olmalı' });
     return;
   }
@@ -113,7 +118,8 @@ officialRouter.put('/:code/:month', async (req: AuthedRequest, res) => {
 
 /// Yanlış girilen bir ayı siler.
 officialRouter.delete('/:code/:month', async (req: AuthedRequest, res) => {
-  const { code, month } = req.params;
+  const code = String(req.params.code);
+  const month = String(req.params.month);
   const { length } = await query(
     `DELETE FROM official_index_levels l
       USING official_series s
@@ -126,4 +132,28 @@ officialRouter.delete('/:code/:month', async (req: AuthedRequest, res) => {
     return;
   }
   res.json({ ok: true });
+});
+
+
+/// TÜİK TÜFE'yi TCMB EVDS'ten çeker.
+///
+/// Elle giriş yolu kalkmadı: anahtar tanımlı değilse ya da TCMB'ye
+/// ulaşılamıyorsa kullanıcı yine kendi girebiliyor.
+officialRouter.post('/refresh', async (_req: AuthedRequest, res) => {
+  try {
+    const result = await refreshOfficial({ force: true });
+    if (result.skipped === 'no-key') {
+      res.status(503).json({
+        error:
+          'Otomatik çekim kapalı: sunucuda EVDS_API_KEY tanımlı değil. '
+          + 'Ayları elle girebilirsin.',
+      });
+      return;
+    }
+    res.json({ written: result.written, newestMonth: result.newestMonth });
+  } catch (err) {
+    res.status(502).json({
+      error: `TCMB'ye ulaşılamadı: ${err instanceof Error ? err.message : err}`,
+    });
+  }
 });

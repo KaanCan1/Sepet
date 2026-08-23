@@ -58,6 +58,8 @@ class OfficialScreen extends StatelessWidget {
                     'yerine boş bırakıyoruz — buraya sen giriyorsun.',
                     style: TextStyle(fontSize: 12, height: 1.5, color: C.muted),
                   ),
+                  const SizedBox(height: 16),
+                  _RefreshRow(),
                   const SizedBox(height: 20),
                   for (final s in series) ...[
                     _SeriesBlock(series: s),
@@ -69,6 +71,84 @@ class OfficialScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// TCMB EVDS'ten çekme satırı.
+///
+/// Elle giriş yolu kalkmadı: anahtar sunucuda tanımlı değilse ya da TCMB'ye
+/// ulaşılamıyorsa kullanıcı yine kendi girebiliyor. İki yol birbirini
+/// dışlamıyor.
+class _RefreshRow extends StatefulWidget {
+  @override
+  State<_RefreshRow> createState() => _RefreshRowState();
+}
+
+class _RefreshRowState extends State<_RefreshRow> {
+  bool _busy = false;
+
+  Future<void> _run() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final cubit = context.read<OfficialCubit>();
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final n = await cubit.refreshFromSource();
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: C.ink,
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            n == 0 ? 'Yeni ay yok' : '$n ay güncellendi',
+            style: const TextStyle(fontSize: 12.5, color: C.card),
+          ),
+        ),
+      );
+    } on ApiException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: C.ink,
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            e.message,
+            style: const TextStyle(fontSize: 12.5, color: C.card),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      onTap: _run,
+      child: PaperCard(
+        padding: const EdgeInsets.fromLTRB(13, 11, 11, 11),
+        child: Row(
+          children: [
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('TCMB EVDS’ten çek', style: T.title),
+                  SizedBox(height: 3),
+                  Text(
+                    'TÜİK TÜFE’nin resmî dağıtım kanalı',
+                    style: TextStyle(fontSize: 11, color: C.muted),
+                  ),
+                ],
+              ),
+            ),
+            if (_busy)
+              const CupertinoLikeSpinner()
+            else
+              const LineIcon(Glyph.chevron, size: 15, color: C.muted),
+          ],
+        ),
+      ),
     );
   }
 }

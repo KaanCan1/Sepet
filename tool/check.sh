@@ -32,6 +32,9 @@ echo "→ Bağımlılıklar"
 echo "→ Biçim"
 "${DART[@]}" format --output=none --set-exit-if-changed .
 
+echo "→ Sunucu tip denetimi"
+(cd server && npm run --silent typecheck)
+
 echo "→ Statik analiz"
 "${FLUTTER[@]}" analyze --fatal-infos
 

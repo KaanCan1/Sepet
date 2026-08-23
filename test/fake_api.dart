@@ -113,6 +113,7 @@ class FakeApi extends Api {
         'entries': <Map<String, Object?>>[],
       },
     ],
+    'POST /official/refresh': {'written': 14, 'newestMonth': '2026-07-01'},
     'PUT /official/TUIK_TUFE/2026-06-01': {
       'month': '2026-06-01',
       'yoyPct': 35.0,

@@ -140,6 +140,12 @@ jobs:
 
       - run: npm ci
 
+      # Tip denetimi CI'da hiç çalışmıyordu; bir tip hatası fark edilmeden
+      # birleşti. Testler geçiyor olması TypeScript'in mutlu olduğu
+      # anlamına gelmiyor — tsx tipleri kontrol etmeden çalıştırıyor.
+      - name: Tip denetimi
+        run: npm run typecheck
+
       - name: Migration'lar
         run: npm run migrate:up
 
