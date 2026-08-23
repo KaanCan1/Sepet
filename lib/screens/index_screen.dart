@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../data/app_scope.dart';
 import '../data/fmt.dart';
 import '../data/models.dart';
 import '../data/repository.dart';
+import '../state/index_cubit.dart';
 import '../theme/tokens.dart';
-import '../widgets/async_view.dart';
+import '../widgets/data_view.dart';
 import '../widgets/atoms.dart';
 import '../widgets/chart.dart';
 import '../widgets/glass.dart';
@@ -16,46 +16,30 @@ import 'monthly_card_screen.dart';
 import 'receipt_detail_screen.dart';
 
 /// 01 — Endeks. Uygulamanın cevabı tek sayı; geri kalanı o sayının kanıtı.
-class IndexScreen extends StatefulWidget {
+///
+/// Veri IndexCubit'te ve cubit kabuğun üstünde duruyor: fiş eklendiğinde
+/// buradaki sayı da fiş listesi de bayatlıyor, ikisi ekrana bağlı olsaydı
+/// sekme değiştirmeden tazelenemezlerdi.
+class IndexScreen extends StatelessWidget {
   const IndexScreen({super.key});
 
   @override
-  State<IndexScreen> createState() => _IndexScreenState();
-}
-
-class _IndexScreenState extends State<IndexScreen> {
-  final _reloader = Reloader();
-
-  @override
-  void dispose() {
-    _reloader.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final repo = AppScope.repoOf(context);
-
     return ScreenFrame(
       title: 'Sepetin',
       reserveTabBar: true,
       slivers: [
         SliverToBoxAdapter(
-          child: AsyncView<(IndexSnapshot, List<Receipt>)>(
-            reloadOn: Listenable.merge([_reloader, dataChanged]),
-            load: () async => (await repo.index(), await repo.receipts()),
-            isEmpty: (d) => d.$1.isEmpty,
+          child: DataView<IndexCubit, IndexHome>(
+            isEmpty: (d) => d.isEmpty,
             empty: const EmptyState(
               title: 'Henüz endeks yok',
               body:
                   'Endeks en az iki farklı ayda fiş gerektiriyor — bir fiyatın '
                   'değiştiğini görebilmek için önce iki kez görmek lazım.',
             ),
-            builder: (context, data) => _Body(
-              snapshot: data.$1,
-              receipts: data.$2,
-              onChanged: _reloader.reload,
-            ),
+            builder: (context, data) =>
+                _Body(snapshot: data.snapshot, receipts: data.receipts),
           ),
         ),
       ],
@@ -64,15 +48,10 @@ class _IndexScreenState extends State<IndexScreen> {
 }
 
 class _Body extends StatelessWidget {
-  const _Body({
-    required this.snapshot,
-    required this.receipts,
-    required this.onChanged,
-  });
+  const _Body({required this.snapshot, required this.receipts});
 
   final IndexSnapshot snapshot;
   final List<Receipt> receipts;
-  final VoidCallback onChanged;
 
   /// "SON 12 AY" sabit değil: 12 ay dolmadıysa gerçek pencere yazılıyor,
   /// yıllıklandırma yapılmıyor.
@@ -154,11 +133,8 @@ class _Body extends StatelessWidget {
           const SizedBox(height: 2),
           for (final r in receipts.take(5))
             Pressable(
-              onTap: () async {
-                await Navigator.of(context)
-                    .push(ReceiptDetailScreen.route(r.id));
-                onChanged();
-              },
+              onTap: () =>
+                  Navigator.of(context).push(ReceiptDetailScreen.route(r.id)),
               child: LedgerRow(
                 name: r.merchant,
                 sub:

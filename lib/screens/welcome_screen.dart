@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../data/api.dart';
-import '../data/app_scope.dart';
 import '../data/session.dart';
+import '../state/auth_cubit.dart';
 import '../theme/tokens.dart';
 import '../widgets/atoms.dart';
 import '../widgets/glass.dart';
@@ -36,11 +37,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   Future<void> _signIn(AuthProvider provider, {String? email}) async {
     if (_busy) return;
     setState(() => _busy = true);
-    final scope = AppScope.of(context);
+    final auth = context.read<AuthCubit>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     try {
-      await scope.signIn(
+      await auth.signIn(
         provider: provider,
         email:
             email ??

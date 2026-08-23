@@ -7,10 +7,20 @@ import 'package:sepet/data/api.dart';
 /// yolundan geçsin diye JSON döndürüyor — modelleri de birlikte doğruluyor.
 class FakeApi extends Api {
   FakeApi({Map<String, Object?>? routes})
-    : super(
-        baseUrl: 'http://fake',
-        client: _FakeClient(routes ?? defaultRoutes),
-      );
+    : this._(_FakeClient(routes ?? defaultRoutes));
+
+  // İstemci tek yerde kuruluyor: iki ayrı örnek yaratılırsa çağrıları
+  // kaydeden nesne, isteklerin geçtiği nesne olmuyor ve calls hep boş
+  // görünüyor.
+  FakeApi._(_FakeClient client)
+    : _client = client,
+      super(baseUrl: 'http://fake', client: client);
+
+  final _FakeClient _client;
+
+  /// "GET /index" biçiminde, yapılan çağrılar. Testler bir düğmenin sunucuya
+  /// gerçekten gidip gitmediğini buradan doğruluyor.
+  List<String> get calls => _client.calls;
 
   /// İki ürün, üç ay: endeks 100 -> 116 -> 120,83 (%20,8).
   static Map<String, Object?> get defaultRoutes => {
@@ -82,6 +92,8 @@ class FakeApi extends Api {
         ],
       },
     ],
+    'DELETE /receipts': {'ok': true, 'deletedReceipts': 1},
+    'DELETE /account': {'ok': true},
     'GET /receipts': [
       {
         'id': 'r1',
@@ -166,10 +178,12 @@ class _FakeClient extends http.BaseClient {
   _FakeClient(this.routes);
 
   final Map<String, Object?> routes;
+  final List<String> calls = [];
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     final key = '${request.method} ${request.url.path}';
+    calls.add(key);
     final body = routes[key];
     final status = body == null ? 404 : 200;
     final payload = jsonEncode(body ?? {'error': 'Bulunamadı'});

@@ -75,6 +75,18 @@ class Repository {
         .toList();
   }
 
+  /// Bütün fişleri ve türetilmiş endeksi siler; hesabı bırakır.
+  ///
+  /// Demo veriden gerçek fişlere geçerken gereken şey bu: hesap, izinler ve
+  /// öğrenilmiş eşleşmeler kalıyor, endeks sıfırdan kuruluyor.
+  Future<int> clearReceipts() async {
+    final res = await _api.delete('/receipts') as Map<String, dynamic>;
+    return (res['deletedReceipts'] as num?)?.toInt() ?? 0;
+  }
+
+  /// Hesabı ve ona bağlı her şeyi siler.
+  Future<void> deleteAccount() => _api.delete('/account');
+
   Future<List<Receipt>> receipts() async {
     final rows = await _api.get('/receipts') as List;
     return rows

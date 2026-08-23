@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
-import '../widgets/async_view.dart';
+import '../state/app_data.dart';
 import '../widgets/glass.dart';
 import '../widgets/icons.dart';
 import 'index_screen.dart';
@@ -23,7 +23,18 @@ class Shell extends StatefulWidget {
 }
 
 class _ShellState extends State<Shell> {
+  /// Hangi sekmenin açık olduğu. Tek bir widget'ın içinde doğup ölen geçici
+  /// durum — Bloc'a taşınacak bir şey değil, yeri burası.
   int _tab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Sekme cubit'lerinin ilk yüklemesi. Kabuk yalnızca oturum açıkken var,
+    // dolayısıyla burada çağırmak "giriş yapıldı" demekle aynı şey; cubit'ler
+    // kurulurken yüklenselerdi jeton gelmeden istek atıp 401 alırlardı.
+    refreshUserData(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +123,7 @@ class _FloatingTabBar extends StatelessWidget {
             onTap: () async {
               final added = await Navigator.of(context)
                   .push(CaptureScreen.route());
-              if (added == true) dataChanged.reload();
+              if (added == true && context.mounted) refreshUserData(context);
             },
             child: GlassSurface(
               radius: kTabCapsuleHeight / 2,

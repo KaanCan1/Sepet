@@ -1,11 +1,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../data/app_scope.dart';
+import '../data/repository.dart';
+import '../state/app_data.dart';
+import '../state/receipts_cubit.dart';
 import '../data/fmt.dart';
 import '../data/models.dart';
 import '../theme/tokens.dart';
-import '../widgets/async_view.dart';
+import '../widgets/data_view.dart';
 import '../widgets/atoms.dart';
 import '../widgets/glass.dart';
 import '../widgets/icons.dart';
@@ -23,27 +26,24 @@ class ReceiptDetailScreen extends StatefulWidget {
 
   final String receiptId;
 
-  static Route<void> route(String id) =>
-      CupertinoPageRoute(builder: (_) => ReceiptDetailScreen(receiptId: id));
+  /// Ayrıntı cubit'i yönlendirmeyle doğup ölüyor.
+  static Route<void> route(String id) => CupertinoPageRoute(
+    builder: (context) => BlocProvider(
+      create: (_) => ReceiptDetailCubit(context.read<Repository>(), id)..load(),
+      child: ReceiptDetailScreen(receiptId: id),
+    ),
+  );
 
   @override
   State<ReceiptDetailScreen> createState() => _ReceiptDetailScreenState();
 }
 
 class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
-  final _reloader = Reloader();
-
-  @override
-  void dispose() {
-    _reloader.dispose();
-    super.dispose();
-  }
-
   Future<void> _resolve(ReceiptLine line) async {
     final productId = await MatchSheet.show(context, line);
     if (productId == null || !mounted) return;
 
-    final repo = AppScope.repoOf(context);
+    final repo = context.read<Repository>();
     final messenger = ScaffoldMessenger.of(context);
     try {
       await repo.confirmMatch(
@@ -51,8 +51,11 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
         lineId: line.id,
         productId: productId,
       );
-      _reloader.reload();
-      dataChanged.reload();
+      if (!mounted) return;
+      // Bu ekran kendini, sekmeler de kendilerini tazeliyor: onaylanan
+      // eşleşme hem fişi hem endeksi değiştiriyor.
+      await context.read<ReceiptDetailCubit>().load(silent: true);
+      if (mounted) refreshUserData(context);
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(
@@ -69,8 +72,6 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final repo = AppScope.repoOf(context);
-
     return ScreenFrame(
       title: 'Fiş',
       leading: Pressable(
@@ -82,9 +83,7 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
       ),
       slivers: [
         SliverToBoxAdapter(
-          child: AsyncView<Receipt>(
-            reloadOn: _reloader,
-            load: () => repo.receipt(widget.receiptId),
+          child: DataView<ReceiptDetailCubit, Receipt>(
             builder: (context, receipt) {
               final pending = receipt.lines.where((l) => l.needsMatch).length;
               return Padding(

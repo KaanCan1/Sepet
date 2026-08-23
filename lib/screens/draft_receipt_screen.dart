@@ -1,8 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../data/repository.dart';
 import '../data/api.dart';
-import '../data/app_scope.dart';
 import '../data/fmt.dart';
 import '../data/models.dart';
 import '../data/receipt_parser.dart';
@@ -60,7 +61,7 @@ class _DraftReceiptScreenState extends State<DraftReceiptScreen> {
 
   Future<void> _loadMerchants() async {
     try {
-      final list = await AppScope.repoOf(context).merchants();
+      final list = await context.read<Repository>().merchants();
       if (!mounted) return;
       setState(() {
         _merchants = list;
@@ -117,7 +118,7 @@ class _DraftReceiptScreenState extends State<DraftReceiptScreen> {
     });
     final navigator = Navigator.of(context);
     try {
-      await AppScope.repoOf(context).createReceipt(
+      await context.read<Repository>().createReceipt(
         merchantId: _merchant!.id,
         purchasedAt: _date,
         lines: [

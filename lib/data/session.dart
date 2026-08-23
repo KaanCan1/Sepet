@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// Oturumun nasıl açıldığı. Apple ve Google ad döndürebiliyor, e-posta akışı
 /// döndürmüyor — `displayName` bu yüzden ada öncelik verip e-postaya düşüyor.
 enum AuthProvider {
@@ -55,9 +53,6 @@ class Session {
   String get initials =>
       displayName.isEmpty ? '?' : displayName[0].toUpperCase();
 }
-
-/// Uygulama genelinde tek oturum kaynağı.
-final session = ValueNotifier<Session?>(null);
 
 bool isValidEmail(String v) =>
     RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]{2,}$').hasMatch(v.trim());

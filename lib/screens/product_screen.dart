@@ -1,10 +1,12 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../data/app_scope.dart';
+import '../data/repository.dart';
 import '../data/fmt.dart';
 import '../data/models.dart';
 import '../theme/tokens.dart';
-import '../widgets/async_view.dart';
+import '../state/products_cubit.dart';
+import '../widgets/data_view.dart';
 import '../widgets/atoms.dart';
 import '../widgets/chart.dart';
 import '../widgets/glass.dart';
@@ -18,13 +20,18 @@ class ProductScreen extends StatelessWidget {
 
   final String productId;
 
-  static Route<void> route(String id) =>
-      CupertinoPageRoute(builder: (_) => ProductScreen(productId: id));
+  /// Ayrıntı cubit'i yönlendirmeyle birlikte doğup ölüyor: ekrandan
+  /// çıkıldığında durum da gitmeli, bir sonraki ürün eskisinin verisiyle
+  /// açılmamalı.
+  static Route<void> route(String id) => CupertinoPageRoute(
+    builder: (context) => BlocProvider(
+      create: (_) => ProductDetailCubit(context.read<Repository>(), id)..load(),
+      child: ProductScreen(productId: id),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
-    final repo = AppScope.repoOf(context);
-
     return ScreenFrame(
       leading: Pressable(
         onTap: () => Navigator.of(context).pop(),
@@ -35,8 +42,7 @@ class ProductScreen extends StatelessWidget {
       ),
       slivers: [
         SliverToBoxAdapter(
-          child: AsyncView<Product>(
-            load: () => repo.product(productId),
+          child: DataView<ProductDetailCubit, Product>(
             builder: (context, p) => _Body(product: p),
           ),
         ),

@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../data/api.dart';
 import '../data/fmt.dart';
-import '../data/app_scope.dart';
 import '../data/repository.dart';
-import '../widgets/async_view.dart';
+import '../state/app_data.dart';
+import '../state/auth_cubit.dart';
+import '../state/receipts_cubit.dart';
+import '../state/index_cubit.dart';
+import '../widgets/data_view.dart';
 import '../data/models.dart';
 import '../data/session.dart';
 import '../theme/tokens.dart';
@@ -30,125 +35,140 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<Session?>(
-      valueListenable: session,
-      builder: (context, s, _) => ScreenFrame(
-        title: 'Profil',
-        reserveTabBar: true,
-        slivers: [
-          SliverPadding(
-            padding: kGutter,
-            sliver: SliverList.list(
-              children: [
-                const SizedBox(height: 8),
-                if (s == null) _SignedOut() else _Identity(session: s),
-                const SizedBox(height: 22),
-                const Lbl('KARŞILAŞTIRMA KAYNAKLARI'),
-                const SizedBox(height: 8),
-                AsyncView<IndexSnapshot>(
-                  load: AppScope.repoOf(context).index,
-                  builder: (context, snap) => PaperCard(
-                    padding: EdgeInsets.zero,
-                    child: Column(
-                      children: [
-                        for (var i = 0; i < snap.official.length; i++) ...[
-                          if (i > 0) const Hairline(),
-                          _SourceRow(source: snap.official[i]),
+    return BlocBuilder<AuthCubit, AuthState>(
+      builder: (context, auth) {
+        final s = switch (auth) {
+          AuthSignedIn(:final session) => session,
+          _ => null,
+        };
+        return ScreenFrame(
+          title: 'Profil',
+          reserveTabBar: true,
+          slivers: [
+            SliverPadding(
+              padding: kGutter,
+              sliver: SliverList.list(
+                children: [
+                  const SizedBox(height: 8),
+                  if (s == null) _SignedOut() else _Identity(session: s),
+                  const SizedBox(height: 22),
+                  const Lbl('KARŞILAŞTIRMA KAYNAKLARI'),
+                  const SizedBox(height: 8),
+                  DataView<IndexCubit, IndexHome>(
+                    builder: (context, home) => PaperCard(
+                      padding: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          for (
+                            var i = 0;
+                            i < home.snapshot.official.length;
+                            i++
+                          ) ...[
+                            if (i > 0) const Hairline(),
+                            _SourceRow(source: home.snapshot.official[i]),
+                          ],
                         ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Resmî ve bağımsız iki ölçüm yan yana duruyor. Uygulama '
+                    'hiçbirini doğrulamıyor ya da yorumlamıyor — senin sepetin '
+                    'için referans çizgisi olarak çekiliyorlar.',
+                    style: TextStyle(fontSize: 11, height: 1.5, color: C.muted),
+                  ),
+                  const SizedBox(height: 22),
+                  const Lbl('BİLDİRİM'),
+                  const SizedBox(height: 8),
+                  PaperCard(
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Aylık kart',
+                                style: TextStyle(fontSize: 12.5, color: C.ink),
+                              ),
+                              SizedBox(height: 3),
+                              Text(
+                                "Her ayın 3'ünde, resmî veri açıklandığında",
+                                style: TextStyle(fontSize: 11, color: C.muted),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch.adaptive(
+                          value: _monthlyPush,
+                          activeThumbColor: C.card,
+                          activeTrackColor: C.ink,
+                          onChanged: (v) => setState(() => _monthlyPush = v),
+                        ),
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Resmî ve bağımsız iki ölçüm yan yana duruyor. Uygulama '
-                  'hiçbirini doğrulamıyor ya da yorumlamıyor — senin sepetin '
-                  'için referans çizgisi olarak çekiliyorlar.',
-                  style: TextStyle(fontSize: 11, height: 1.5, color: C.muted),
-                ),
-                const SizedBox(height: 22),
-                const Lbl('BİLDİRİM'),
-                const SizedBox(height: 8),
-                PaperCard(
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Aylık kart',
-                              style: TextStyle(fontSize: 12.5, color: C.ink),
-                            ),
-                            SizedBox(height: 3),
-                            Text(
-                              "Her ayın 3'ünde, resmî veri açıklandığında",
-                              style: TextStyle(fontSize: 11, color: C.muted),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Switch.adaptive(
-                        value: _monthlyPush,
-                        activeThumbColor: C.card,
-                        activeTrackColor: C.ink,
-                        onChanged: (v) => setState(() => _monthlyPush = v),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 22),
-                const Lbl('VERİLERİN'),
-                const SizedBox(height: 4),
-                if (s != null)
+                  const SizedBox(height: 22),
+                  const Lbl('VERİLERİN'),
+                  const SizedBox(height: 4),
+                  if (s != null)
+                    _ActionRow(
+                      label: 'İzinler',
+                      hint: _consentHint(s),
+                      onTap: () =>
+                          Navigator.of(context).push(ConsentScreen.route()),
+                    ),
                   _ActionRow(
-                    label: 'İzinler',
-                    hint: _consentHint(s),
+                    label: 'Aydınlatma metni',
+                    hint: 'KVKK',
                     onTap: () =>
-                        Navigator.of(context).push(ConsentScreen.route()),
+                        Navigator.of(context).push(PrivacyScreen.route()),
                   ),
-                _ActionRow(
-                  label: 'Aydınlatma metni',
-                  hint: 'KVKK',
-                  onTap: () =>
-                      Navigator.of(context).push(PrivacyScreen.route()),
-                ),
-                _ActionRow(
-                  label: 'Fişleri dışa aktar',
-                  hint: 'CSV',
-                  onTap: () => _toast(context, 'Dışa aktarma hazırlanıyor'),
-                ),
-                _ActionRow(
-                  label: 'Fiş verisi nerede duruyor?',
-                  hint: s == null ? 'Cihazda' : 'Cihaz + hesap',
-                  onTap: () => _explainStorage(context, s != null),
-                ),
-                if (s != null)
                   _ActionRow(
-                    label: 'Hesabı sil',
-                    hint: '',
-                    danger: true,
-                    onTap: () => _confirmDelete(context),
+                    label: 'Fişleri dışa aktar',
+                    hint: 'CSV',
+                    onTap: () => _toast(context, 'Dışa aktarma hazırlanıyor'),
                   ),
-                const SizedBox(height: 18),
-                if (s != null)
-                  PrimaryButton(
-                    label: 'Çıkış yap',
-                    dark: false,
-                    onTap: () => session.value = null,
+                  _ActionRow(
+                    label: 'Fiş verisi nerede duruyor?',
+                    hint: s == null ? 'Cihazda' : 'Cihaz + hesap',
+                    onTap: () => _explainStorage(context, s != null),
                   ),
-                const SizedBox(height: 16),
-                Center(
-                  child: Text(
-                    'SEPET · v0.1.0',
-                    style: T.label.copyWith(fontSize: 9),
+                  if (s != null) ...[
+                    _ActionRow(
+                      label: 'Fişleri sil',
+                      hint: 'Hesap kalır',
+                      danger: true,
+                      onTap: () => _confirmClearReceipts(context),
+                    ),
+                    _ActionRow(
+                      label: 'Hesabı sil',
+                      hint: '',
+                      danger: true,
+                      onTap: () => _confirmDelete(context),
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  if (s != null)
+                    PrimaryButton(
+                      label: 'Çıkış yap',
+                      dark: false,
+                      onTap: () => context.read<AuthCubit>().signOut(),
+                    ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: Text(
+                      'SEPET · v0.1.0',
+                      style: T.label.copyWith(fontSize: 9),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 
@@ -199,33 +219,92 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _confirmDelete(BuildContext context) {
-    showDialog<void>(
+  /// Ortak onay penceresi. [onConfirm] yalnızca kullanıcı "Sil" derse çalışır.
+  Future<bool> _confirm(
+    BuildContext context, {
+    required String title,
+    required String body,
+  }) async {
+    final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: C.card,
-        title: const Text('Hesabı sil', style: T.title),
-        content: const Text(
-          'Tüm fişlerin ve endeks geçmişin kalıcı olarak silinir. '
-          'Bu işlem geri alınamaz.',
-          style: TextStyle(fontSize: 12.5, height: 1.5, color: C.ink),
+        title: Text(title, style: T.title),
+        content: Text(
+          body,
+          style: const TextStyle(fontSize: 12.5, height: 1.5, color: C.ink),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Vazgeç', style: TextStyle(color: C.muted)),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              session.value = null;
-            },
+            onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Sil', style: TextStyle(color: C.hot)),
           ),
         ],
       ),
     );
+    return ok ?? false;
   }
+
+  /// Fişleri siler, hesabı bırakır. Demo veriden gerçek kullanıma geçiş yolu.
+  Future<void> _confirmClearReceipts(BuildContext context) async {
+    final repo = context.read<Repository>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    final ok = await _confirm(
+      context,
+      title: 'Fişleri sil',
+      body:
+          'Bütün fişlerin ve endeks geçmişin silinir. Hesabın, izinlerin ve '
+          'öğrenilmiş ürün eşleşmelerin kalır — endeks bir sonraki fişinden '
+          'itibaren sıfırdan kurulur. Bu işlem geri alınamaz.',
+    );
+    if (!ok) return;
+
+    try {
+      final n = await repo.clearReceipts();
+      if (context.mounted) refreshUserData(context);
+      messenger.showSnackBar(_snack('$n fiş silindi'));
+    } on ApiException catch (e) {
+      messenger.showSnackBar(_snack(e.message));
+    }
+  }
+
+  /// Hesabı gerçekten siler.
+  ///
+  /// Eskiden bu düğme sunucuya hiç istek atmıyor, yalnızca oturumu
+  /// kapatıyordu — oysa metin "kalıcı olarak silinir" diyordu. Veri
+  /// sunucuda duruyordu.
+  Future<void> _confirmDelete(BuildContext context) async {
+    // Onay penceresi bir async boşluk açıyor; context'e ondan sonra
+    // dokunulmasın diye ihtiyaç duyulanlar önden alınıyor.
+    final auth = context.read<AuthCubit>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    final ok = await _confirm(
+      context,
+      title: 'Hesabı sil',
+      body:
+          'Tüm fişlerin ve endeks geçmişin kalıcı olarak silinir. '
+          'Bu işlem geri alınamaz.',
+    );
+    if (!ok) return;
+
+    try {
+      await auth.deleteAccount();
+    } on ApiException catch (e) {
+      messenger.showSnackBar(_snack(e.message));
+    }
+  }
+
+  SnackBar _snack(String text) => SnackBar(
+    backgroundColor: C.ink,
+    behavior: SnackBarBehavior.floating,
+    content: Text(text, style: const TextStyle(fontSize: 12.5, color: C.card)),
+  );
 }
 
 class _SignedOut extends StatelessWidget {
@@ -297,8 +376,7 @@ class _Identity extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
-        AsyncView<List<Receipt>>(
-          load: AppScope.repoOf(context).receipts,
+        DataView<ReceiptsCubit, List<Receipt>>(
           builder: (context, receipts) => PaperCard(
             child: Row(
               children: [

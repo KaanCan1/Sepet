@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sepet/data/app_scope.dart';
 import 'package:sepet/data/auth_store.dart';
 import 'package:sepet/data/fmt.dart';
-import 'package:sepet/data/session.dart';
 import 'package:sepet/screens/root_gate.dart';
 import 'package:sepet/screens/shell.dart';
 import 'package:sepet/screens/welcome_screen.dart';
@@ -19,8 +18,8 @@ Widget bootstrap({String? token}) => AppScope(
 );
 
 void main() {
-  setUp(() => session.value = null);
-
+  // Oturum artık global bir bildirici değil, AuthCubit'te — her test kendi
+  // ağacını kurduğu için sıfırlamaya gerek kalmadı.
   group('Fmt', () {
     test('binlik ayracı nokta, ondalık virgül', () {
       expect(Fmt.money(1917.45), '1.917,45');
@@ -196,6 +195,45 @@ void main() {
       // Meyve son ayda %42 kapsıyor — eşik %25, uyarı çıkmamalı.
       expect(find.textContaining('küçük bir bölümünü'), findsNothing);
       expect(find.textContaining('zincirlenmiş endekstir'), findsOneWidget);
+    });
+  });
+
+  group('Profil', () {
+    // Bu düğme sunucuya hiç istek atmıyordu: yalnızca oturumu kapatıyor,
+    // ekranda ise "kalıcı olarak silinir" yazıyordu. Veri sunucuda duruyordu.
+    testWidgets('fişleri silme onay ister ve sunucuya gider', (tester) async {
+      final api = FakeApi();
+      await tester.pumpWidget(
+        AppScope(
+          api: api,
+          authStore: MemoryAuthStore('test-token'),
+          child: MaterialApp(
+            locale: const Locale('tr', 'TR'),
+            home: const RootGate(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-3')));
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(find.text('Fişleri sil'), 120);
+      await tester.tap(find.text('Fişleri sil'));
+      await tester.pumpAndSettle();
+
+      // Onay penceresi çıkmalı; vazgeçince hiçbir şey olmamalı.
+      expect(find.textContaining('endeks geçmişin silinir'), findsOneWidget);
+      await tester.tap(find.text('Vazgeç'));
+      await tester.pumpAndSettle();
+      expect(api.calls, isNot(contains('DELETE /receipts')));
+
+      await tester.tap(find.text('Fişleri sil'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sil'));
+      await tester.pumpAndSettle();
+
+      expect(api.calls, contains('DELETE /receipts'));
     });
   });
 }

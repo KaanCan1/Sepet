@@ -7,13 +7,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../data/app_scope.dart';
 import '../data/fmt.dart';
-import '../data/models.dart';
 import '../data/repository.dart';
+import '../state/monthly_card_cubit.dart';
 import '../theme/tokens.dart';
-import '../widgets/async_view.dart';
+import '../widgets/data_view.dart';
 import '../widgets/atoms.dart';
 import '../widgets/glass.dart';
 import '../widgets/icons.dart';
@@ -27,7 +27,10 @@ class MonthlyCardScreen extends StatefulWidget {
 
   static Route<void> route() => CupertinoPageRoute(
     fullscreenDialog: true,
-    builder: (_) => const MonthlyCardScreen(),
+    builder: (context) => BlocProvider(
+      create: (_) => MonthlyCardCubit(context.read<Repository>())..load(),
+      child: const MonthlyCardScreen(),
+    ),
   );
 
   @override
@@ -97,7 +100,6 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final repo = AppScope.repoOf(context);
     final month = Fmt.monthLong(DateTime.now());
 
     return ScreenFrame(
@@ -111,19 +113,14 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
       ),
       slivers: [
         SliverToBoxAdapter(
-          child: AsyncView<(IndexSnapshot, List<Mover>, List<Receipt>)>(
-            load: () async => (
-              await repo.index(),
-              await repo.movers(),
-              await repo.receipts(),
-            ),
-            isEmpty: (d) => d.$1.isEmpty,
+          child: DataView<MonthlyCardCubit, MonthlyCard>(
+            isEmpty: (d) => d.snapshot.isEmpty,
             empty: const EmptyState(
               title: 'Paylaşacak bir şey yok',
               body: 'Kart, endeks hesaplanabilir olduğunda hazırlanır.',
             ),
             builder: (context, data) {
-              final (snapshot, movers, receipts) = data;
+              final MonthlyCard(:snapshot, :movers, :receipts) = data;
               return Padding(
                 padding: kGutter,
                 child: Column(
