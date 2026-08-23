@@ -24,14 +24,20 @@ class ApiException implements Exception {
 ///   flutter run --dart-define=SEPET_API_URL=https://...
 /// Varsayılan iOS simülatöründen çalışan yerel sunucu.
 class Api {
-  Api({http.Client? client, String? baseUrl})
-    : _client = client ?? http.Client(),
-      baseUrl =
-          baseUrl ??
-          const String.fromEnvironment(
-            'SEPET_API_URL',
-            defaultValue: 'http://localhost:4000',
-          );
+  Api({
+    http.Client? client,
+    String? baseUrl,
+    Duration? timeout,
+    Duration? wakeTimeout,
+  }) : _client = client ?? http.Client(),
+       _timeout = timeout ?? const Duration(seconds: 12),
+       _wakeTimeout = wakeTimeout ?? const Duration(seconds: 50),
+       baseUrl =
+           baseUrl ??
+           const String.fromEnvironment(
+             'SEPET_API_URL',
+             defaultValue: 'http://localhost:4000',
+           );
 
   final http.Client _client;
   final String baseUrl;
@@ -41,7 +47,17 @@ class Api {
   // ignore: use_setters_to_change_properties
   void setToken(String? token) => _token = token;
 
-  static const _timeout = Duration(seconds: 15);
+  /// İlk deneme. Uyanık bir sunucu bunun çok altında cevap veriyor.
+  final Duration _timeout;
+
+  /// İkinci deneme. Render ücretsiz katmanda 15 dakika sessizlikten sonra
+  /// servisi uyutuyor ve uyanması 30-60 saniye sürüyor — üstelik başlatma
+  /// komutumuz her uyanışta migration'ları ve katalog yüklemesini de
+  /// çalıştırıyor. Tek ve kısa bir zaman aşımıyla uygulama sunucu daha
+  /// açılmadan pes ediyordu; kullanıcıya da "bağlantını kontrol et" diyerek
+  /// yanlış yere baktırıyordu.
+  /// Testler bu iki süreyi milisaniyeye indiriyor.
+  final Duration _wakeTimeout;
 
   Map<String, String> get _headers => {
     'content-type': 'application/json',
@@ -51,9 +67,12 @@ class Api {
   Future<dynamic> _send(Future<http.Response> Function() run) async {
     late final http.Response res;
     try {
-      res = await run().timeout(_timeout);
+      res = await _runWithWakeRetry(run);
     } on TimeoutException {
-      throw const ApiException('Sunucu yanıt vermedi. Bağlantını kontrol et.');
+      throw const ApiException(
+        'Sunucu yanıt vermedi. Uyku modundan uyanıyor olabilir; '
+        'birkaç saniye sonra yeniden dene.',
+      );
     } on SocketException {
       throw const ApiException('Sunucuya ulaşılamadı. Bağlantını kontrol et.');
     }
@@ -69,6 +88,21 @@ class Api {
         ? body['error'] as String
         : 'Beklenmeyen bir hata oldu (${res.statusCode})';
     throw ApiException(message, statusCode: res.statusCode);
+  }
+
+  /// Zaman aşımında bir kez daha, bu sefer uzun süreyle dener.
+  ///
+  /// Yeniden deneme yalnızca zaman aşımına özel: sunucu cevap verdiyse
+  /// — reddetse bile — tekrar denemenin anlamı yok. Bağlantı hatasında da
+  /// beklemenin faydası yok, o hemen bildiriliyor.
+  Future<http.Response> _runWithWakeRetry(
+    Future<http.Response> Function() run,
+  ) async {
+    try {
+      return await run().timeout(_timeout);
+    } on TimeoutException {
+      return run().timeout(_wakeTimeout);
+    }
   }
 
   Future<dynamic> get(String path) =>
