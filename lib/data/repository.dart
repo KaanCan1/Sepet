@@ -58,6 +58,23 @@ class Repository {
     return rows.map((e) => Mover.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// Kategori kırılımı — en çok artandan başlayarak.
+  Future<List<Breakdown>> indexByCategory() async {
+    final rows = await _api.get('/index/by-category') as List;
+    return rows
+        .map((e) => Breakdown.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Marka kırılımı. Markasız kalemler (kasada tartılan sebze) bu seride
+  /// hiç yok — sunucu onları dışarıda bırakıyor, marka uydurulmuyor.
+  Future<List<Breakdown>> indexByBrand() async {
+    final rows = await _api.get('/index/by-brand') as List;
+    return rows
+        .map((e) => Breakdown.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<List<Receipt>> receipts() async {
     final rows = await _api.get('/receipts') as List;
     return rows

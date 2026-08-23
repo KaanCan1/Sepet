@@ -28,6 +28,7 @@ class LineChart extends StatelessWidget {
     this.marker,
     this.markerLabel,
     this.progress = 1,
+    this.guides = true,
   });
 
   final List<ChartSeries> series;
@@ -40,25 +41,37 @@ class LineChart extends StatelessWidget {
   /// 0..1 — çizgi çizim animasyonu.
   final double progress;
 
+  /// Taban çizgisi ve kesikli orta çizgi. Satır içi kıvılcım boyutunda
+  /// (26 px) bunlar çizgiden çok yer kaplayıp gürültü yapıyor; oralarda
+  /// kapatılıyor.
+  final bool guides;
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: height,
       width: double.infinity,
       child: CustomPaint(
-        painter: _LinePainter(series, marker, markerLabel, progress),
+        painter: _LinePainter(series, marker, markerLabel, progress, guides),
       ),
     );
   }
 }
 
 class _LinePainter extends CustomPainter {
-  _LinePainter(this.series, this.marker, this.markerLabel, this.progress);
+  _LinePainter(
+    this.series,
+    this.marker,
+    this.markerLabel,
+    this.progress,
+    this.guides,
+  );
 
   final List<ChartSeries> series;
   final int? marker;
   final String? markerLabel;
   final double progress;
+  final bool guides;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -66,16 +79,18 @@ class _LinePainter extends CustomPainter {
       ..color = C.line
       ..strokeWidth = 1;
 
-    final baseY = size.height - 1;
-    canvas.drawLine(Offset(0, baseY), Offset(size.width, baseY), grid);
-    _dash(
-      canvas,
-      Offset(0, size.height / 2),
-      Offset(size.width, size.height / 2),
-      grid,
-      on: 2,
-      off: 3,
-    );
+    if (guides) {
+      final baseY = size.height - 1;
+      canvas.drawLine(Offset(0, baseY), Offset(size.width, baseY), grid);
+      _dash(
+        canvas,
+        Offset(0, size.height / 2),
+        Offset(size.width, size.height / 2),
+        grid,
+        on: 2,
+        off: 3,
+      );
+    }
 
     var lo = double.infinity, hi = -double.infinity;
     for (final s in series) {
@@ -197,5 +212,8 @@ class _LinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_LinePainter old) =>
-      old.progress != progress || old.series != series || old.marker != marker;
+      old.progress != progress ||
+      old.series != series ||
+      old.marker != marker ||
+      old.guides != guides;
 }

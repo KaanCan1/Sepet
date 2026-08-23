@@ -244,6 +244,23 @@ describe('API', () => {
     }
   });
 
+  // Bu test bir kez düşmüş bir hatayı tutuyor: pg, DATE sütununu YEREL
+  // geceyarısı Date'i yapıyor ve JSON'a giderken toISOString() onu UTC'ye
+  // çeviriyordu. UTC+3'te ayın 1'i bir önceki ayın 31'ine kayıyor, ekranda
+  // Ağustos seviyesi "Temmuz" diye etiketleniyordu. Aylar artık SQL'de
+  // metne çevriliyor; her ay ayın ilk günü olmalı.
+  it('kırılım ayları saat diliminden kaymıyor', async () => {
+    const res = await request(app)
+      .get('/index/by-category')
+      .set(auth())
+      .expect(200);
+    for (const c of res.body) {
+      for (const p of c.series) {
+        expect(p.month, 'ay, ayın ilk günü olmalı').toMatch(/^\d{4}-\d{2}-01$/);
+      }
+    }
+  });
+
   it('marka kırılımında markasız kalem yok', async () => {
     const res = await request(app)
       .get('/index/by-brand')

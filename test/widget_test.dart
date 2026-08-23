@@ -106,6 +106,12 @@ void main() {
       await tester.pumpWidget(bootstrap(token: 'test-token'));
       await tester.pumpAndSettle();
 
+      // Kırılım kartı eklendikten sonra fiş listesi aşağı kaydı ve satır
+      // yüzen sekme çubuğunun altında kalıyordu; dokunuş sessizce ıskalıyordu.
+      // scrollUntilVisible işe yaramıyor çünkü satır zaten ağaçta — sorun
+      // görünürlük değil, üstünü kapatan çubuk.
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -260));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('A101').first);
       await tester.pumpAndSettle();
 
@@ -130,6 +136,66 @@ void main() {
       expect(find.text('SEPETİNDEKİ ÜRÜN'), findsOneWidget);
       expect(find.text('248,00'), findsOneWidget);
       expect(find.text('389,90'), findsWidgets);
+    });
+  });
+
+  group('Kırılım', () {
+    /// Endeks ekranından kırılıma gider.
+    Future<void> open(WidgetTester tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Kırılım'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('kategoriler en çok artandan sıralı', (tester) async {
+      await open(tester);
+
+      expect(find.text('EN ÇOK ARTAN KATEGORİ'), findsOneWidget);
+      // Manşette ve listede birer kez.
+      expect(find.text('Et'), findsNWidgets(2));
+      expect(find.text('+39,2%'), findsNWidgets(2));
+      expect(find.text('+12,5%'), findsOneWidget);
+    });
+
+    testWidgets('marka sekmesi ayrı seri getiriyor', (tester) async {
+      await open(tester);
+      await tester.tap(find.text('Marka'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('EN ÇOK ARTAN MARKA'), findsOneWidget);
+      expect(find.text('Sütaş'), findsNWidgets(2));
+      // Kategori listesi gitmiş olmalı — eksen değişince veri baştan yükleniyor.
+      expect(find.text('Meyve'), findsNothing);
+    });
+
+    testWidgets('yüzdeler toplanabilir sanılmasın diye not var', (
+      tester,
+    ) async {
+      await open(tester);
+      expect(find.textContaining('birbirine eklenmez'), findsOneWidget);
+    });
+
+    testWidgets('detayda aylar doğru etiketleniyor', (tester) async {
+      await open(tester);
+      await tester.tap(find.text('Meyve'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('KATEGORİ · 01.1.6'), findsOneWidget);
+      expect(find.text('AY AY SEVİYE'), findsOneWidget);
+      // En yeni ay üstte. Saat dilimi kayması olsaydı burası "Temmuz" derdi.
+      expect(find.text('Ağustos'), findsOneWidget);
+      expect(find.text('112,5'), findsOneWidget);
+    });
+
+    testWidgets('kapsama düşükse uyarı çıkıyor', (tester) async {
+      await open(tester);
+      await tester.tap(find.text('Meyve'));
+      await tester.pumpAndSettle();
+
+      // Meyve son ayda %42 kapsıyor — eşik %25, uyarı çıkmamalı.
+      expect(find.textContaining('küçük bir bölümünü'), findsNothing);
+      expect(find.textContaining('zincirlenmiş endekstir'), findsOneWidget);
     });
   });
 }

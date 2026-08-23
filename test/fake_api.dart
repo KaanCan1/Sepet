@@ -45,6 +45,43 @@ class FakeApi extends Api {
         'changePct': 18.4,
       },
     ],
+    // Kırılım: iki kategori, biri diğerinden daha çok artmış. Taban ay 100.
+    'GET /index/by-category': [
+      {
+        'categoryId': 'c1',
+        'code': '01.1.2',
+        'name': 'Et',
+        'latestLevel': 139.2,
+        'series': [
+          {'month': '2026-06-01', 'level': 100, 'coveredWeight': 0},
+          {'month': '2026-07-01', 'level': 128.4, 'coveredWeight': 0.61},
+          {'month': '2026-08-01', 'level': 139.2, 'coveredWeight': 0.58},
+        ],
+      },
+      {
+        'categoryId': 'c2',
+        'code': '01.1.6',
+        'name': 'Meyve',
+        'latestLevel': 112.5,
+        'series': [
+          {'month': '2026-06-01', 'level': 100, 'coveredWeight': 0},
+          {'month': '2026-07-01', 'level': 108.0, 'coveredWeight': 0.39},
+          {'month': '2026-08-01', 'level': 112.5, 'coveredWeight': 0.42},
+        ],
+      },
+    ],
+    'GET /index/by-brand': [
+      {
+        'brandId': 'b1',
+        'name': 'Sütaş',
+        'latestLevel': 133.1,
+        'series': [
+          {'month': '2026-06-01', 'level': 100, 'coveredWeight': 0},
+          {'month': '2026-07-01', 'level': 121.0, 'coveredWeight': 0.5},
+          {'month': '2026-08-01', 'level': 133.1, 'coveredWeight': 0.5},
+        ],
+      },
+    ],
     'GET /receipts': [
       {
         'id': 'r1',
