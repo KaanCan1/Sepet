@@ -110,9 +110,21 @@ ON CONFLICT (name) DO NOTHING;
 --
 -- brand NULL = markasız: açık sebze, meyve, fırın ekmeği. Kasada tartılan
 -- ürünün markası yok, uydurmuyoruz.
-INSERT INTO canonical_products (group_id, brand_id, size_label, size_value)
-SELECT g.id, b.id, p.size_label, p.size_value
-  FROM (VALUES
+-- Katalogun ürün listesi önce geçici bir tabloya yazılıyor: hem ekleme hem
+-- de dosyanın sonundaki artık temizliği aynı listeye bakmak zorunda, yoksa
+-- temizlik "markalı ürünü olan grupta markasız satır olmaz" gibi kaba bir
+-- sezgiye dayanır ve meşru satırları da siler. Kıyma tam böyle bir ürün:
+-- hem kasada tartılan markasız kilogram, hem Pınar Et 500 g.
+DROP TABLE IF EXISTS katalog_urun;
+CREATE TEMP TABLE katalog_urun (
+  group_name text,
+  brand_name text,
+  size_label text,
+  size_value numeric
+);
+
+INSERT INTO katalog_urun (group_name, brand_name, size_label, size_value)
+VALUES
     -- grup                 marka                 boy etiketi   boy (kanonik birim)
     ('Süt, tam yağlı',      'Sütaş',              '1 litre',      1.0),
     ('Süt, tam yağlı',      'Pınar',              '1 litre',      1.0),
@@ -212,7 +224,11 @@ SELECT g.id, b.id, p.size_label, p.size_value
     ('Şampuan',             'Elidor',             '500 mL',       0.5),
     ('Diş macunu',          'Colgate',            '75 mL',        0.075),
     ('Diş macunu',          'Signal',             '75 mL',        0.075)
-  ) AS p (group_name, brand_name, size_label, size_value)
+  ;
+
+INSERT INTO canonical_products (group_id, brand_id, size_label, size_value)
+SELECT g.id, b.id, p.size_label, p.size_value
+  FROM katalog_urun p
   JOIN product_groups g ON g.name = p.group_name
   LEFT JOIN brands b ON b.name = p.brand_name
 ON CONFLICT DO NOTHING;
@@ -221,3 +237,58 @@ INSERT INTO official_series (code, publisher, name, is_official) VALUES
   ('TUIK_TUFE',  'TÜİK', 'TÜFE',   true),
   ('ENAG_ETUFE', 'ENAG', 'E-TÜFE', false)
 ON CONFLICT (code) DO NOTHING;
+
+-- ── Marka öncesi artıklar ──────────────────────────────────────────────────
+-- Marka modeline geçmeden önce kurulmuş bir veritabanında eski kanonik
+-- ürünler markasız satırlara dönüştü (migration 008). Yukarıdaki markalı
+-- katalog onların üstüne binince ikisi yan yana kalıyor ve eşleştirme
+-- ekranında "Süt, tam yağlı 1 litre" ile "Sütaş Süt, tam yağlı 1 litre"
+-- birlikte listeleniyor. Temiz kurulumda 84 ürün çıkarken yükseltilen bir
+-- veritabanında 104 çıkıyordu.
+--
+-- Ölçüt kataloğun kendi listesi: bu dosyanın saymadığı markasız satır artık
+-- demektir. Sezgiye ("markalı ürünü olan grupta markasız satır olmaz")
+-- dayansaydı kıyma gibi meşru satırlar da silinirdi — kıyma hem kasada
+-- tartılan markasız kilogram, hem Pınar Et 500 g olarak var.
+--
+-- Kapsam iki kez daraltılıyor.
+--
+-- Bir: katalog yalnızca KENDİ gruplarının içini temizliyor. Bu dosyada adı
+-- geçmeyen bir gruba hiç dokunmuyor. Bugün kanonik ürün yaratan tek yer bu
+-- dosya, ama yarın "kullanıcı katalogda olmayan ürünü eklesin" denirse o
+-- satırlar sessizce silinmesin.
+--
+-- İki: gözlemi, fiş satırı ya da öğrenilmiş eşleşmesi olan hiçbir satıra
+-- dokunulmuyor. Kullanıcının verisi katalog düzenlemesine kurban gitmez.
+DELETE FROM canonical_products cp
+ WHERE cp.brand_id IS NULL
+   AND EXISTS (
+         SELECT 1
+           FROM katalog_urun k
+           JOIN product_groups g ON g.name = k.group_name
+          WHERE g.id = cp.group_id
+       )
+   AND NOT EXISTS (
+         SELECT 1
+           FROM katalog_urun k
+           JOIN product_groups g ON g.name = k.group_name
+          WHERE k.brand_name IS NULL
+            AND g.id = cp.group_id
+            AND k.size_value = cp.size_value
+       )
+   AND NOT EXISTS (
+         SELECT 1 FROM price_observations o WHERE o.canonical_product_id = cp.id
+       )
+   AND NOT EXISTS (
+         SELECT 1 FROM receipt_lines l WHERE l.canonical_product_id = cp.id
+       )
+   AND NOT EXISTS (
+         SELECT 1 FROM product_aliases a WHERE a.canonical_product_id = cp.id
+       );
+
+-- Boş grup temizliği bilerek YOK. Silme yalnızca katalogun kendi grupları
+-- içinde çalışıyor ve her katalog grubuna en az bir ürün yazılıyor, yani
+-- bu silme hiçbir grubu boşaltamıyor. Koşulsuz bir "boş grupları sil" ise
+-- başka bir yerde yeni açılmış bir grubu ürünü yazılmadan önce yakalardı.
+
+DROP TABLE katalog_urun;
