@@ -163,9 +163,12 @@ describe('API', () => {
     expect(detail.body.lines[0].status).toBe('pending');
     expect(detail.body.lines[0].canonical).toBeNull();
 
+    // Katalogda her markanın birden çok boyu var; test tek kaleme
+    // bağlanmalı, o yüzden boy da belirtiliyor.
     const zeytin = await one<{ id: string }>(
       `SELECT id FROM v_canonical_products
-        WHERE group_name = 'Zeytinyağı' AND brand_name = 'Komili'`,
+        WHERE group_name = 'Zeytinyağı' AND brand_name = 'Komili'
+          AND size_label = '1 litre'`,
     );
     await request(app)
       .post(`/receipts/${created.body.id}/lines/${detail.body.lines[0].id}/match`)

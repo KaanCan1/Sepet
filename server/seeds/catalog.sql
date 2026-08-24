@@ -261,6 +261,142 @@ SELECT g.id, b.id, p.size_label, p.size_value
   LEFT JOIN brands b ON b.name = p.brand_name
 ON CONFLICT DO NOTHING;
 
+-- ── Yaygın paket boyları ───────────────────────────────────────────────────
+-- Yukarıdaki liste her markaya BİR boy veriyor. Eşleştirmede bu yetmiyor:
+-- fiş gramajı basmadığı için kullanıcıya "hangi boy?" soruluyor ve tek
+-- seçenekli bir soru, soru değil — kullanıcı ya onu kabul ediyor ya elle
+-- gramaj giriyor.
+--
+-- Burada her grubun rafta gerçekten bulunan boyları, o grupta ürünü olan
+-- markalarla çaprazlanıyor. Bir markanın o boyu satmıyor olması ihtimali
+-- var; karşılığında soru tek dokunuşa iniyor. Ters durum daha pahalı:
+-- listede olmayan boy, elle giriş demek.
+--
+-- Kasada tartılan gruplar (domates, açık kıyma, piliç bonfile) burada YOK.
+-- Onlarda paket boyu diye bir şey yok, fiş zaten kilo cinsinden basıyor.
+DROP TABLE IF EXISTS katalog_boy;
+CREATE TEMP TABLE katalog_boy (
+  group_name text,
+  size_label text,
+  size_value numeric
+);
+
+INSERT INTO katalog_boy (group_name, size_label, size_value)
+VALUES
+    -- Süt ürünleri
+    ('Süt, tam yağlı',      '200 mL',     0.2),
+    ('Süt, tam yağlı',      '500 mL',     0.5),
+    ('Süt, tam yağlı',      '1 litre',    1.0),
+    ('Süt, yarım yağlı',    '500 mL',     0.5),
+    ('Süt, yarım yağlı',    '1 litre',    1.0),
+    ('Ayran',               '200 mL',     0.2),
+    ('Ayran',               '300 mL',     0.3),
+    ('Ayran',               '1 litre',    1.0),
+    ('Ayran',               '2 litre',    2.0),
+    ('Yoğurt',              '500 g',      0.5),
+    ('Yoğurt',              '1 kg',       1.0),
+    ('Yoğurt',              '1,5 kg',     1.5),
+    ('Yoğurt',              '2,5 kg',     2.5),
+    ('Beyaz peynir',        '250 g',      0.25),
+    ('Beyaz peynir',        '500 g',      0.5),
+    ('Beyaz peynir',        '600 g',      0.6),
+    ('Beyaz peynir',        '1 kg',       1.0),
+    ('Kaşar peyniri',       '200 g',      0.2),
+    ('Kaşar peyniri',       '350 g',      0.35),
+    ('Kaşar peyniri',       '500 g',      0.5),
+    ('Çeçil peyniri',       '200 g',      0.2),
+    ('Çeçil peyniri',       '250 g',      0.25),
+    ('Tereyağı',            '125 g',      0.125),
+    ('Tereyağı',            '250 g',      0.25),
+    ('Tereyağı',            '500 g',      0.5),
+
+    -- Yağ, un, şeker
+    ('Ayçiçek yağı',        '1 litre',    1.0),
+    ('Ayçiçek yağı',        '2 litre',    2.0),
+    ('Ayçiçek yağı',        '5 litre',    5.0),
+    ('Zeytinyağı',          '500 mL',     0.5),
+    ('Zeytinyağı',          '1 litre',    1.0),
+    ('Zeytinyağı',          '2 litre',    2.0),
+    ('Un, buğday',          '1 kg',       1.0),
+    ('Un, buğday',          '2 kg',       2.0),
+    ('Un, buğday',          '5 kg',       5.0),
+    ('Şeker, toz',          '1 kg',       1.0),
+    ('Şeker, toz',          '3 kg',       3.0),
+    ('Şeker, toz',          '5 kg',       5.0),
+
+    -- Bakliyat ve tahıl
+    ('Pirinç, baldo',       '1 kg',       1.0),
+    ('Pirinç, baldo',       '2,5 kg',     2.5),
+    ('Pirinç, baldo',       '5 kg',       5.0),
+    ('Bulgur, pilavlık',    '1 kg',       1.0),
+    ('Bulgur, pilavlık',    '2,5 kg',     2.5),
+    ('Mercimek, kırmızı',   '1 kg',       1.0),
+    ('Mercimek, kırmızı',   '2,5 kg',     2.5),
+    ('Nohut',               '1 kg',       1.0),
+    ('Nohut',               '2,5 kg',     2.5),
+    ('Makarna, burgu',      '500 g',      0.5),
+    ('Ekmek, tam buğday',   '400 g',      0.4),
+    ('Ekmek, tam buğday',   '500 g',      0.5),
+
+    -- Kahvaltılık, içecek
+    ('Salça, domates',      '700 g',      0.7),
+    ('Salça, domates',      '830 g',      0.83),
+    ('Fındık kreması',      '350 g',      0.35),
+    ('Fındık kreması',      '700 g',      0.7),
+    ('Çay, siyah',          '500 g',      0.5),
+    ('Çay, siyah',          '1 kg',       1.0),
+    ('Türk kahvesi',        '100 g',      0.1),
+    ('Türk kahvesi',        '200 g',      0.2),
+    ('Türk kahvesi',        '250 g',      0.25),
+    ('Kahve, filtre',       '250 g',      0.25),
+    ('Kahve, filtre',       '500 g',      0.5),
+    ('Su, doğal kaynak',    '500 mL',     0.5),
+    ('Su, doğal kaynak',    '1,5 litre',  1.5),
+    ('Su, doğal kaynak',    '5 litre',    5.0),
+    ('Gazlı içecek, kola',  '1 litre',    1.0),
+    ('Gazlı içecek, kola',  '2,5 litre',  2.5),
+
+    -- Temizlik ve kişisel bakım
+    ('Kağıt havlu',         '2''li',      2.0),
+    ('Kağıt havlu',         '4''lü',      4.0),
+    ('Kağıt havlu',         '6''lı',      6.0),
+    ('Kağıt havlu',         '8''li',      8.0),
+    ('Tuvalet kağıdı',      '8''li',      8.0),
+    ('Tuvalet kağıdı',      '16''lı',    16.0),
+    ('Tuvalet kağıdı',      '32''li',    32.0),
+    ('Deterjan, çamaşır',   '1,5 litre',  1.5),
+    ('Deterjan, çamaşır',   '3 litre',    3.0),
+    ('Deterjan, çamaşır',   '5 litre',    5.0),
+    ('Bulaşık deterjanı',   '650 mL',     0.65),
+    ('Bulaşık deterjanı',   '1,3 litre',  1.3),
+    ('Bulaşık deterjanı',   '2 litre',    2.0),
+    ('Çamaşır suyu',        '750 mL',     0.75),
+    ('Çamaşır suyu',        '1,8 litre',  1.8),
+    ('Çamaşır suyu',        '3 litre',    3.0),
+    ('Şampuan',             '350 mL',     0.35),
+    ('Şampuan',             '500 mL',     0.5),
+    ('Şampuan',             '650 mL',     0.65),
+    -- Diş macununun kanonik birimi kilogram ama etiketi mL; mevcut
+    -- satırlarla aynı yazım korunuyor (75 mL -> 0,075).
+    ('Diş macunu',          '50 mL',      0.05),
+    ('Diş macunu',          '75 mL',      0.075),
+    ('Diş macunu',          '100 mL',     0.1),
+    ('Yumurta',             '10''lu',    10.0),
+    ('Yumurta',             '15''li',    15.0),
+    ('Yumurta',             '30''lu',    30.0);
+
+-- Boyları, o grupta ZATEN ürünü olan markalarla çaprazla. Markası olmayan
+-- kalemler (kasada tartılanlar) dışarıda kalıyor: onlarda paket yok.
+INSERT INTO canonical_products (group_id, brand_id, size_label, size_value)
+SELECT g.id, cp.brand_id, boy.size_label, boy.size_value
+  FROM katalog_boy boy
+  JOIN product_groups g ON g.name = boy.group_name
+  JOIN canonical_products cp ON cp.group_id = g.id AND cp.brand_id IS NOT NULL
+ GROUP BY g.id, cp.brand_id, boy.size_label, boy.size_value
+ON CONFLICT DO NOTHING;
+
+DROP TABLE katalog_boy;
+
 -- ── Karşılaştırma serileri ─────────────────────────────────────────────────
 -- Yalnızca TÜİK. ENAG kaldırıldı: alan adları enag.org.tr artık kayıtlı
 -- değil (yetkili org.tr sunucusu NXDOMAIN dönüyor), yeni adresleri
