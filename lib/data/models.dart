@@ -1,3 +1,5 @@
+import 'product_name.dart';
+
 /// Kanonik ürüne yapılan hafif atıf — eşleşme adayları ve zamlanan listesi
 /// için ürünün tamamını çekmeye gerek yok.
 class ProductRef {
@@ -165,6 +167,9 @@ class ReceiptLine {
   final bool needsMatch;
 
   /// "SUT TAM YAGLI 1L · x3"
+  /// Kısaltmaları açılmış hâli — bkz. [ProductName].
+  String get displayName => ProductName.expand(raw);
+
   String get rawLine => quantity == 1 ? raw : '$raw · x${qtyLabel(quantity)}';
 
   static String qtyLabel(double q) => q == q.roundToDouble()

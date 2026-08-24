@@ -36,6 +36,111 @@ TOPLAM                    687,11
 KREDİ KARTI               687,11
 ''';
 
+/// Apple Vision'ın gerçek çıktısı — 24.08.2026 tarihli BİM e-arşiv faturası,
+/// OcrPlugin.assemble() ile aynı satır kurma mantığından geçirilmiş hâli.
+///
+/// Bu fiş hiç okunamıyordu: tutarlar ondalık NOKTA ile ve başlarında yıldızla
+/// basılıyor, miktar satırı ürün adından önce geliyor, tutar da adın altındaki
+/// ayrı satırda. Üçü birden eski ayrıştırıcının varsayımlarını kırıyordu.
+const bimEArsivOcr = """
+MI
+E-Arsiv Fatura
+BIM BIRLESIK MAGAZALAR A.
+S
+Yıldız Mah. Istanbul Cad.N
+o:108
+Lüleburgaz/Kırklareli
+Büyük Mükeliefler VDM 17500
+51846
+FATURA NO:T082026153853216
+24.08.2026 17:45  Sir
+a No: 95
+ETTN91845199-45ff-4b77-aa60-16c
+0a546f343
+52080012408612440095
+TCKN/VKN:11111111111-NIHAI TÜKE
+TICI
+0.983 kg X 199.00
+PILIÇ BONFİLE  %1
+*195.62
+4 ad X 59.00
+PROTEIN BAR 50 G  %1.
+*236.00
+TOPLAM KDV
+15
+Odenecek  KDV Dahil Tutar
+*431.62
+Banka Kredi Kartı (1)
+*431.62
+IS BANKASI
+I: 664030285 T:S0I08405  454360*
+*****1154
+- 24.08.2026 17:45 B:1661 S:47
+Onay No:387068  Ref.No:623646
+180342
+KDV  MATRAH  KDV TUTAR
+DV DAHIL
+%1.  427.35  *4.27
+*431.62
+POS:1 - 81200 - G**** K****
+5208, KURTULUŞ - L.BURGAZ/KIRKS  954452081
+No: 1244
+""";
+
+/// Aynı gün Migros'tan alınmış e-arşiv bilgi fişi, yine gerçek Vision çıktısı.
+///
+/// Buradaki tuzak farklı: Vision kuruşu ayrı bir gözlem olarak döndürüyor,
+/// birleştirici araya boşluk koyuyor ve "*289  00" ortaya çıkıyor. Ayrıca
+/// KDV oranı kolonu ürün adının hemen sağında.
+const migrosEArsivOcr = """
+MIGROS TICARET A.S.
+LULEBURGAZ KIRKLARELI MIGROS STS MGZS.
+AIATURK MH. DR.FERIT_NEJAT CAD. NO:2  TEL: (0850)2846985
+LULEBURGAZ/KIRKLARELI
+BUYJK MUKELLEFLER V.D.6220529513
+MERKEZ ADREST: ATATÜRK МAН. TURGUT ÖZAL
+BULV. NO:7 ATAŞEHİR/İSTANBUL
+TARIH:24/08/2026  SAAT:18:05
+FIŞ NO  :0093
+BİLGİ FİŞİ
+TÜR:e-ARSIV FATURA
+Fatura/İrsaliye Seri Sıra No:
+92030020498260824
+MUŞTERI TCKN:11111111111
+#6002080584721771
+MIGROS PLASTIK POSET  %20  *1,00
+TACIROGLI TAM YAGLI  %1  *289  00
+MIGROS EKSTRA CECIL  *149  ,90
+** HASATA PILAVLIK B  *49  95
+MIGROS T.YAGLI YOGU.  *191  95
+UNTAD PREMIUM  TAMBU  x129  00
+VIVA HAVLU GLI  %20  *89  95
+ARA TOPLAM  *900.75
+TOPKDV  *23,18
+TOPLAM  *900,75
+#454360******1154  ORTAK POS  *900.75
+KASİYER  011  324856
+FATURA:https://earsiv.migros.com.tr/
+XXX*XXХX*XXХ*XXxx*x*Xxxxx*xxxxxxxxxxxxxx
+MONEY İLE BU FİŞİNİZDE  24,00TL
+İNDİRIMLİ ALIŞVERİŞ YAPTINIZ
+X*X**xxxxxxxx*xxxxxxxx***xxx*x*XxxXXXX
+0493 9203/002/011 + 24/08/26 18:04 AC-04
+92030020498260824
+SATIS
+454360******1154
+*900,75 TL
+REF NO : 623646436627
+ONAY KODU : 636008
+Isyeri ID:0696497205 Sira No:000022  IS 3ANKASI
+Terninal ID:S1B34S04 Batch No:000286
+MERSIS NO: 0622052951300016
+http://www.migros.com.tr
+ÜRSALIYE  YERİNE GECER
+IMZA:
+Z NO:3020
+""";
+
 void main() {
   group('Tutar ayrıştırma', () {
     test('binlik ayracı ve ondalık virgül', () {
@@ -175,6 +280,74 @@ void main() {
         'A101\nEKMEK 100,00\nSUT 50,00\nTOPLAM 300,00\n',
       );
       expect(r.balances, isFalse);
+    });
+  });
+
+  group('BİM e-arşiv faturası (gerçek Vision çıktısı)', () {
+    final fis = ReceiptParser.parse(bimEArsivOcr);
+
+    test('zincir ve tarih tanınır', () {
+      expect(fis.merchantCode, 'BIM');
+      expect(fis.date, DateTime(2026, 8, 24));
+    });
+
+    test('iki ürünün ikisi de okunur', () {
+      expect(fis.lines.map((l) => l.raw), [
+        'PILIÇ BONFİLE',
+        'PROTEIN BAR 50 G',
+      ]);
+    });
+
+    test('tutarlar ondalık noktayla ve yıldız önekiyle çözülür', () {
+      expect(fis.lines[0].amount, closeTo(195.62, 0.001));
+      expect(fis.lines[1].amount, closeTo(236.00, 0.001));
+    });
+
+    test('ürün adından önce gelen miktar satırı doğru ürüne bağlanır', () {
+      expect(fis.lines[0].quantity, closeTo(0.983, 0.0001));
+      expect(fis.lines[0].unitPrice, closeTo(199.00, 0.001));
+      expect(fis.lines[1].quantity, 4);
+      expect(fis.lines[1].unitPrice, closeTo(59.00, 0.001));
+    });
+
+    test('toplam, KDV toplamı değil ödenecek tutardır', () {
+      // "TOPLAM KDV *4.27" ile "Ödenecek KDV Dahil Tutar *431.62" ayrı şeyler.
+      expect(fis.total, closeTo(431.62, 0.001));
+      expect(fis.balances, isTrue);
+    });
+  });
+
+  group('Migros e-arşiv bilgi fişi (gerçek Vision çıktısı)', () {
+    final fis = ReceiptParser.parse(migrosEArsivOcr);
+
+    test('zincir ve tarih tanınır', () {
+      expect(fis.merchantCode, 'MIGROS');
+      expect(fis.date, DateTime(2026, 8, 24));
+    });
+
+    test('yedi kalemin hepsi okunur', () {
+      expect(fis.lines, hasLength(7));
+    });
+
+    test('KDV oranı kolonu ürün adına yapışmaz', () {
+      expect(fis.lines.first.raw, 'MIGROS PLASTIK POSET');
+      expect(fis.lines.map((l) => l.raw).any((n) => n.contains('%')), isFalse);
+    });
+
+    test('kampanya yıldızı ürün adının başından atılır', () {
+      expect(fis.lines.map((l) => l.raw), contains('HASATA PILAVLIK B'));
+    });
+
+    test('boşlukla bölünmüş kuruş kısmı toparlanır', () {
+      // Vision "*289  00" döndürüyor; 289,00 olarak okunmalı.
+      final tacir = fis.lines.firstWhere((l) => l.raw.startsWith('TACIROGL'));
+      expect(tacir.amount, closeTo(289.00, 0.001));
+    });
+
+    test('satırların toplamı fişteki toplamı tutar', () {
+      expect(fis.total, closeTo(900.75, 0.001));
+      expect(fis.lineSum, closeTo(900.75, 0.01));
+      expect(fis.balances, isTrue);
     });
   });
 }
