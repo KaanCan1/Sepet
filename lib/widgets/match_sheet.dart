@@ -217,6 +217,9 @@ class _MatchSheetState extends State<MatchSheet> {
   /// görünüyor ve ekranın kaldırmak için var olduğu belirsizliği
   /// yeniden üretiyor. Yalnızca aynı marka ve grubun boyları kalıyor.
   List<ProductRef> get _sizeOptions {
+    // Sunucu boy sorulacaksa listeyi tam ve sıralı gönderiyor.
+    if (_suggestion.sizes.isNotEmpty) return _suggestion.sizes;
+
     final first = _suggestion.candidates.first;
     final same = _suggestion.candidates
         .where((c) => c.groupName == first.groupName && c.brand == first.brand)

@@ -113,9 +113,37 @@ productsRouter.get('/catalog/suggest', async (req, res) => {
     return;
   }
   const outcome = await matchCatalog(raw, 6);
+
+  // Boy sorulacaksa listeyi aday havuzundan süzmek yetmez: aday sayısı
+  // sınırlı ve katalog büyüdükçe markanın boyları kesilebilir. O yüzden
+  // aynı marka + grubun boyları ayrıca ve tam olarak çekiliyor.
+  const top = outcome.candidates[0];
+  const sizes =
+    outcome.sizeAmbiguous && top
+      ? await query(
+          `SELECT id, short_name, group_name, brand_name, size_label,
+                  size_value, unit
+             FROM v_canonical_products
+            WHERE group_id = $1
+              AND coalesce(brand_id, '00000000-0000-0000-0000-000000000000'::uuid)
+                  = coalesce($2::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+            ORDER BY size_value`,
+          [top.groupId, top.brandId],
+        )
+      : [];
+
   res.json({
     sizeAmbiguous: outcome.sizeAmbiguous,
     autoId: outcome.auto?.id ?? null,
+    sizes: sizes.map((r) => ({
+      id: r.id,
+      name: r.short_name,
+      groupName: r.group_name,
+      brand: r.brand_name,
+      sizeLabel: r.size_label,
+      sizeValue: Number(r.size_value),
+      unit: r.unit,
+    })),
     candidates: outcome.candidates.map((c) => ({
       id: c.id,
       name: c.shortName,

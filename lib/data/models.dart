@@ -71,9 +71,15 @@ class MatchSuggestion {
   const MatchSuggestion({
     required this.candidates,
     required this.sizeAmbiguous,
+    this.sizes = const [],
   });
 
   final List<ProductRef> candidates;
+
+  /// Boy sorulacaksa aynı marka ve grubun bütün boyları, artan sırada.
+  /// Aday havuzundan süzmek yetmiyor: aday sayısı sınırlı ve katalog
+  /// büyüdükçe markanın boyları kesilebiliyor.
+  final List<ProductRef> sizes;
 
   /// Marka ve grup çözüldü, geriye yalnızca gramaj kaldı. Fişte yazmadığı
   /// için sorulmak zorunda — ve endeks birim fiyat üzerinden hesaplandığı
@@ -85,6 +91,9 @@ class MatchSuggestion {
   static MatchSuggestion fromJson(Map<String, dynamic> j) => MatchSuggestion(
     sizeAmbiguous: j['sizeAmbiguous'] == true,
     candidates: ((j['candidates'] as List?) ?? const [])
+        .map((e) => ProductRef.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    sizes: ((j['sizes'] as List?) ?? const [])
         .map((e) => ProductRef.fromJson(e as Map<String, dynamic>))
         .toList(),
   );
