@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth, type AuthedRequest } from '../auth.js';
 import { query } from '../db.js';
+import { matchCatalog } from '../catalog-match.js';
 
 export const productsRouter = Router();
 productsRouter.use(requireAuth);
@@ -91,6 +92,37 @@ productsRouter.get('/:id', async (req: AuthedRequest, res) => {
       packPrice: m.pack_price,
       unitPrice: m.unit_price,
       seenOn: m.observed_on,
+    })),
+  });
+});
+
+/**
+ * Ham fiş metni için sıralı aday listesi.
+ *
+ * Eşleşme ekranı açılırken çağrılıyor: kullanıcı arama kutusuna bir şey
+ * yazmadan önce doğru ürün zaten listenin başında duruyor.
+ *
+ * `sizeAmbiguous` true ise marka ve grup çözülmüş, geriye yalnızca gramaj
+ * kalmıştır — arayüz o durumda tam listeyi değil, aynı ürünün boylarını
+ * sormalı.
+ */
+productsRouter.get('/catalog/suggest', async (req, res) => {
+  const raw = String(req.query.raw ?? '').trim();
+  if (!raw) {
+    res.status(400).json({ error: 'raw gerekli' });
+    return;
+  }
+  const outcome = await matchCatalog(raw, 6);
+  res.json({
+    sizeAmbiguous: outcome.sizeAmbiguous,
+    autoId: outcome.auto?.id ?? null,
+    candidates: outcome.candidates.map((c) => ({
+      id: c.id,
+      name: c.shortName,
+      groupName: c.groupName,
+      brand: c.brandName,
+      sizeLabel: c.sizeLabel,
+      score: c.score,
     })),
   });
 });
