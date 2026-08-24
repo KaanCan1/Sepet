@@ -73,3 +73,74 @@ abstract final class Fmt {
   static String monthShort(DateTime d) => _monthsShort[d.month - 1];
   static String monthLong(DateTime d) => _monthsLong[d.month - 1];
 }
+
+/// Paket boyu etiketleri. Katalogdaki biçimle aynı yazılmak zorunda:
+/// "400 g", "1,5 kg", "500 mL", "30'lu".
+abstract final class SizeLabel {
+  /// Adet ekinin ünlü uyumu, sayının okunuşundaki son ünlüye göre.
+  ///
+  /// 6 "altı" -> 6'lı, 8 "sekiz" -> 8'li, 3 "üç" -> 3'lü, 30 "otuz" -> 30'lu.
+  /// Tam sayı adını üretmeye gerek yok: son basamak (ya da onluk) belirliyor.
+  static const _ones = [
+    "'lu",
+    "'li",
+    "'li",
+    "'lü",
+    "'lü",
+    "'li",
+    "'lı",
+    "'li",
+    "'li",
+    "'lu",
+  ];
+  static const _tens = [
+    "",
+    "'lu",
+    "'li",
+    "'lu",
+    "'lı",
+    "'li",
+    "'lı",
+    "'li",
+    "'li",
+    "'lı",
+  ];
+
+  static String countSuffix(int n) {
+    if (n <= 0) return "'li";
+    if (n % 100 == 0 && n >= 100) return "'lü"; // yüz
+    final last = n % 10;
+    if (last != 0) return _ones[last];
+    final tens = (n ~/ 10) % 10;
+    return _tens[tens].isEmpty ? "'lu" : _tens[tens];
+  }
+
+  /// Kullanıcının girdiği sayı ve birimden etiket üretir.
+  static String build(double value, String unit) {
+    final n = value == value.roundToDouble() ? value.toInt() : null;
+    // Fmt.quantity üç haneye tamamlıyor ("1,500"); etiketin kısası doğrusu.
+    final text = n != null
+        ? '$n'
+        : value
+              .toStringAsFixed(3)
+              .replaceFirst(RegExp(r'0+$'), '')
+              .replaceFirst(RegExp(r'\.$'), '')
+              .replaceFirst('.', ',');
+    if (unit == 'adet') return '$text${countSuffix(n ?? 1)}';
+    return '$text $unit';
+  }
+
+  /// Etiketin kanonik birim cinsinden değeri: 400 g -> 0,4 (kilogram).
+  static double toCanonical(double value, String unit) => switch (unit) {
+    'g' => value / 1000,
+    'mL' => value / 1000,
+    _ => value,
+  };
+
+  /// Grubun kanonik birimine göre kullanıcıya sunulacak birimler.
+  static List<String> unitsFor(String canonicalUnit) => switch (canonicalUnit) {
+    'kilogram' => const ['g', 'kg'],
+    'litre' => const ['mL', 'litre'],
+    _ => const ['adet'],
+  };
+}

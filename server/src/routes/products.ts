@@ -119,11 +119,71 @@ productsRouter.get('/catalog/suggest', async (req, res) => {
     candidates: outcome.candidates.map((c) => ({
       id: c.id,
       name: c.shortName,
+      groupId: c.groupId,
       groupName: c.groupName,
+      brandId: c.brandId,
       brand: c.brandName,
       sizeLabel: c.sizeLabel,
+      sizeValue: c.sizeValue,
+      unit: c.unit,
       score: c.score,
     })),
+  });
+});
+
+/**
+ * Katalogda olmayan bir boyu ekler.
+ *
+ * Katalog rafta yaygın paketleri taşıyor ama hepsini taşıyamaz. Eksik boy
+ * için kullanıcının yapabileceği tek şey yanlış bir boy seçmek olurdu ve
+ * endeks birim fiyattan hesaplandığı için bu sessizce yanlış enflasyon
+ * demek. Eklenen kalem kataloğun kendisine giriyor — aynı marka + grup +
+ * boy ikinci kez istendiğinde mevcut olan dönüyor, yenisi açılmıyor.
+ */
+productsRouter.post('/catalog', async (req: AuthedRequest, res) => {
+  const { groupId, brandId, sizeLabel, sizeValue } = req.body ?? {};
+  const value = Number(sizeValue);
+  if (!groupId || !sizeLabel || !Number.isFinite(value) || value <= 0) {
+    res
+      .status(400)
+      .json({ error: 'groupId, sizeLabel ve pozitif sizeValue gerekli' });
+    return;
+  }
+
+  const [row] = await query(
+    `WITH yeni AS (
+       INSERT INTO canonical_products (group_id, brand_id, size_label, size_value)
+       VALUES ($1, $2, btrim($3), $4)
+       ON CONFLICT DO NOTHING
+       RETURNING id
+     )
+     SELECT id FROM yeni
+     UNION ALL
+     SELECT id FROM canonical_products
+      WHERE group_id = $1
+        AND coalesce(brand_id, '00000000-0000-0000-0000-000000000000'::uuid)
+            = coalesce($2::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+        AND size_label = btrim($3)
+     LIMIT 1`,
+    [groupId, brandId ?? null, sizeLabel, value],
+  );
+
+  if (!row) {
+    res.status(400).json({ error: 'Ürün grubu bulunamadı' });
+    return;
+  }
+
+  const [full] = await query(
+    `SELECT id, short_name, group_name, brand_name, size_label
+       FROM v_canonical_products WHERE id = $1`,
+    [row.id],
+  );
+  res.status(201).json({
+    id: full!.id,
+    name: full!.short_name,
+    groupName: full!.group_name,
+    brand: full!.brand_name,
+    sizeLabel: full!.size_label,
   });
 });
 

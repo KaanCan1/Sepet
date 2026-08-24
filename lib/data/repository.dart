@@ -151,6 +151,25 @@ class Repository {
     return MatchSuggestion.fromJson(json as Map<String, dynamic>);
   }
 
+  /// Katalogda olmayan bir boyu ekler ve kanonik ürünü döndürür.
+  ///
+  /// Aynı marka + grup + boy ikinci kez istendiğinde mevcut olan dönüyor;
+  /// katalog kullanıcı eliyle büyürken ikizlenmiyor.
+  Future<ProductRef> addCatalogSize({
+    required String groupId,
+    String? brandId,
+    required String sizeLabel,
+    required double sizeValue,
+  }) async {
+    final json = await _api.post('/products/catalog', {
+      'groupId': groupId,
+      'brandId': brandId,
+      'sizeLabel': sizeLabel,
+      'sizeValue': sizeValue,
+    });
+    return ProductRef.fromJson(json as Map<String, dynamic>);
+  }
+
   Future<List<ProductRef>> searchCatalog(String query) async {
     final rows = await _api.get(
       '/products/catalog/search?q=${Uri.encodeQueryComponent(query)}',

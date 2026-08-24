@@ -8,7 +8,11 @@ class ProductRef {
     required this.name,
     required this.sizeLabel,
     this.brand,
+    this.groupId,
+    this.brandId,
     this.groupName,
+    this.unit,
+    this.sizeValue,
     this.score,
   });
 
@@ -21,6 +25,18 @@ class ProductRef {
 
   /// Ürün grubu — "Yoğurt", "Bulgur, pilavlık".
   final String? groupName;
+
+  /// Katalogda olmayan bir boy eklenirken gerekiyor.
+  final String? groupId;
+  final String? brandId;
+
+  /// Grubun kanonik birimi: litre, kilogram ya da adet.
+  final String? unit;
+
+  /// Paket içeriği kanonik birim cinsinden: "400 g" -> 0,4 (kilogram).
+  /// Birim fiyat bununla hesaplanıyor; etiketten sayı ayrıştırmak yanlış
+  /// olurdu, çünkü etiketin birimi kanonik birim olmak zorunda değil.
+  final double? sizeValue;
 
   /// Bulanık eşleştirmenin güven puanı, 0..1. Aramadan gelen adaylarda null.
   final double? score;
@@ -41,7 +57,11 @@ class ProductRef {
     name: j['name'] as String,
     sizeLabel: (j['sizeLabel'] ?? '') as String,
     brand: j['brand'] as String?,
+    groupId: j['groupId'] as String?,
+    brandId: j['brandId'] as String?,
     groupName: j['groupName'] as String?,
+    unit: j['unit'] as String?,
+    sizeValue: (j['sizeValue'] as num?)?.toDouble(),
     score: (j['score'] as num?)?.toDouble(),
   );
 }

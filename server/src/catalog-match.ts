@@ -11,6 +11,10 @@ export type Candidate = {
   brandId: string | null;
   brandName: string | null;
   sizeLabel: string;
+  /** Paket içeriği kanonik birim cinsinden: 400 g -> 0,4 (kilogram). */
+  sizeValue: number;
+  /** Grubun kanonik birimi: litre, kilogram ya da adet. */
+  unit: string;
   score: number;
 };
 
@@ -48,7 +52,8 @@ export async function matchCatalog(
   const runner = client ?? pool;
   const { rows } = await runner.query(
     `SELECT v.id, v.display_name, v.short_name, v.group_id, v.group_name,
-            v.brand_id, v.brand_name, v.size_label, m.score
+            v.brand_id, v.brand_name, v.size_label, v.size_value, v.unit,
+            m.score
        FROM catalog_match($1, $2) m
        JOIN v_canonical_products v ON v.id = m.canonical_product_id
       ORDER BY m.score DESC, v.size_value`,
@@ -65,6 +70,8 @@ export async function matchCatalog(
       brandId: r.brand_id as string | null,
       brandName: r.brand_name as string | null,
       sizeLabel: r.size_label as string,
+      sizeValue: Number(r.size_value),
+      unit: r.unit as string,
       score: Number(r.score),
     }))
     .filter((c) => c.score >= SUGGEST_THRESHOLD);
