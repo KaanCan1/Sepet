@@ -16,25 +16,25 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/01-endeks.png" width="196" alt="Endeks ekranı">
-  <img src="docs/screenshots/07-kirilim.png" width="196" alt="Kategori ve marka kırılımı">
-  <img src="docs/screenshots/02-fis.png" width="196" alt="Fiş ekranı">
-  <img src="docs/screenshots/03-urun-gecmisi.png" width="196" alt="Ürün geçmişi ekranı">
+  <img src="docs/screenshots/store/01-endeks.png" width="172" alt="Endeks ekranı">
+  <img src="docs/screenshots/store/02-fis.png" width="172" alt="Fiş ekranı">
+  <img src="docs/screenshots/store/03-kirilim.png" width="172" alt="Kategori ve marka kırılımı">
+  <img src="docs/screenshots/store/04-urun-gecmisi.png" width="172" alt="Ürün geçmişi ekranı">
+  <img src="docs/screenshots/store/05-aylik-kart.png" width="172" alt="Aylık kart ekranı">
 </p>
 
 <p align="center">
-  <sub><b>Endeks</b> · <b>Kırılım</b> · <b>Fiş</b> · <b>Ürün geçmişi</b></sub>
+  <sub><b>Endeks</b> · <b>Fiş</b> · <b>Kırılım</b> · <b>Ürün geçmişi</b> · <b>Aylık kart</b></sub>
 </p>
 
 <p align="center">
   <img src="docs/screenshots/09-ilk-acilis.png" width="196" alt="İlk açılış ekranı">
   <img src="docs/screenshots/00-karsilama.png" width="196" alt="Karşılama ekranı">
-  <img src="docs/screenshots/04-aylik-kart.png" width="196" alt="Aylık kart ekranı">
   <img src="docs/screenshots/08-profil.png" width="196" alt="Profil ekranı">
 </p>
 
 <p align="center">
-  <sub><b>İlk açılış</b> · <b>Karşılama</b> · <b>Aylık kart</b> · <b>Profil</b></sub>
+  <sub><b>İlk açılış</b> · <b>Karşılama</b> · <b>Profil</b></sub>
 </p>
 
 ---
