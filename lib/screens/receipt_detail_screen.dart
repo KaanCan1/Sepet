@@ -39,9 +39,19 @@ class ReceiptDetailScreen extends StatefulWidget {
 }
 
 class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
-  Future<void> _resolve(ReceiptLine line) async {
+  /// Bekleyen satırları sırayla açar. Kullanıcı fişe her dönüp yeniden
+  /// dokunmak yerine tek akışta bitiriyor; vazgeçerse akış da duruyor.
+  Future<void> _resolveAll(List<ReceiptLine> lines) async {
+    for (final line in lines) {
+      if (!mounted) return;
+      final done = await _resolve(line);
+      if (!done) return;
+    }
+  }
+
+  Future<bool> _resolve(ReceiptLine line) async {
     final productId = await MatchSheet.show(context, line);
-    if (productId == null || !mounted) return;
+    if (productId == null || !mounted) return false;
 
     final repo = context.read<Repository>();
     final messenger = ScaffoldMessenger.of(context);
@@ -51,11 +61,13 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
         lineId: line.id,
         productId: productId,
       );
-      if (!mounted) return;
+      // Eşleşme sunucuya yazıldı ama ekran kapandıysa akış da duruyor.
+      if (!mounted) return false;
       // Bu ekran kendini, sekmeler de kendilerini tazeliyor: onaylanan
       // eşleşme hem fişi hem endeksi değiştiriyor.
       await context.read<ReceiptDetailCubit>().load(silent: true);
       if (mounted) refreshUserData(context);
+      return true;
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(
@@ -67,6 +79,7 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
           ),
         ),
       );
+      return false;
     }
   }
 
@@ -85,7 +98,8 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
         SliverToBoxAdapter(
           child: DataView<ReceiptDetailCubit, Receipt>(
             builder: (context, receipt) {
-              final pending = receipt.lines.where((l) => l.needsMatch).length;
+              final waiting = receipt.lines.where((l) => l.needsMatch).toList();
+              final pending = waiting.length;
               return Padding(
                 padding: kGutter,
                 child: Column(
@@ -103,13 +117,15 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
                     // yana durması eşleşmenin ne demek olduğunu anlatıyor.
                     ReceiptPaper(receipt: receipt),
                     const SizedBox(height: 26),
-                    Lbl(
-                      pending > 0
-                          ? '${receipt.lines.length} SATIR · '
-                                '$pending EŞLEŞME ONAYI BEKLİYOR'
-                          : '${receipt.lines.length} SATIR · HEPSİ EŞLEŞTİ',
-                    ),
+                    Lbl('${receipt.lines.length} SATIR'),
                     const SizedBox(height: 8),
+                    if (pending > 0) ...[
+                      _PendingBanner(
+                        count: pending,
+                        onTap: () => _resolveAll(waiting),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                     PaperCard(
                       padding: EdgeInsets.zero,
                       child: Column(
@@ -150,7 +166,53 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
   }
 }
 
+/// Bekleyen satırların sayacı ve tek dokunuşta hepsini gezen akış.
+class _PendingBanner extends StatelessWidget {
+  const _PendingBanner({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      onTap: onTap,
+      scale: .99,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+        decoration: BoxDecoration(
+          color: C.hotBg,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: const Color(0x389F2F2D)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '$count kalem eşleşme bekliyor',
+                style: const TextStyle(fontSize: 12.5, color: C.hot),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: const Color(0x669F2F2D)),
+              ),
+              child: Text('SIRAYLA ÇÖZ', style: T.label.copyWith(color: C.hot)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Kanonik ad üstte, fişteki ham satır altta, tutar sağda.
+///
+/// Durum şeritle veriliyor: bekleyen satır zam kırmızısı zemin ve sol
+/// şerit alıyor, çözülmüş satır hiçbir işaret taşımıyor. Kasa poşeti gibi
+/// endeks dışı kalemler ise sessiz — sorulacak bir şey yok.
 class _LineRow extends StatelessWidget {
   const _LineRow({required this.line, this.onTap});
 
@@ -159,34 +221,46 @@ class _LineRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final waiting = line.needsMatch;
     return Pressable(
       onTap: onTap,
       scale: .99,
       child: Container(
-        color: C.card,
-        padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
+        decoration: BoxDecoration(
+          color: waiting ? C.hotBg : C.card,
+          border: waiting
+              ? const Border(left: BorderSide(color: C.hot, width: 2))
+              : null,
+        ),
+        padding: EdgeInsets.fromLTRB(waiting ? 9 : 11, 10, 11, 10),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
+              // Rozet eşleşmeden bağımsız: marka fişte zaten yazıyor,
+              // eksik olan hangi kanonik ürüne gittiği. Dikkat isteyen
+              // satırı şerit anlatıyor, rozet değil.
+              child: BrandChip(
+                _monogram(line),
+                known: _monogram(line) != '?',
+                size: 21,
+              ),
+            ),
+            const SizedBox(width: 9),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        line.canonical ?? line.raw,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: line.canonical == null ? C.muted : C.ink,
-                        ),
-                      ),
-                      if (line.needsMatch) const MatchFlag(),
-                    ],
+                  Text(
+                    line.canonical ?? line.displayName,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: line.canonical == null ? C.muted : C.ink,
+                    ),
                   ),
                   const SizedBox(height: 3),
-                  Text(line.rawLine, style: T.raw),
+                  Text(_hint(line), style: _hintStyle(line)),
                 ],
               ),
             ),
@@ -197,4 +271,23 @@ class _LineRow extends StatelessWidget {
       ),
     );
   }
+
+  /// Marka rozetindeki harfler. Eşleşmiş satırda kanonik addan, henüz
+  /// eşleşmemişte fişteki açılmış addan.
+  static String _monogram(ReceiptLine line) {
+    final source = line.canonical ?? line.displayName;
+    final letters = source.replaceAll(RegExp(r'[^A-Za-zÇĞİÖŞÜçğıöşü]'), '');
+    if (letters.isEmpty) return '?';
+    return letters.substring(0, letters.length >= 2 ? 2 : 1).toUpperCase();
+  }
+
+  /// Adın altındaki tek satır: satırın neden dikkat istediği ya da istemediği.
+  static String _hint(ReceiptLine line) {
+    if (line.isExcluded) return 'endeks dışı';
+    if (line.needsMatch) return 'eşleşme bekliyor';
+    return line.rawLine;
+  }
+
+  static TextStyle _hintStyle(ReceiptLine line) =>
+      line.needsMatch ? T.label.copyWith(color: C.hot) : T.raw;
 }

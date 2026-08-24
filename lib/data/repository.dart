@@ -142,6 +142,15 @@ class Repository {
   Future<Product> product(String id) async =>
       Product.fromJson(await _api.get('/products/$id') as Map<String, dynamic>);
 
+  /// Ham fiş metni için sıralı aday listesi. Kullanıcı hiçbir şey yazmadan
+  /// önce doğru ürün genelde ilk sırada oluyor.
+  Future<MatchSuggestion> suggestMatches(String raw) async {
+    final json = await _api.get(
+      '/products/catalog/suggest?raw=${Uri.encodeQueryComponent(raw)}',
+    );
+    return MatchSuggestion.fromJson(json as Map<String, dynamic>);
+  }
+
   Future<List<ProductRef>> searchCatalog(String query) async {
     final rows = await _api.get(
       '/products/catalog/search?q=${Uri.encodeQueryComponent(query)}',

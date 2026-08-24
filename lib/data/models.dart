@@ -7,18 +7,66 @@ class ProductRef {
     required this.id,
     required this.name,
     required this.sizeLabel,
+    this.brand,
+    this.groupName,
+    this.score,
   });
 
   final String id;
   final String name;
   final String sizeLabel;
 
+  /// Marka adı. Markasız kalemlerde (açık sebze, fırın ekmeği) null.
+  final String? brand;
+
+  /// Ürün grubu — "Yoğurt", "Bulgur, pilavlık".
+  final String? groupName;
+
+  /// Bulanık eşleştirmenin güven puanı, 0..1. Aramadan gelen adaylarda null.
+  final double? score;
+
   String get title => '$name, $sizeLabel';
+
+  /// Marka rozetindeki iki harf. Logo yok: fişin monospace'inde baş harfler.
+  String get monogram {
+    final source = brand ?? name;
+    final flat = ProductName.expand(source)
+        .replaceAll(RegExp(r'[^A-Za-zÇĞİÖŞÜçğıöşü]'), '');
+    if (flat.isEmpty) return '?';
+    return flat.substring(0, flat.length >= 2 ? 2 : 1).toUpperCase();
+  }
 
   static ProductRef fromJson(Map<String, dynamic> j) => ProductRef(
     id: j['id'] as String,
     name: j['name'] as String,
     sizeLabel: (j['sizeLabel'] ?? '') as String,
+    brand: j['brand'] as String?,
+    groupName: j['groupName'] as String?,
+    score: (j['score'] as num?)?.toDouble(),
+  );
+}
+
+/// Bir fiş satırı için sunucunun önerdiği adaylar.
+class MatchSuggestion {
+  const MatchSuggestion({
+    required this.candidates,
+    required this.sizeAmbiguous,
+  });
+
+  final List<ProductRef> candidates;
+
+  /// Marka ve grup çözüldü, geriye yalnızca gramaj kaldı. Fişte yazmadığı
+  /// için sorulmak zorunda — ve endeks birim fiyat üzerinden hesaplandığı
+  /// için doğru olmak zorunda.
+  final bool sizeAmbiguous;
+
+  static const empty = MatchSuggestion(candidates: [], sizeAmbiguous: false);
+
+  static MatchSuggestion fromJson(Map<String, dynamic> j) => MatchSuggestion(
+    sizeAmbiguous: j['sizeAmbiguous'] == true,
+    candidates: ((j['candidates'] as List?) ?? const [])
+        .map((e) => ProductRef.fromJson(e as Map<String, dynamic>))
+        .toList(),
   );
 }
 
@@ -152,6 +200,7 @@ class ReceiptLine {
     required this.amount,
     required this.quantity,
     this.needsMatch = false,
+    this.status = 'auto',
   });
 
   final String id;
@@ -165,6 +214,12 @@ class ReceiptLine {
   /// Normalizasyon emin olamadı — kullanıcıya soruluyor. Bu bayrak hem
   /// doğruluğu artırıyor hem her satır için model çağırmayı engelliyor.
   final bool needsMatch;
+
+  /// Sunucudaki durum: auto, confirmed, pending, excluded.
+  final String status;
+
+  /// Kasa poşeti gibi ürün olmayan kalem. Endekse girmiyor ve sorulmuyor.
+  bool get isExcluded => status == 'excluded';
 
   /// "SUT TAM YAGLI 1L · x3"
   /// Kısaltmaları açılmış hâli — bkz. [ProductName].
@@ -183,6 +238,7 @@ class ReceiptLine {
     amount: (j['amount'] as num).toDouble(),
     quantity: (j['quantity'] as num?)?.toDouble() ?? 1,
     needsMatch: j['status'] == 'pending',
+    status: (j['status'] ?? 'auto') as String,
   );
 }
 

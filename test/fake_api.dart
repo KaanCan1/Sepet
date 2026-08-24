@@ -152,6 +152,39 @@ class FakeApi extends Api {
           'status': 'pending',
           'canonical': null,
         },
+        // Kasa poşeti: ürün değil, endekse girmiyor ve sorulmuyor.
+        {
+          'id': 'l3',
+          'lineNo': 3,
+          'raw': 'POSET',
+          'quantity': 1,
+          'amount': 1.0,
+          'status': 'excluded',
+          'canonical': null,
+        },
+      ],
+    },
+    // Gramaj belirsiz: marka ve ürün çözülmüş, geriye yalnızca boy kalmış.
+    'GET /products/catalog/suggest': {
+      'sizeAmbiguous': true,
+      'autoId': null,
+      'candidates': [
+        {
+          'id': 'y1',
+          'name': 'Yumurta',
+          'groupName': 'Yumurta',
+          'brand': null,
+          'sizeLabel': "15'li",
+          'score': 0.91,
+        },
+        {
+          'id': 'y2',
+          'name': 'Yumurta',
+          'groupName': 'Yumurta',
+          'brand': null,
+          'sizeLabel': "30'lu",
+          'score': 0.91,
+        },
       ],
     },
     'GET /products': [

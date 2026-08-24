@@ -97,32 +97,6 @@ class _Arrow extends CustomPainter {
   bool shouldRepaint(_Arrow old) => old.color != color || old.up != up;
 }
 
-/// .flag — normalizasyonun emin olamadığı satırın işareti.
-class MatchFlag extends StatelessWidget {
-  const MatchFlag({super.key, this.text = 'eşleşme?'});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(left: 6),
-    padding: const EdgeInsets.fromLTRB(5, 2, 5, 2.5),
-    decoration: BoxDecoration(
-      color: C.refBg,
-      borderRadius: BorderRadius.circular(3),
-    ),
-    child: Text(
-      text,
-      style: const TextStyle(
-        fontFamily: F.mono,
-        fontFamilyFallback: F.monoFallback,
-        fontSize: 8.5,
-        height: 1,
-        color: C.ref,
-      ),
-    ),
-  );
-}
-
 /// .row — nokta + ad + monospace değer.
 class SeriesRow extends StatelessWidget {
   const SeriesRow({
@@ -262,4 +236,48 @@ class _TearPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_TearPainter old) => false;
+}
+
+/// Marka rozeti — logo değil, baş harfler.
+///
+/// Logo servisleri alan adı tabanlı çalışıyor ve telefondan çağrılırsa
+/// kullanıcının sepetini üçüncü tarafa sızdırır; bu uygulamanın tüm mimarisi
+/// fişin cihazdan çıkmaması üzerine kurulu. Küçük üreticilerde (Hasata,
+/// Untad, Viva) zaten kapsama da yok.
+///
+/// Renk referans mavisi: zam kırmızısı yalnızca dikkat isteyen satırlarda
+/// kalsın diye — tek renk vurgusu bölünmüyor.
+class BrandChip extends StatelessWidget {
+  const BrandChip(this.text, {super.key, this.known = true, this.size = 22});
+
+  final String text;
+
+  /// Eşleşme yoksa kesik çerçeveli soru işareti.
+  final bool known;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: known ? C.refBg : null,
+        borderRadius: BorderRadius.circular(size * .23),
+        border: known ? null : Border.all(color: C.line),
+      ),
+      child: Text(
+        known ? text : '?',
+        style: TextStyle(
+          fontFamily: F.mono,
+          fontFamilyFallback: F.monoFallback,
+          fontSize: size * .36,
+          fontWeight: FontWeight.w600,
+          height: 1,
+          color: known ? C.ref : C.grey,
+        ),
+      ),
+    );
+  }
 }

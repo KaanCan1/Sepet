@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth, type AuthedRequest } from '../auth.js';
 import { pool, query } from '../db.js';
 import { matchCatalog } from '../catalog-match.js';
+import { isNonIndexLine } from '../non-index.js';
 
 export const receiptsRouter = Router();
 receiptsRouter.use(requireAuth);
@@ -130,13 +131,19 @@ receiptsRouter.post('/', async (req: AuthedRequest, res) => {
       // kullanıcıya gidiyor: gramaj fişte yazmıyor ve endeks birim fiyat
       // üzerinden hesaplandığı için yanlış tahmin sessizce yanlış enflasyon
       // üretir.
-      if (!productId) {
+      // Kasa poşeti gibi ürün olmayan kalemler endeks dışı. Sorulmuyor da:
+      // doğru cevabı yok.
+      const nonIndex = !productId && isNonIndexLine(line.raw);
+
+      if (!productId && !nonIndex) {
         const outcome = await matchCatalog(line.raw, 5, client);
         if (outcome.auto) {
           productId = outcome.auto.id;
           confidence = outcome.auto.score;
         }
       }
+
+      const status = productId ? 'auto' : nonIndex ? 'excluded' : 'pending';
 
       await client.query(
         `INSERT INTO receipt_lines
@@ -150,7 +157,7 @@ receiptsRouter.post('/', async (req: AuthedRequest, res) => {
           line.quantity ?? 1,
           line.amount,
           productId,
-          productId ? 'auto' : 'pending',
+          status,
           confidence,
         ],
       );
