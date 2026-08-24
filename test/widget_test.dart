@@ -216,6 +216,29 @@ void main() {
     });
   });
 
+  group('Fiş silme', () {
+    testWidgets('sola kaydırınca onay isteniyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-1')));
+      await tester.pumpAndSettle();
+
+      // Kaydırma tek başına silmiyor: fiş endeksi değiştiriyor ve işlem
+      // geri alınamıyor.
+      await tester.drag(find.text('A101').first, const Offset(-400, 0));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fişi sil'), findsOneWidget);
+      expect(find.textContaining('geri alınamaz'), findsOneWidget);
+
+      await tester.tap(find.text('Vazgeç'));
+      await tester.pumpAndSettle();
+      // Vazgeçilince fiş yerinde duruyor.
+      expect(find.text('A101'), findsOneWidget);
+    });
+  });
+
   group('Ürünler', () {
     testWidgets('liste ve geçmiş sunucudan geliyor', (tester) async {
       await tester.pumpWidget(bootstrap(token: 'test-token'));

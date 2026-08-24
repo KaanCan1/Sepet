@@ -238,6 +238,37 @@ receiptsRouter.post('/:id/lines/:lineId/match', async (req: AuthedRequest, res) 
 /// Öğrenilmiş eşleşmeler (product_aliases) BİLEREK duruyor. Onlar kullanıcıya
 /// değil markete bağlı ve "şu ham metin şu üründür" bilgisi demo veriyle
 /// öğrenilmiş olsa da doğru; silmek ilk gerçek fişte gereksiz soru sordururdu.
+/**
+ * Tek fişi siler.
+ *
+ * Yanlışlıkla onaylanan bir fiş için tek çare "hepsini sil" olmamalı.
+ * Satırlar ve fiyat gözlemleri basamaklı gidiyor; türetilmiş tablolar
+ * kullanıcıya bağlı olduğu için endeks yeniden hesaplanıyor.
+ */
+receiptsRouter.delete('/:id', async (req: AuthedRequest, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rowCount } = await client.query(
+      `DELETE FROM receipts WHERE id = $1 AND user_id = $2`,
+      [req.params.id, req.userId],
+    );
+    if (!rowCount) {
+      await client.query('ROLLBACK');
+      res.status(404).json({ error: 'Fiş bulunamadı' });
+      return;
+    }
+    await client.query('SELECT refresh_user_index($1)', [req.userId]);
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+});
+
 receiptsRouter.delete('/', async (req: AuthedRequest, res) => {
   const client = await pool.connect();
   try {

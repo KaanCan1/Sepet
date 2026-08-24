@@ -17,3 +17,42 @@ describe('Endeks dışı satırlar', () => {
     expect(isNonIndexLine('POSETLI CAY')).toBe(false);
   });
 });
+
+import { isBulk, sizeStated, sizesIn } from '../src/size-hint.js';
+
+describe('Fişte boy yazıyor mu', () => {
+  it('yazan boyu yakalıyor', () => {
+    expect(sizeStated('SUT TAM YAGLI 1L', 'litre', 1)).toBe(true);
+    expect(sizeStated('AYRAN 500ML', 'litre', 0.5)).toBe(true);
+    expect(sizeStated('BEYAZ PEYNIR 600G', 'kilogram', 0.6)).toBe(true);
+    expect(sizeStated('YUMURTA 30LU', 'adet', 30)).toBe(true);
+    // Kanonik birim adet ama etiket ağırlık; etiketin kendisi aranıyor.
+    expect(sizeStated('PROTEIN BAR 50 G', 'adet', 1, '50 g')).toBe(true);
+  });
+
+  it('yazmayan boyu uydurmuyor', () => {
+    // Bu ekranın varlık sebebi: fiş gramajı basmıyor, sorulmak zorunda.
+    expect(sizeStated('MIGROS T.YAGLI YOGU.', 'kilogram', 1)).toBe(false);
+    expect(sizeStated('PINAR BEYAZ PEYNIR', 'kilogram', 0.6)).toBe(false);
+    expect(sizeStated('MIGROS EKSTRA CECIL', 'kilogram', 0.2)).toBe(false);
+  });
+
+  it('başka bir boyu bu boy sanmıyor', () => {
+    expect(sizeStated('SUT TAM YAGLI 1L', 'litre', 0.5)).toBe(false);
+    expect(sizeStated('YUMURTA 30LU', 'adet', 15)).toBe(false);
+  });
+
+  it('birimi grubun kanonik birimine çeviriyor', () => {
+    expect(sizesIn('BEYAZ PEYNIR 600G', 'kilogram')).toEqual([0.6]);
+    expect(sizesIn('AYRAN 500ML', 'litre')).toEqual([0.5]);
+  });
+});
+
+describe('Kasada tartılan kalemler', () => {
+  it('birim adı boy etiketiyse paket yok demektir', () => {
+    expect(isBulk('kilogram')).toBe(true);
+    expect(isBulk('litre')).toBe(true);
+    expect(isBulk('600 g')).toBe(false);
+    expect(isBulk("30'lu")).toBe(false);
+  });
+});
