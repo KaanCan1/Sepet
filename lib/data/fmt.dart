@@ -137,10 +137,33 @@ abstract final class SizeLabel {
     _ => value,
   };
 
-  /// Grubun kanonik birimine göre kullanıcıya sunulacak birimler.
+  /// Bir birimin hangi kanonik boyutta ölçtüğü: g ve kg -> kilogram.
+  static String dimensionOf(String unit) => switch (unit) {
+    'g' || 'kg' => 'kilogram',
+    'mL' || 'litre' => 'litre',
+    _ => 'adet',
+  };
+
+  /// Kullanıcıya sunulacak birimler — hepsi, grubun kendi boyutu başta.
+  ///
+  /// Liste eskiden grubun boyutuyla sınırlıydı ve bu bir çıkmaz üretiyordu:
+  /// fişte "TACIROGLU SUT" yazan kalem aslında kaşar peyniriyse kullanıcının
+  /// gireceği boy 400 g, ama ekran yalnızca mL ve litre öneriyordu. Yazan
+  /// şey ile satın alınan şey her zaman aynı değil; birimi kısıtlamak
+  /// kullanıcıyı bildiği doğruyu giremez hâle getiriyordu.
+  ///
+  /// Sıra önemli: grubun kendi boyutu başta durunca yaygın hâl tek
+  /// dokunuşta kalıyor, boyut değiştirmek ise bilinçli bir seçim oluyor.
   static List<String> unitsFor(String canonicalUnit) => switch (canonicalUnit) {
-    'kilogram' => const ['g', 'kg'],
-    'litre' => const ['mL', 'litre'],
-    _ => const ['adet'],
+    'kilogram' => const ['g', 'kg', 'mL', 'litre', 'adet'],
+    'litre' => const ['mL', 'litre', 'g', 'kg', 'adet'],
+    _ => const ['adet', 'g', 'kg', 'mL', 'litre'],
+  };
+
+  /// Kanonik birimin kısa adı — birim fiyat etiketinde geçen sözcük.
+  static String shortUnit(String? canonicalUnit) => switch (canonicalUnit) {
+    'kilogram' => 'kg',
+    'litre' => 'litre',
+    _ => 'adet',
   };
 }

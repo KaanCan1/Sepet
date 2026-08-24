@@ -11,8 +11,8 @@ import 'package:sepet/widgets/atoms.dart';
 import 'fake_api.dart';
 
 /// Uygulamayı sahte sunucuyla kurar.
-Widget bootstrap({String? token}) => AppScope(
-  api: FakeApi(),
+Widget bootstrap({String? token, FakeApi? api}) => AppScope(
+  api: api ?? FakeApi(),
   authStore: MemoryAuthStore(token),
   child: MaterialApp(locale: const Locale('tr', 'TR'), home: const RootGate()),
 );
@@ -213,6 +213,59 @@ void main() {
 
       // Katalogda olmayan gramaj elle girilebiliyor.
       expect(find.text('Listede yok, gramajı kendim gireyim'), findsOneWidget);
+    });
+
+    // Fişte yazan ile satın alınan her zaman aynı şey değil: "TACIROGLU SUT"
+    // satırı aslında kaşar peyniri olabiliyor. Kullanıcı gram girdiğinde
+    // yanlış olan birim değil grup — 400 g'ı litre cinsinden bir grupta
+    // saklamak endeksin birimini bozar. O yüzden boyut değişince grup da
+    // soruluyor ve seçilmeden kaydetmeye izin verilmiyor.
+    testWidgets('birim boyutu değişince ürün grubu soruluyor', (tester) async {
+      final api = FakeApi();
+      await tester.pumpWidget(bootstrap(token: 'test-token', api: api));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-1')));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -260));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A101').first);
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -420));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('eşleşme bekliyor'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Listede yok, gramajı kendim gireyim'));
+      await tester.pumpAndSettle();
+
+      // Grubun kendi boyutu (adet) başta, ama diğer birimler de burada.
+      expect(find.text('adet'), findsWidgets);
+      expect(find.text('kg'), findsOneWidget);
+
+      await tester.tap(find.text('kg'));
+      await tester.pumpAndSettle();
+
+      // Boyut değişti: grup soruluyor ve kaydetme kilitli.
+      expect(api.calls, contains('GET /products/catalog/groups'));
+      expect(find.textContaining('başka bir grupta'), findsOneWidget);
+      expect(find.text('Önce ürün grubunu seç'), findsOneWidget);
+
+      // İlk alan gramaj, ikincisi grup araması.
+      await tester.enterText(find.byType(TextField).first, '400');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Beyaz peynir').last);
+      await tester.pumpAndSettle();
+
+      // Düğme kataloğa girecek adı yazıyor; onay o isme veriliyor.
+      final ekle = find.text('Beyaz peynir olarak ekle');
+      expect(ekle, findsOneWidget);
+      await tester.ensureVisible(ekle);
+      await tester.pumpAndSettle();
+      await tester.tap(ekle);
+      await tester.pumpAndSettle();
+
+      expect(api.calls, contains('POST /products/catalog'));
     });
   });
 

@@ -56,6 +56,17 @@ class _MatchSheetState extends State<MatchSheet> {
   bool _customSize = false;
   final _sizeInput = TextEditingController();
   String _customUnit = 'g';
+
+  /// Seçilen birim grubun ölçü boyutunu değiştirdiğinde açılan grup seçimi.
+  ///
+  /// Fişte "TACIROGLU SUT" yazan kalem aslında kaşar peyniri olabiliyor.
+  /// Kullanıcı gram girdiğinde yanlış olan birim değil grup: 400 g'ı litre
+  /// cinsinden bir grupta saklamak endekse "litre fiyatı" diye yanlış bir
+  /// birim yazar. O yüzden boyut değişince grup da soruluyor.
+  final _groupInput = TextEditingController();
+  List<ProductGroupRef> _groups = const [];
+  ProductGroupRef? _pickedGroup;
+  bool _groupsLoading = false;
   bool _saving = false;
   bool _loading = true;
   String? _error;
@@ -76,7 +87,45 @@ class _MatchSheetState extends State<MatchSheet> {
   void dispose() {
     _controller.dispose();
     _sizeInput.dispose();
+    _groupInput.dispose();
     super.dispose();
+  }
+
+  /// Girilen birim, eşleşen grubun ölçü boyutundan farklı mı?
+  bool _crossDimension(ProductRef base) =>
+      SizeLabel.dimensionOf(_customUnit) != (base.unit ?? 'kilogram');
+
+  /// Kaydedilecek grup: boyut değişmediyse eşleşen grup, değiştiyse seçilen.
+  String? _targetGroup(ProductRef base) =>
+      _crossDimension(base) ? _pickedGroup?.id : base.groupId;
+
+  /// Birim değişince grup seçimi tazeleniyor.
+  ///
+  /// Boyut aynı kaldıysa seçili grubu taşımak yanlış olurdu — kullanıcı
+  /// kg'dan g'a geçtiğinde hâlâ aynı üründen bahsediyor.
+  Future<void> _pickUnit(ProductRef base, String unit) async {
+    setState(() {
+      _customUnit = unit;
+      _pickedGroup = null;
+      _groups = const [];
+    });
+    if (_crossDimension(base)) await _loadGroups();
+  }
+
+  Future<void> _loadGroups() async {
+    setState(() => _groupsLoading = true);
+    final repo = context.read<Repository>();
+    try {
+      final rows = await repo.catalogGroups(
+        unit: SizeLabel.dimensionOf(_customUnit),
+        query: _groupInput.text.trim(),
+      );
+      if (mounted) setState(() => _groups = rows);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _groupsLoading = false);
+    }
   }
 
   /// Girilen boyun kanonik birim cinsinden değeri.
@@ -96,13 +145,14 @@ class _MatchSheetState extends State<MatchSheet> {
   Future<void> _saveCustomSize(ProductRef base) async {
     final raw = double.tryParse(_sizeInput.text.trim().replaceAll(',', '.'));
     final value = _customValue;
-    if (raw == null || value == null || base.groupId == null) return;
+    final groupId = _targetGroup(base);
+    if (raw == null || value == null || groupId == null) return;
 
     setState(() => _saving = true);
     final repo = context.read<Repository>();
     try {
       final created = await repo.addCatalogSize(
-        groupId: base.groupId!,
+        groupId: groupId,
         brandId: base.brandId,
         sizeLabel: SizeLabel.build(raw, _customUnit),
         sizeValue: value,
@@ -165,11 +215,8 @@ class _MatchSheetState extends State<MatchSheet> {
 
   /// Birim fiyatın etiketi grubun kanonik biriminden geliyor: kilogram
   /// grubunda "kg fiyatı", paket 400 g olsa bile.
-  static String _unitLabel(String? canonicalUnit) => switch (canonicalUnit) {
-    'kilogram' => 'kg',
-    'litre' => 'litre',
-    _ => 'adet',
-  };
+  static String _unitLabel(String? canonicalUnit) =>
+      SizeLabel.shortUnit(canonicalUnit);
 
   @override
   Widget build(BuildContext context) {
@@ -180,29 +227,38 @@ class _MatchSheetState extends State<MatchSheet> {
       borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
       child: GlassBar(
         borderSide: GlassEdge.none,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(18, 14, 18, 14 + pad + inset),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: C.line,
-                    borderRadius: BorderRadius.circular(2),
+        // Sayfa kısa içerikte kendi boyunda duruyor, uzun içerikte
+        // kaydırılıyor. Sabit Column yeterliydi ta ki grup seçimi açılana
+        // kadar: boy listesi + gramaj alanı + grup listesi ekranı taşırıyor
+        // ve taşan Flutter sütunu içeriği kesiyor, kaydırmıyor.
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+          ),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(18, 14, 18, 14 + pad + inset),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: C.line,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              const Lbl('FİŞTEKİ SATIR'),
-              const SizedBox(height: 5),
-              Text(widget.line.rawLine, style: T.num12),
-              const SizedBox(height: 16),
-              if (_sizeOnly) ..._sizeMode() else ..._productMode(),
-            ],
+                const SizedBox(height: 16),
+                const Lbl('FİŞTEKİ SATIR'),
+                const SizedBox(height: 5),
+                Text(widget.line.rawLine, style: T.num12),
+                const SizedBox(height: 16),
+                if (_sizeOnly) ..._sizeMode() else ..._productMode(),
+              ],
+            ),
           ),
         ),
       ),
@@ -277,9 +333,21 @@ class _MatchSheetState extends State<MatchSheet> {
           units: SizeLabel.unitsFor(first.unit ?? 'kilogram'),
           unit: _customUnit,
           unitPrice: _customUnitPrice,
-          unitLabel: _unitLabel(first.unit),
+          // Etiket seçilen birimi izliyor, grubunkini değil: gram girildiği
+          // an hesaplanan şey kg fiyatı olur.
+          unitLabel: SizeLabel.shortUnit(SizeLabel.dimensionOf(_customUnit)),
           saving: _saving,
-          onUnit: (u) => setState(() => _customUnit = u),
+          crossDimension: _crossDimension(first),
+          currentGroup: first.groupName ?? '',
+          brand: first.brand,
+          groupInput: _groupInput,
+          groups: _groups,
+          groupsLoading: _groupsLoading,
+          pickedGroup: _pickedGroup,
+          ready: _targetGroup(first) != null,
+          onUnit: (u) => _pickUnit(first, u),
+          onGroupQuery: (_) => _loadGroups(),
+          onGroup: (g) => setState(() => _pickedGroup = g),
           onChanged: () => setState(() {}),
           onSave: () => _saveCustomSize(first),
         )
@@ -555,7 +623,17 @@ class _CustomSizeEditor extends StatelessWidget {
     required this.unitPrice,
     required this.unitLabel,
     required this.saving,
+    required this.crossDimension,
+    required this.currentGroup,
+    required this.brand,
+    required this.groupInput,
+    required this.groups,
+    required this.groupsLoading,
+    required this.pickedGroup,
+    required this.ready,
     required this.onUnit,
+    required this.onGroupQuery,
+    required this.onGroup,
     required this.onChanged,
     required this.onSave,
   });
@@ -566,13 +644,39 @@ class _CustomSizeEditor extends StatelessWidget {
   final String unitPrice;
   final String unitLabel;
   final bool saving;
+
+  /// Seçilen birim eşleşen grubun ölçü boyutundan farklı.
+  final bool crossDimension;
+  final String currentGroup;
+  final String? brand;
+  final TextEditingController groupInput;
+  final List<ProductGroupRef> groups;
+  final bool groupsLoading;
+  final ProductGroupRef? pickedGroup;
+
+  /// Kaydedilecek bir grup var mı — boyut değiştiyse seçim yapılmış mı.
+  final bool ready;
   final ValueChanged<String> onUnit;
+  final ValueChanged<String> onGroupQuery;
+  final ValueChanged<ProductGroupRef> onGroup;
   final VoidCallback onChanged;
   final VoidCallback onSave;
 
+  /// Düğme ne yapacağını yazıyor.
+  ///
+  /// Boyut değiştiyse eklenecek şey artık "bir boy" değil, başka bir gruptaki
+  /// yeni bir kalem — düğmenin bunu söylemesi gerekiyor, çünkü kullanıcı
+  /// onayladığı anda kataloğa giren isim o.
+  String _saveLabel() {
+    if (!crossDimension) return 'Bu boyu ekle';
+    final g = pickedGroup;
+    if (g == null) return 'Önce ürün grubunu seç';
+    return '${brand == null ? '' : '$brand '}${g.name} olarak ekle';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final ready = unitPrice != '—' && !saving;
+    final ok = unitPrice != '—' && !saving && ready;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -648,23 +752,162 @@ class _CustomSizeEditor extends StatelessWidget {
             ],
           ),
         ),
+        if (crossDimension) ...[
+          const SizedBox(height: 10),
+          _GroupPicker(
+            currentGroup: currentGroup,
+            unitLabel: unitLabel,
+            input: groupInput,
+            groups: groups,
+            loading: groupsLoading,
+            picked: pickedGroup,
+            onQuery: onGroupQuery,
+            onPick: onGroup,
+          ),
+        ],
         const SizedBox(height: 9),
         Pressable(
-          onTap: ready ? onSave : null,
+          onTap: ok ? onSave : null,
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 13),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: ready ? C.ink : C.line,
+              color: ok ? C.ink : C.line,
               borderRadius: BorderRadius.circular(9),
             ),
             child: Text(
-              saving ? 'Ekleniyor…' : 'Bu boyu ekle',
-              style: TextStyle(fontSize: 13, color: ready ? C.card : C.muted),
+              saving ? 'Ekleniyor…' : _saveLabel(),
+              style: TextStyle(fontSize: 13, color: ok ? C.card : C.muted),
             ),
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// Ölçü boyutu değiştiğinde açılan grup seçimi.
+///
+/// Ekranın söylediği şey basit ama kritik: girilen birim grubun birimiyle
+/// uyuşmuyorsa yanlış olan birim değil, kalemin bağlı olduğu grup. Kullanıcı
+/// gram giriyorsa elindeki ürün süt değil; doğru grup seçilmeden kaydetmek
+/// endeksin birimini bozardı.
+class _GroupPicker extends StatelessWidget {
+  const _GroupPicker({
+    required this.currentGroup,
+    required this.unitLabel,
+    required this.input,
+    required this.groups,
+    required this.loading,
+    required this.picked,
+    required this.onQuery,
+    required this.onPick,
+  });
+
+  final String currentGroup;
+  final String unitLabel;
+  final TextEditingController input;
+  final List<ProductGroupRef> groups;
+  final bool loading;
+  final ProductGroupRef? picked;
+  final ValueChanged<String> onQuery;
+  final ValueChanged<ProductGroupRef> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(11, 9, 11, 10),
+          decoration: BoxDecoration(
+            color: C.hotBg,
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Text(
+            '${currentGroup.isEmpty ? 'Eşleşen grup' : currentGroup} '
+            '$unitLabel ile ölçülmüyor. Bu kalem başka bir grupta — hangisi?',
+            style: const TextStyle(fontSize: 11.5, height: 1.4, color: C.hot),
+          ),
+        ),
+        const SizedBox(height: 8),
+        PaperCard(
+          padding: const EdgeInsets.symmetric(horizontal: 13),
+          child: TextField(
+            controller: input,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              hintText: 'Grup ara — kaşar, peynir…',
+              hintStyle: TextStyle(fontSize: 13, color: C.muted),
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(vertical: 12),
+            ),
+            style: const TextStyle(fontSize: 13, color: C.ink),
+            onChanged: onQuery,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (loading && groups.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: C.muted,
+                ),
+              ),
+            ),
+          )
+        else if (groups.isEmpty)
+          const Text(
+            'Bu birimde grup bulunamadı.',
+            style: TextStyle(fontSize: 11.5, color: C.muted),
+          )
+        else
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 172),
+            child: PaperCard(
+              padding: EdgeInsets.zero,
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: groups.length,
+                separatorBuilder: (_, _) => const Hairline(),
+                itemBuilder: (context, i) {
+                  final g = groups[i];
+                  final on = g.id == picked?.id;
+                  return Pressable(
+                    scale: .99,
+                    onTap: () => onPick(g),
+                    child: Container(
+                      color: on ? C.refBg : C.card,
+                      padding: const EdgeInsets.fromLTRB(13, 11, 13, 11),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              g.name,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: on ? C.ref : C.ink,
+                              ),
+                            ),
+                          ),
+                          if (on)
+                            const LineIcon(Glyph.check, size: 13, color: C.ref),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
       ],
     );
   }

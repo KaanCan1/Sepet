@@ -209,6 +209,34 @@ describe('API', () => {
     ).toBe(true);
   });
 
+  // Fişte "TACIROGLU SUT" yazan kalem aslında kaşar peyniri olabiliyor.
+  // Kullanıcı gram girdiğinde yanlış olan birim değil grup: 400 g'ı litre
+  // cinsinden bir grupta saklamak endeksin birimini bozar. Bu uç nokta
+  // doğru grubu seçtiriyor.
+  it('grup listesi ölçü birimine göre süzülüyor', async () => {
+    const res = await request(app)
+      .get('/products/catalog/groups?unit=kilogram&q=peynir')
+      .set(auth())
+      .expect(200);
+
+    const adlar = res.body.map((g: { name: string }) => g.name);
+    expect(adlar).toContain('Kaşar peyniri');
+    // Süzgeç birimi tutuyor: litre grubu bu listede olamaz.
+    expect(
+      res.body.every((g: { unit: string }) => g.unit === 'kilogram'),
+    ).toBe(true);
+  });
+
+  it('grup araması Türkçe karakterden bağımsız', async () => {
+    const res = await request(app)
+      .get('/products/catalog/groups?q=kasar')
+      .set(auth())
+      .expect(200);
+    expect(
+      res.body.some((g: { name: string }) => g.name === 'Kaşar peyniri'),
+    ).toBe(true);
+  });
+
   it('kategori kırılımı seri döndürüyor', async () => {
     const res = await request(app)
       .get('/index/by-category')
