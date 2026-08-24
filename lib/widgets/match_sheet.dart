@@ -51,6 +51,12 @@ class _MatchSheetState extends State<MatchSheet> {
 
   /// Kullanıcı arama kutusuna dokunduğu an öneri modundan çıkılıyor.
   bool _searching = false;
+
+  /// Katalogda olmayan bir boy giriliyor.
+  bool _customSize = false;
+  final _sizeInput = TextEditingController();
+  String _customUnit = 'g';
+  bool _saving = false;
   bool _loading = true;
   String? _error;
   bool _started = false;
@@ -69,7 +75,44 @@ class _MatchSheetState extends State<MatchSheet> {
   @override
   void dispose() {
     _controller.dispose();
+    _sizeInput.dispose();
     super.dispose();
+  }
+
+  /// Girilen boyun kanonik birim cinsinden değeri.
+  double? get _customValue {
+    final raw = double.tryParse(_sizeInput.text.trim().replaceAll(',', '.'));
+    if (raw == null || raw <= 0) return null;
+    return SizeLabel.toCanonical(raw, _customUnit);
+  }
+
+  /// Girilen boy seçilirse endekse girecek birim fiyat.
+  String get _customUnitPrice {
+    final v = _customValue;
+    if (v == null || v <= 0) return '—';
+    return Fmt.money(widget.line.amount / (widget.line.quantity * v));
+  }
+
+  Future<void> _saveCustomSize(ProductRef base) async {
+    final raw = double.tryParse(_sizeInput.text.trim().replaceAll(',', '.'));
+    final value = _customValue;
+    if (raw == null || value == null || base.groupId == null) return;
+
+    setState(() => _saving = true);
+    final repo = context.read<Repository>();
+    try {
+      final created = await repo.addCatalogSize(
+        groupId: base.groupId!,
+        brandId: base.brandId,
+        sizeLabel: SizeLabel.build(raw, _customUnit),
+        sizeValue: value,
+      );
+      if (mounted) Navigator.of(context).pop(created.id);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   Future<void> _suggest() async {
@@ -110,27 +153,23 @@ class _MatchSheetState extends State<MatchSheet> {
   ///
   /// Kullanıcının gördüğü tek doğrulama bu: 3 kg'lık yoğurdu 1 kg sanmak
   /// kilo fiyatını üçe katlar ve o ay sahte bir zam olarak endekse girer.
+  ///
+  /// Hesap sunucudaki size_value ile: paket içeriği kanonik birim cinsinden
+  /// zaten orada duruyor. Etiketten sayı ayrıştırmak yanlış olurdu —
+  /// "400 g" etiketinin kanonik değeri 400 değil 0,4.
   String _unitPrice(ProductRef p) {
-    final size = _sizeValue(p.sizeLabel);
+    final size = p.sizeValue;
     if (size == null || size <= 0) return '';
-    final unit = widget.line.amount / (widget.line.quantity * size);
-    return Fmt.money(unit);
+    return Fmt.money(widget.line.amount / (widget.line.quantity * size));
   }
 
-  /// "1,5 kg" -> 1.5. Etiketin sayısal kısmı; birim adı gösterim için.
-  static double? _sizeValue(String label) {
-    final m = RegExp(r'(\d+(?:[.,]\d+)?)').firstMatch(label);
-    if (m == null) return null;
-    return double.tryParse(m.group(1)!.replaceAll(',', '.'));
-  }
-
-  /// "1,5 kg" -> "kg", "500 mL" -> "mL", "6'lı" -> "adet".
-  static String _unitLabel(String sizeLabel) {
-    final m = RegExp(r'\d\s*([A-Za-zÇĞİÖŞÜçğıöşü]+)$').firstMatch(sizeLabel);
-    final raw = m?.group(1)?.toLowerCase();
-    if (raw == null || raw.startsWith('l')) return 'adet';
-    return m!.group(1)!;
-  }
+  /// Birim fiyatın etiketi grubun kanonik biriminden geliyor: kilogram
+  /// grubunda "kg fiyatı", paket 400 g olsa bile.
+  static String _unitLabel(String? canonicalUnit) => switch (canonicalUnit) {
+    'kilogram' => 'kg',
+    'litre' => 'litre',
+    _ => 'adet',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -182,11 +221,7 @@ class _MatchSheetState extends State<MatchSheet> {
     final same = _suggestion.candidates
         .where((c) => c.groupName == first.groupName && c.brand == first.brand)
         .toList();
-    same.sort((a, b) {
-      final av = _sizeValue(a.sizeLabel) ?? 0;
-      final bv = _sizeValue(b.sizeLabel) ?? 0;
-      return av.compareTo(bv);
-    });
+    same.sort((a, b) => (a.sizeValue ?? 0).compareTo(b.sizeValue ?? 0));
     return same;
   }
 
@@ -225,13 +260,37 @@ class _MatchSheetState extends State<MatchSheet> {
               _SizeOption(
                 product: options[i],
                 unitPrice: _unitPrice(options[i]),
-                unitLabel: _unitLabel(options[i].sizeLabel),
+                unitLabel: _unitLabel(options[i].unit),
                 onTap: () => Navigator.of(context).pop(options[i].id),
               ),
             ],
           ],
         ),
       ),
+      const SizedBox(height: 10),
+      if (_customSize)
+        _CustomSizeEditor(
+          controller: _sizeInput,
+          units: SizeLabel.unitsFor(first.unit ?? 'kilogram'),
+          unit: _customUnit,
+          unitPrice: _customUnitPrice,
+          unitLabel: _unitLabel(first.unit),
+          saving: _saving,
+          onUnit: (u) => setState(() => _customUnit = u),
+          onChanged: () => setState(() {}),
+          onSave: () => _saveCustomSize(first),
+        )
+      else
+        Pressable(
+          onTap: () => setState(() {
+            _customSize = true;
+            _customUnit = SizeLabel.unitsFor(first.unit ?? 'kilogram').first;
+          }),
+          child: const Text(
+            'Listede yok, gramajı kendim gireyim',
+            style: TextStyle(fontSize: 12.5, color: C.ref),
+          ),
+        ),
       const SizedBox(height: 10),
       const Text(
         'Fiş gramajı basmıyor. Seçtiğin boy endeksin birim fiyatını '
@@ -476,6 +535,134 @@ class _ConfidenceBar extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Katalogda olmayan boyu girme alanı.
+///
+/// Sayı ve birim ayrı: fiş "400 g" da yazabilir "0,4 kg" da, kullanıcı hangisi
+/// kolayına geliyorsa onu giriyor. Sağda, yazarken güncellenen birim fiyat —
+/// bu ekranın tek doğrulaması o.
+class _CustomSizeEditor extends StatelessWidget {
+  const _CustomSizeEditor({
+    required this.controller,
+    required this.units,
+    required this.unit,
+    required this.unitPrice,
+    required this.unitLabel,
+    required this.saving,
+    required this.onUnit,
+    required this.onChanged,
+    required this.onSave,
+  });
+
+  final TextEditingController controller;
+  final List<String> units;
+  final String unit;
+  final String unitPrice;
+  final String unitLabel;
+  final bool saving;
+  final ValueChanged<String> onUnit;
+  final VoidCallback onChanged;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    final ready = unitPrice != '—' && !saving;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Lbl('PAKET BOYU'),
+        const SizedBox(height: 8),
+        PaperCard(
+          padding: const EdgeInsets.fromLTRB(13, 10, 13, 12),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: controller,
+                      autofocus: true,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        hintText: '400',
+                        hintStyle: TextStyle(fontSize: 15, color: C.grey),
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(vertical: 6),
+                      ),
+                      style: const TextStyle(
+                        fontFamily: F.mono,
+                        fontFamilyFallback: F.monoFallback,
+                        fontSize: 15,
+                        color: C.ink,
+                      ),
+                      onChanged: (_) => onChanged(),
+                      onSubmitted: (_) => ready ? onSave() : null,
+                    ),
+                  ),
+                  for (final u in units) ...[
+                    const SizedBox(width: 6),
+                    Pressable(
+                      onTap: () => onUnit(u),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: u == unit ? C.ink : null,
+                          borderRadius: BorderRadius.circular(999),
+                          border: u == unit ? null : Border.all(color: C.line),
+                        ),
+                        child: Text(
+                          u,
+                          style: TextStyle(
+                            fontFamily: F.mono,
+                            fontFamilyFallback: F.monoFallback,
+                            fontSize: 11,
+                            color: u == unit ? C.card : C.muted,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const Hairline(),
+              const SizedBox(height: 9),
+              Row(
+                children: [
+                  Text('$unitLabel fiyatı', style: T.raw),
+                  const Spacer(),
+                  Text(unitPrice, style: T.num12),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 9),
+        Pressable(
+          onTap: ready ? onSave : null,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: ready ? C.ink : C.line,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Text(
+              saving ? 'Ekleniyor…' : 'Bu boyu ekle',
+              style: TextStyle(fontSize: 13, color: ready ? C.card : C.muted),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

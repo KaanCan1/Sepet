@@ -210,6 +210,9 @@ void main() {
       expect(find.text("30'lu"), findsOneWidget);
       expect(find.textContaining('12,30'), findsOneWidget);
       expect(find.textContaining('6,15'), findsOneWidget);
+
+      // Katalogda olmayan gramaj elle girilebiliyor.
+      expect(find.text('Listede yok, gramajı kendim gireyim'), findsOneWidget);
     });
   });
 
