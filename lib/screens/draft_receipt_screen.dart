@@ -318,7 +318,10 @@ class _DraftRow extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(line.raw, style: T.num11.copyWith(fontSize: 11)),
+                        Text(
+                          line.displayName,
+                          style: T.num11.copyWith(fontSize: 11),
+                        ),
                         if (line.quantity != 1) ...[
                           const SizedBox(height: 2),
                           Text(
@@ -443,7 +446,9 @@ class _LineSheet extends StatefulWidget {
 }
 
 class _LineSheetState extends State<_LineSheet> {
-  late final _name = TextEditingController(text: widget.line.raw);
+  // Düzeltme alanı açılmış adla açılıyor: kullanıcı kesilmiş metni baştan
+  // yazmak yerine üstünde oynuyor.
+  late final _name = TextEditingController(text: widget.line.displayName);
   late final _amount = TextEditingController(
     text: Fmt.money(widget.line.amount),
   );

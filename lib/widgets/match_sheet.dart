@@ -42,8 +42,13 @@ class _MatchSheetState extends State<MatchSheet> {
   String? _error;
   bool _started = false;
 
-  /// Ham metnin ilk kelimesi genelde ürünün kendisi: "AYCICEK YAGI 5L".
-  String get _initialQuery => widget.line.raw.split(RegExp(r'\s+')).first;
+  /// Açılmış adın ilk kelimesi genelde markadır; ürünün kendisi ikinci
+  /// sırada geliyor ("MIGROS tam yağlı yoğurt"). Katalogda arananı
+  /// bulmak için ikisini de deniyoruz.
+  String get _initialQuery {
+    final parts = widget.line.displayName.split(RegExp(r'\s+'));
+    return parts.length > 1 ? parts[1] : parts.first;
+  }
 
   @override
   void didChangeDependencies() {
