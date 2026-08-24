@@ -174,8 +174,42 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Süt, tam yağlı 1 litre'), findsOneWidget);
-      expect(find.byType(MatchFlag), findsOneWidget);
-      expect(find.textContaining('1 EŞLEŞME ONAYI BEKLİYOR'), findsOneWidget);
+      // Durum artık şeritle ve tek satırlık ipucuyla veriliyor; üstteki
+      // sayaç da tek dokunuşta hepsini gezen akışı açıyor.
+      expect(find.text('eşleşme bekliyor'), findsOneWidget);
+      expect(find.text('1 kalem eşleşme bekliyor'), findsOneWidget);
+      expect(find.text('SIRAYLA ÇÖZ'), findsOneWidget);
+      // Kasa poşeti sessiz: endeks dışı, sorulmuyor.
+      expect(find.text('endeks dışı'), findsOneWidget);
+    });
+
+    testWidgets('gramaj belirsizse yalnızca boy soruluyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-1')));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -260));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A101').first);
+      await tester.pumpAndSettle();
+
+      // Satırlar kâğıt fişin altında; ekranı aşağı çekmeden dokunulamıyor.
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -420));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('eşleşme bekliyor'));
+      await tester.pumpAndSettle();
+
+      // Marka ve ürün zaten çözülmüş: arama kutusu çıkmıyor.
+      expect(find.text('HANGİ BOY?'), findsOneWidget);
+      expect(find.text('Katalogda ara'), findsNothing);
+
+      // Her boyun yanında o seçim yapılırsa endekse girecek birim fiyat.
+      // 184,50 TL / 15 adet = 12,30 · / 30 adet = 6,15.
+      expect(find.text("15'li"), findsOneWidget);
+      expect(find.text("30'lu"), findsOneWidget);
+      expect(find.textContaining('12,30'), findsOneWidget);
+      expect(find.textContaining('6,15'), findsOneWidget);
     });
   });
 

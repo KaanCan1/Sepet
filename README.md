@@ -57,7 +57,7 @@ doğrulamıyor ya da yorumlamıyor — sadece referans çizgisi olarak duruyorla
 |---|---|---|
 | **00** | Karşılama | Apple, Google ya da e-posta ile giriş. Sağlayıcı akışı henüz sahte; jetonu üreten uç değişecek, saklayan katman aynı kalacak. |
 | **01** | Endeks | Tek sayı: son 12 ayda senin sepetin. Altında TÜİK karşılaştırması, seri grafiği ve son fişler. |
-| **02** | Fiş ekleme ve fiş | Fotoğraf → cihaz üstünde OCR → düzeltilebilir taslak → kayıt. Fişin kâğıt hâli ve altında yorumlanmış satırlar; emin olunamayan satır `eşleşme?` ile işaretlenir. |
+| **02** | Fiş ekleme ve fiş | Fotoğraf → cihaz üstünde OCR → düzeltilebilir taslak → kayıt. Fişin kâğıt hâli ve altında yorumlanmış satırlar; emin olunamayan satır zam kırmızısı şeritle işaretlenir ve tek akışta sırayla çözülür. |
 | **03** | Ürün geçmişi | Tek ürünün gözlem geçmişi, marketler arası son fiyatlar, 12 aylık değişim. |
 | **04** | Aylık kart | Paylaşılabilir özet kart (PNG olarak dışa aktarılır) ve ayın en çok zamlanan kalemleri. |
 | **05** | Kırılım | Hangi kategori, hangi marka. Her seri kendi kümesinde yeniden ağırlıklandırılıyor — yüzdeler birbirine eklenmez. |
@@ -108,8 +108,10 @@ ile sabitlendi.
 
 <img src="docs/screenshots/05-eslesme.png" width="230" align="right" alt="Eşleşme onayı alt sayfası">
 
-Fişteki `YUMURTA 30LU` satırı hangi kanonik ürüne gidiyor? 30'lu yumurta mı,
-15'li mi? Normalizasyon emin olamadığında uygulama **tahmin etmiyor, soruyor.**
+Fişteki `MIGROS T.YAGLI YOGU.` satırı hangi kanonik ürüne gidiyor? Marka ve
+ürünü sunucu bulanık eşleştirmeyle kendi çözüyor — ama **1 kg mı 3 kg mı**
+sorusunun cevabı fişte yazmıyor. Uygulama orada **tahmin etmiyor, soruyor**;
+her seçeneğin yanında o boyu seçersen endekse girecek birim fiyat duruyor.
 
 Bunun iki karşılığı var:
 

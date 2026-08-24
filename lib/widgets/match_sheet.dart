@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../data/repository.dart';
 import '../data/api.dart';
+import '../data/fmt.dart';
 import '../data/models.dart';
 import '../theme/tokens.dart';
 import 'atoms.dart';
@@ -11,9 +12,18 @@ import 'icons.dart';
 
 /// "eşleşme?" sorusu — buzlu cam alt sayfa.
 ///
-/// Katalogda arama yapıyor; seçilen ürün hem satırı düzeltiyor hem de bu
-/// market + ham metin için alias'a yazılıyor, böylece aynı fiş formatı bir
-/// daha sorulmuyor.
+/// Sayfa iki biçimde açılıyor ve hangisinin açılacağına sunucu karar veriyor:
+///
+/// - **Gramaj sorusu.** Marka ve ürün çözülmüş, geriye yalnızca boy kalmış.
+///   Arama kutusu yok, klavye yok; sadece boy seçenekleri ve her birinin
+///   yanında o seçim yapılırsa çıkacak birim fiyat. Fiş gramajı basmıyor ve
+///   endeks birim fiyat üzerinden hesaplandığı için bu ekranın tek işi
+///   endeksi yanlış sayıdan korumak.
+/// - **Ürün sorusu.** Sıralı adaylar, altında arama. Doğru aday genelde
+///   zaten ilk sırada.
+///
+/// Seçilen ürün hem satırı düzeltiyor hem de bu market + ham metin için
+/// alias'a yazılıyor, böylece aynı fiş formatı bir daha sorulmuyor.
 class MatchSheet extends StatefulWidget {
   const MatchSheet({super.key, required this.line});
 
@@ -34,29 +44,26 @@ class MatchSheet extends StatefulWidget {
 }
 
 class _MatchSheetState extends State<MatchSheet> {
-  late final TextEditingController _controller = TextEditingController(
-    text: _initialQuery,
-  );
+  late final TextEditingController _controller = TextEditingController();
+
+  MatchSuggestion _suggestion = MatchSuggestion.empty;
   List<ProductRef> _results = const [];
+
+  /// Kullanıcı arama kutusuna dokunduğu an öneri modundan çıkılıyor.
+  bool _searching = false;
   bool _loading = true;
   String? _error;
   bool _started = false;
 
-  /// Açılmış adın ilk kelimesi genelde markadır; ürünün kendisi ikinci
-  /// sırada geliyor ("MIGROS tam yağlı yoğurt"). Katalogda arananı
-  /// bulmak için ikisini de deniyoruz.
-  String get _initialQuery {
-    final parts = widget.line.displayName.split(RegExp(r'\s+'));
-    return parts.length > 1 ? parts[1] : parts.first;
-  }
+  bool get _sizeOnly => _suggestion.sizeAmbiguous && !_searching;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // initState'te InheritedWidget'a bakılamıyor; ilk arama buradan.
+    // initState'te InheritedWidget'a bakılamıyor; ilk çağrı buradan.
     if (_started) return;
     _started = true;
-    _search(_initialQuery);
+    _suggest();
   }
 
   @override
@@ -65,8 +72,25 @@ class _MatchSheetState extends State<MatchSheet> {
     super.dispose();
   }
 
+  Future<void> _suggest() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final repo = context.read<Repository>();
+    try {
+      final s = await repo.suggestMatches(widget.line.raw);
+      if (mounted) setState(() => _suggestion = s);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _search(String q) async {
     setState(() {
+      _searching = true;
       _loading = true;
       _error = null;
     });
@@ -80,6 +104,32 @@ class _MatchSheetState extends State<MatchSheet> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Bu boy seçilirse endekse girecek birim fiyat.
+  ///
+  /// Kullanıcının gördüğü tek doğrulama bu: 3 kg'lık yoğurdu 1 kg sanmak
+  /// kilo fiyatını üçe katlar ve o ay sahte bir zam olarak endekse girer.
+  String _unitPrice(ProductRef p) {
+    final size = _sizeValue(p.sizeLabel);
+    if (size == null || size <= 0) return '';
+    final unit = widget.line.amount / (widget.line.quantity * size);
+    return Fmt.money(unit);
+  }
+
+  /// "1,5 kg" -> 1.5. Etiketin sayısal kısmı; birim adı gösterim için.
+  static double? _sizeValue(String label) {
+    final m = RegExp(r'(\d+(?:[.,]\d+)?)').firstMatch(label);
+    if (m == null) return null;
+    return double.tryParse(m.group(1)!.replaceAll(',', '.'));
+  }
+
+  /// "1,5 kg" -> "kg", "500 mL" -> "mL", "6'lı" -> "adet".
+  static String _unitLabel(String sizeLabel) {
+    final m = RegExp(r'\d\s*([A-Za-zÇĞİÖŞÜçğıöşü]+)$').firstMatch(sizeLabel);
+    final raw = m?.group(1)?.toLowerCase();
+    if (raw == null || raw.startsWith('l')) return 'adet';
+    return m!.group(1)!;
   }
 
   @override
@@ -112,107 +162,317 @@ class _MatchSheetState extends State<MatchSheet> {
               const SizedBox(height: 5),
               Text(widget.line.rawLine, style: T.num12),
               const SizedBox(height: 16),
-              const Lbl('HANGİ ÜRÜN?'),
-              const SizedBox(height: 8),
-              PaperCard(
-                padding: const EdgeInsets.symmetric(horizontal: 13),
-                child: TextField(
-                  controller: _controller,
-                  autofocus: false,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    hintText: 'Katalogda ara',
-                    hintStyle: TextStyle(fontSize: 13.5, color: C.muted),
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 13),
-                  ),
-                  style: const TextStyle(fontSize: 13.5, color: C.ink),
-                  onChanged: _search,
-                ),
-              ),
-              const SizedBox(height: 10),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 280),
-                child: _loading && _results.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Center(
-                          child: SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: C.muted,
-                            ),
-                          ),
-                        ),
-                      )
-                    : _error != null
-                    ? Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        child: Text(
-                          _error!,
-                          style: const TextStyle(fontSize: 12, color: C.hot),
-                        ),
-                      )
-                    : _results.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
-                        child: Text(
-                          'Katalogda eşleşen ürün yok. Farklı bir kelime dene.',
-                          style: TextStyle(fontSize: 12, color: C.muted),
-                        ),
-                      )
-                    : PaperCard(
-                        padding: EdgeInsets.zero,
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          padding: EdgeInsets.zero,
-                          itemCount: _results.length,
-                          separatorBuilder: (_, _) => const Hairline(),
-                          itemBuilder: (context, i) {
-                            final p = _results[i];
-                            return Pressable(
-                              scale: .99,
-                              onTap: () => Navigator.of(context).pop(p.id),
-                              child: Container(
-                                color: C.card,
-                                padding: const EdgeInsets.fromLTRB(
-                                  13,
-                                  13,
-                                  13,
-                                  13,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        p.title,
-                                        style: const TextStyle(
-                                          fontSize: 12.5,
-                                          color: C.ink,
-                                        ),
-                                      ),
-                                    ),
-                                    const LineIcon(
-                                      Glyph.chevron,
-                                      size: 13,
-                                      color: C.muted,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Seçimin bu markete ait fiş formatı için kaydedilir.',
-                style: TextStyle(fontSize: 11, color: C.muted),
+              if (_sizeOnly) ..._sizeMode() else ..._productMode(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Gramaj sorusunda gösterilecek boylar.
+  ///
+  /// Aday listesi daha geniş geliyor — başka markaların ve grupların
+  /// kalemleri de var. Boy sorusunda onları göstermek ekranı bozuyor:
+  /// "Sütaş Yoğurt 1 kg" ile "Migros Yoğurt 1 kg" aynı satır gibi
+  /// görünüyor ve ekranın kaldırmak için var olduğu belirsizliği
+  /// yeniden üretiyor. Yalnızca aynı marka ve grubun boyları kalıyor.
+  List<ProductRef> get _sizeOptions {
+    final first = _suggestion.candidates.first;
+    final same = _suggestion.candidates
+        .where((c) => c.groupName == first.groupName && c.brand == first.brand)
+        .toList();
+    same.sort((a, b) {
+      final av = _sizeValue(a.sizeLabel) ?? 0;
+      final bv = _sizeValue(b.sizeLabel) ?? 0;
+      return av.compareTo(bv);
+    });
+    return same;
+  }
+
+  // ── Gramaj sorusu ───────────────────────────────────────────────
+  List<Widget> _sizeMode() {
+    final first = _suggestion.candidates.first;
+    final options = _sizeOptions;
+    return [
+      Row(
+        children: [
+          BrandChip(first.monogram),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              first.name,
+              style: const TextStyle(fontSize: 13.5, color: C.ink),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 4),
+      Text(
+        'Ödenen ${Fmt.money(widget.line.amount)}'
+        '${widget.line.quantity == 1 ? '' : ' · ${ReceiptLine.qtyLabel(widget.line.quantity)} adet'}',
+        style: T.raw,
+      ),
+      const SizedBox(height: 16),
+      const Lbl('HANGİ BOY?'),
+      const SizedBox(height: 8),
+      PaperCard(
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: [
+            for (var i = 0; i < options.length; i++) ...[
+              if (i > 0) const Hairline(),
+              _SizeOption(
+                product: options[i],
+                unitPrice: _unitPrice(options[i]),
+                unitLabel: _unitLabel(options[i].sizeLabel),
+                onTap: () => Navigator.of(context).pop(options[i].id),
               ),
             ],
+          ],
+        ),
+      ),
+      const SizedBox(height: 10),
+      const Text(
+        'Fiş gramajı basmıyor. Seçtiğin boy endeksin birim fiyatını '
+        'belirliyor — yanlış seçim sessizce yanlış enflasyon üretir.',
+        style: TextStyle(fontSize: 11, height: 1.4, color: C.muted),
+      ),
+      const SizedBox(height: 10),
+      Pressable(
+        onTap: () => setState(() => _searching = true),
+        child: const Text(
+          'Bu ürün değil',
+          style: TextStyle(fontSize: 12, color: C.ref),
+        ),
+      ),
+    ];
+  }
+
+  // ── Ürün sorusu ─────────────────────────────────────────────────
+  List<Widget> _productMode() {
+    final rows = _searching ? _results : _suggestion.candidates;
+    return [
+      Lbl(_searching ? 'HANGİ ÜRÜN?' : 'ÖNERİLENLER'),
+      const SizedBox(height: 8),
+      if (!_searching && rows.isNotEmpty) ...[
+        PaperCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (var i = 0; i < rows.length; i++) ...[
+                if (i > 0) const Hairline(),
+                _CandidateRow(
+                  product: rows[i],
+                  onTap: () => Navigator.of(context).pop(rows[i].id),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+      PaperCard(
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        child: TextField(
+          controller: _controller,
+          autofocus: false,
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+            hintText: 'Katalogda ara',
+            hintStyle: TextStyle(fontSize: 13.5, color: C.muted),
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(vertical: 13),
+          ),
+          style: const TextStyle(fontSize: 13.5, color: C.ink),
+          onChanged: _search,
+        ),
+      ),
+      const SizedBox(height: 10),
+      ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 260),
+        child: _buildSearchBody(rows),
+      ),
+      const SizedBox(height: 10),
+      const Text(
+        'Seçimin bu markete ait fiş formatı için kaydedilir.',
+        style: TextStyle(fontSize: 11, color: C.muted),
+      ),
+    ];
+  }
+
+  Widget _buildSearchBody(List<ProductRef> rows) {
+    if (_loading && rows.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2, color: C.muted),
+          ),
+        ),
+      );
+    }
+    if (_error != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Text(
+          _error!,
+          style: const TextStyle(fontSize: 12, color: C.hot),
+        ),
+      );
+    }
+    if (!_searching) return const SizedBox.shrink();
+    if (rows.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Text(
+          'Katalogda eşleşen ürün yok. Farklı bir kelime dene.',
+          style: TextStyle(fontSize: 12, color: C.muted),
+        ),
+      );
+    }
+    return PaperCard(
+      padding: EdgeInsets.zero,
+      child: ListView.separated(
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
+        itemCount: rows.length,
+        separatorBuilder: (_, _) => const Hairline(),
+        itemBuilder: (context, i) => _CandidateRow(
+          product: rows[i],
+          onTap: () => Navigator.of(context).pop(rows[i].id),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tek boy seçeneği. Sağda o seçim yapılırsa endekse girecek birim fiyat.
+class _SizeOption extends StatelessWidget {
+  const _SizeOption({
+    required this.product,
+    required this.unitPrice,
+    required this.unitLabel,
+    required this.onTap,
+  });
+
+  final ProductRef product;
+  final String unitPrice;
+  final String unitLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      scale: .99,
+      onTap: onTap,
+      child: Container(
+        color: C.card,
+        padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                product.sizeLabel,
+                style: const TextStyle(
+                  fontFamily: F.display,
+                  fontFamilyFallback: F.displayFallback,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: C.ink,
+                ),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text('$unitLabel fiyatı', style: T.raw),
+                const SizedBox(height: 2),
+                Text(unitPrice, style: T.num12),
+              ],
+            ),
+            const SizedBox(width: 8),
+            const LineIcon(Glyph.chevron, size: 13, color: C.muted),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Aday satırı: marka rozeti, ad, güven çubuğu.
+class _CandidateRow extends StatelessWidget {
+  const _CandidateRow({required this.product, required this.onTap});
+
+  final ProductRef product;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final score = product.score;
+    return Pressable(
+      scale: .99,
+      onTap: onTap,
+      child: Container(
+        color: C.card,
+        padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+        child: Row(
+          children: [
+            BrandChip(product.monogram, size: 24),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: const TextStyle(fontSize: 12.5, color: C.ink),
+                  ),
+                  if (product.sizeLabel.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(product.sizeLabel, style: T.raw),
+                  ],
+                ],
+              ),
+            ),
+            if (score != null) ...[
+              const SizedBox(width: 8),
+              _ConfidenceBar(score),
+            ],
+            const SizedBox(width: 8),
+            const LineIcon(Glyph.chevron, size: 13, color: C.muted),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Sunucunun güven puanı. Sayı değil çubuk: kullanıcının 0,71'i
+/// yorumlaması beklenmiyor, ilk adayın açık ara önde olduğunu görmesi yeterli.
+class _ConfidenceBar extends StatelessWidget {
+  const _ConfidenceBar(this.score);
+
+  final double score;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 34,
+      height: 3,
+      decoration: BoxDecoration(
+        color: C.line,
+        borderRadius: BorderRadius.circular(2),
+      ),
+      alignment: Alignment.centerLeft,
+      child: FractionallySizedBox(
+        widthFactor: score.clamp(0, 1),
+        child: Container(
+          decoration: BoxDecoration(
+            color: C.ref,
+            borderRadius: BorderRadius.circular(2),
           ),
         ),
       ),
