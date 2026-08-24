@@ -46,6 +46,8 @@ SELECT b.name, trim(normalize_raw_text(b.name))
     ('Balküpü'), ('Torku Şeker'),
     ('Omo'), ('Ariel'), ('Persil'), ('Fairy'), ('Domestos'),
     ('Elidor'), ('Colgate'), ('Signal'), ('Selpak'), ('Solo'),
+    -- Fişlerden gelen market kendi markaları ve yerel üreticiler.
+    ('Migros'), ('Tacıroğlu'), ('Hasata'), ('Untad'), ('Viva'),
     ('Erikli'), ('Sırma'), ('Coca-Cola'), ('Fanta'),
     ('Ülker'), ('Eti'), ('Sarelle'), ('Tamek'), ('Tat')
   ) AS b (name)
@@ -98,7 +100,12 @@ SELECT g.name, g.unit::product_unit, c.id
     ('Kağıt havlu',         'adet',     '05.6.1'),
     ('Tuvalet kağıdı',      'adet',     '05.6.1'),
     ('Şampuan',             'litre',    '12.1.3'),
-    ('Diş macunu',          'kilogram', '12.1.3')
+    ('Diş macunu',          'kilogram', '12.1.3'),
+    -- 24.08.2026 tarihli BİM ve Migros fişlerinden gelen, katalogda
+    -- karşılığı olmayan kalemler.
+    ('Çeçil peyniri',       'kilogram', '01.1.4'),
+    ('Piliç bonfile',       'kilogram', '01.1.2'),
+    ('Protein bar',         'adet',     '01.1.8')
   ) AS g (name, unit, cat_code)
   JOIN categories c ON c.code = g.cat_code
 ON CONFLICT (name) DO NOTHING;
@@ -220,6 +227,27 @@ VALUES
     ('Kağıt havlu',         'Selpak',             '8''li',        8.0),
     ('Kağıt havlu',         'Solo',               '8''li',        8.0),
     ('Tuvalet kağıdı',      'Selpak',             '16''lı',      16.0),
+    -- ── Fişlerden gelenler ────────────────────────────────────────────
+    -- Boy etiketleri fişte YAZMIYOR; yazarkasa yalnızca kesilmiş adı ve
+    -- tutarı basıyor. Buradakiler rafta yaygın paketler — doğrusunu
+    -- kullanıcı eşleşme ekranında seçiyor. Endeks birim fiyat üzerinden
+    -- çalıştığı için bu seçim endeksin doğruluğunu belirliyor.
+    ('Yoğurt',              'Migros',             '1 kg',         1.0),
+    ('Yoğurt',              'Migros',             '1,5 kg',       1.5),
+    ('Yoğurt',              'Migros',             '3 kg',         3.0),
+    ('Yoğurt',              'Tacıroğlu',          '1 kg',         1.0),
+    ('Yoğurt',              'Tacıroğlu',          '1,5 kg',       1.5),
+    ('Süt, tam yağlı',      'Migros',             '1 litre',      1.0),
+    ('Süt, tam yağlı',      'Tacıroğlu',          '1 litre',      1.0),
+    ('Çeçil peyniri',       'Migros',             '200 g',        0.2),
+    ('Bulgur, pilavlık',    'Hasata',             '1 kg',         1.0),
+    ('Ekmek, tam buğday',   'Untad',              '500 g',        0.5),
+    ('Kağıt havlu',         'Viva',               '6''lı',        6.0),
+    ('Kağıt havlu',         'Migros',             '8''li',        8.0),
+    ('Yumurta',             'Migros',             '30''lu',      30.0),
+    -- BİM'de bu iki kalem markasız basılıyor.
+    ('Piliç bonfile',       NULL,                 'kilogram',     1.0),
+    ('Protein bar',         NULL,                 '50 g',         1.0),
 
     ('Şampuan',             'Elidor',             '500 mL',       0.5),
     ('Diş macunu',          'Colgate',            '75 mL',        0.075),

@@ -35,8 +35,10 @@ beforeAll(async () => {
   ).id;
   yumurtaId = (
     await one<{ id: string }>(
+      // Markasız kalem: katalogda Migros'un 30'lusu da var.
       `SELECT id FROM v_canonical_products
-        WHERE group_name = 'Yumurta' AND size_label = '30''lu'`,
+        WHERE group_name = 'Yumurta' AND size_label = '30''lu'
+          AND brand_name IS NULL`,
     )
   ).id;
 });

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth, type AuthedRequest } from '../auth.js';
 import { pool, query } from '../db.js';
+import { matchCatalog } from '../catalog-match.js';
 
 export const receiptsRouter = Router();
 receiptsRouter.use(requireAuth);
@@ -117,7 +118,25 @@ receiptsRouter.post('/', async (req: AuthedRequest, res) => {
             AND raw_text_normalized = normalize_raw_text($2)`,
         [merchantId, line.raw],
       );
-      const productId = line.canonicalProductId ?? alias[0]?.canonical_product_id ?? null;
+      let productId =
+        line.canonicalProductId ?? alias[0]?.canonical_product_id ?? null;
+      let confidence: number | null = productId && alias[0] ? 1 : null;
+
+      // Alias yoksa katalogda bulanık aranıyor. Yazarkasa ürün adını kesiyor
+      // ("MIGROS T.YAGLI YOGU."), birebir arama bunu hiç bulamıyordu.
+      //
+      // Otomatik bağlama yalnızca aday tek başına net olduğunda. Boy belirsizse
+      // — aynı marka ve grubun 1 kg ile 3 kg'ı yan yana geldiğinde — soru
+      // kullanıcıya gidiyor: gramaj fişte yazmıyor ve endeks birim fiyat
+      // üzerinden hesaplandığı için yanlış tahmin sessizce yanlış enflasyon
+      // üretir.
+      if (!productId) {
+        const outcome = await matchCatalog(line.raw, 5, client);
+        if (outcome.auto) {
+          productId = outcome.auto.id;
+          confidence = outcome.auto.score;
+        }
+      }
 
       await client.query(
         `INSERT INTO receipt_lines
@@ -132,7 +151,7 @@ receiptsRouter.post('/', async (req: AuthedRequest, res) => {
           line.amount,
           productId,
           productId ? 'auto' : 'pending',
-          productId && alias[0] ? 1 : null,
+          confidence,
         ],
       );
     }
