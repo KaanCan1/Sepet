@@ -69,3 +69,6 @@ android/key.properties
 
 # FVM Version Cache
 .fvm/
+
+# ASO çalışma çıktıları (aso-appstore-screenshots skill) — final görseller docs/screenshots/store/ altında
+/screenshots/
