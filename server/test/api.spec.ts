@@ -2,6 +2,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { one, pool, query } from '../src/db.js';
+import { canonicalId } from './fixtures/catalog-ref.js';
 
 const app = createApp();
 
@@ -24,23 +25,8 @@ beforeAll(async () => {
       `SELECT id FROM merchants WHERE chain_code = 'BIM'`,
     )
   ).id;
-  // Katalogda aynı grubun birden çok markası var; test tek bir kaleme
-  // bağlanmalı, o yüzden marka da belirtiliyor.
-  sutId = (
-    await one<{ id: string }>(
-      `SELECT id FROM v_canonical_products
-        WHERE group_name = 'Süt, tam yağlı' AND brand_name = 'Sütaş'
-          AND size_label = '1 litre'`,
-    )
-  ).id;
-  yumurtaId = (
-    await one<{ id: string }>(
-      // Markasız kalem: katalogda Migros'un 30'lusu da var.
-      `SELECT id FROM v_canonical_products
-        WHERE group_name = 'Yumurta' AND size_label = '30''lu'
-          AND brand_name IS NULL`,
-    )
-  ).id;
+  sutId = await canonicalId('Süt, tam yağlı', 'Sütaş', '1 litre');
+  yumurtaId = await canonicalId('Yumurta', null, "30'lu");
 });
 
 afterAll(async () => {
@@ -163,17 +149,11 @@ describe('API', () => {
     expect(detail.body.lines[0].status).toBe('pending');
     expect(detail.body.lines[0].canonical).toBeNull();
 
-    // Katalogda her markanın birden çok boyu var; test tek kaleme
-    // bağlanmalı, o yüzden boy da belirtiliyor.
-    const zeytin = await one<{ id: string }>(
-      `SELECT id FROM v_canonical_products
-        WHERE group_name = 'Zeytinyağı' AND brand_name = 'Komili'
-          AND size_label = '1 litre'`,
-    );
+    const zeytinId = await canonicalId('Zeytinyağı', 'Komili', '1 litre');
     await request(app)
       .post(`/receipts/${created.body.id}/lines/${detail.body.lines[0].id}/match`)
       .set(auth())
-      .send({ canonicalProductId: zeytin.id })
+      .send({ canonicalProductId: zeytinId })
       .expect(200);
 
     // Aynı market + aynı ham metin bir daha sorulmamalı.
