@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg';
 import { pool } from './db.js';
+import { isBulk, sizeStated } from './size-hint.js';
 
 /** Bulanık eşleştirmeden dönen tek aday. */
 export type Candidate = {
@@ -76,17 +77,31 @@ export async function matchCatalog(
     }))
     .filter((c) => c.score >= SUGGEST_THRESHOLD);
 
-  const [top, second] = candidates;
-  if (!top) return { candidates: [], auto: null, sizeAmbiguous: false };
+  if (!candidates.length) {
+    return { candidates: [], auto: null, sizeAmbiguous: false };
+  }
 
-  // Aynı marka + aynı grup, farklı boy: fişte gramaj yazmadığı için
-  // ayırt edilemez. Buradan otomatik seçim yapmak endeksi bozar — 3 kg
-  // yoğurdu 1 kg sanmak birim fiyatı üçe katlar.
+  // Fişte boy yazıyorsa adaylar ona göre daraltılıyor: "SUT TAM YAGLI 1L"
+  // için 500 mL'lik kalemleri aday tutmanın anlamı yok.
+  const stated = candidates.filter((c) =>
+    sizeStated(raw, c.unit, c.sizeValue, c.sizeLabel),
+  );
+  const pool_ = stated.length ? stated : candidates;
+
+  const [top, second] = pool_;
+  if (!top) return { candidates, auto: null, sizeAmbiguous: false };
+
+  // Boy sorusu iki koşula bağlı ve ikisi de kataloğun ne taşıdığından
+  // BAĞIMSIZ. Eskiden "aynı marka ve grubun birden çok boyu var mı" diye
+  // bakılıyordu; o kural katalogda tek boy bulunan kalemi sessizce
+  // otomatik bağlıyordu. Pınar beyaz peynirin katalogda yalnızca 600 g'ı
+  // olması, kullanıcının 600 g aldığı anlamına gelmiyor.
+  //
+  //   Paketli mi?  Kasada tartılan kalemde (domates, açık kıyma) boy yok.
+  //   Fişte var mı? Yazıyorsa sormak kullanıcıyı bildiği şeyle meşgul eder.
   const sizeAmbiguous =
-    !!second &&
-    second.groupId === top.groupId &&
-    second.brandId === top.brandId &&
-    second.score >= top.score - AUTO_MARGIN;
+    !isBulk(top.sizeLabel) &&
+    !sizeStated(raw, top.unit, top.sizeValue, top.sizeLabel);
 
   const decisive =
     top.score >= AUTO_THRESHOLD &&

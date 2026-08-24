@@ -85,6 +85,9 @@ class Repository {
   }
 
   /// Hesabı ve ona bağlı her şeyi siler.
+  /// Tek fişi siler ve endeksi yeniden hesaplatır.
+  Future<void> deleteReceipt(String id) => _api.delete('/receipts/$id');
+
   Future<void> deleteAccount() => _api.delete('/account');
 
   /// Resmî ve bağımsız seriler, girilmiş aylarıyla.
