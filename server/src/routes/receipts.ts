@@ -44,11 +44,18 @@ receiptsRouter.get('/:id', async (req: AuthedRequest, res) => {
     return;
   }
 
+  // Birim fiyat gözlemden okunuyor, satırdan hesaplanmıyor: endeksin
+  // kullandığı sayı orada duruyor ve ikisinin ayrışması imkânsız olmalı.
+  //
+  // Fişin kendisi bu sayıyı basmıyor — "289,00" yazıyor ama "722,50 TL/kg"
+  // yazmıyor. Kullanıcının ilk fişinde bile eline geçen yeni bilgi bu.
   const lines = await query(
     `SELECT l.id, l.line_no, l.raw_text, l.quantity, l.line_amount, l.status,
-            cp.display_name AS name, cp.brand_name, cp.size_label
+            cp.display_name AS name, cp.brand_name, cp.size_label, cp.unit,
+            o.unit_price
        FROM receipt_lines l
        LEFT JOIN v_canonical_products cp ON cp.id = l.canonical_product_id
+       LEFT JOIN price_observations o ON o.receipt_line_id = l.id
       WHERE l.receipt_id = $1
       ORDER BY l.line_no`,
     [req.params.id],
@@ -69,6 +76,8 @@ receiptsRouter.get('/:id', async (req: AuthedRequest, res) => {
       // display_name zaten marka + grup + boy; ayrıca boy eklenmiyor.
       canonical: l.name ?? null,
       brand: l.brand_name ?? null,
+      unitPrice: l.unit_price === null ? null : Number(l.unit_price),
+      unit: l.unit ?? null,
     })),
   });
 });

@@ -183,6 +183,28 @@ void main() {
       expect(find.text('endeks dışı'), findsOneWidget);
     });
 
+    // Fiş "116,70" basıyor ama "38,90 / litre" basmıyor — ve paketler
+    // farklı boyda olduğu için karşılaştırılabilir tek fiyat bu. Endeks
+    // olgunlaşmasa da kullanıcının ilk fişinde eline geçen yeni bilgi.
+    testWidgets('eşleşmiş satırda birim fiyat yazıyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-1')));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -260));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A101').first);
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -420));
+      await tester.pumpAndSettle();
+
+      expect(find.text('38,90 / litre'), findsOneWidget);
+      // Eşleşmemiş satırda uydurulmuyor: sayı gözlemden geliyor, satırdan
+      // hesaplanmıyor.
+      expect(find.textContaining(' / adet'), findsNothing);
+    });
+
     testWidgets('gramaj belirsizse yalnızca boy soruluyor', (tester) async {
       await tester.pumpWidget(bootstrap(token: 'test-token'));
       await tester.pumpAndSettle();
@@ -310,10 +332,119 @@ void main() {
     });
   });
 
+  // Endeks iki FARKLI ayda fiş istiyor ve o zamana kadar ekran "bir ay daha
+  // lazım" yazıp duruyordu. Bu kart o boşluğu dolduruyor: kullanıcının
+  // eline endeksten önce geçen tek somut şey.
+  group('Sepet karşılaştırması', () {
+    Widget appWithBasket() => AppScope(
+      api: FakeApi(
+        routes: {
+          ...FakeApi.defaultRoutes,
+          'GET /index/basket': {
+            'comparable': true,
+            'receiptId': 'r1',
+            'merchant': 'BİM',
+            'itemCount': 2,
+            'paid': 340.0,
+            'best': 298.0,
+            'saved': 42.0,
+            'items': [
+              {
+                'name': 'Kıyma, dana kilogram',
+                'paid': 200.0,
+                'unitPrice': 690.33,
+                'bestName': 'Kıyma, dana kilogram',
+                'bestMerchant': 'Şok',
+                'bestUnitPrice': 661.78,
+                'bestSeenOn': '2026-07-19',
+                'bestPaid': 172.0,
+                'saved': 28.0,
+              },
+              {
+                'name': 'Banvit Tavuk göğsü kilogram',
+                'paid': 140.0,
+                'unitPrice': 223.1,
+                'bestName': 'Şenpiliç Tavuk göğsü kilogram',
+                'bestMerchant': 'A101',
+                'bestUnitPrice': 210.21,
+                'bestSeenOn': '2026-08-02',
+                'bestPaid': 126.0,
+                'saved': 14.0,
+              },
+            ],
+          },
+        },
+      ),
+      authStore: MemoryAuthStore('test-token'),
+      child: MaterialApp(
+        locale: const Locale('tr', 'TR'),
+        home: const RootGate(),
+      ),
+    );
+
+    testWidgets('tasarruf ve kıyaslanan alternatif görünüyor', (tester) async {
+      await tester.pumpWidget(appWithBasket());
+      await tester.pumpAndSettle();
+
+      final kart = find.text('DAHA UCUZA GÖRMÜŞTÜN');
+      await tester.ensureVisible(kart);
+      await tester.pumpAndSettle();
+
+      expect(kart, findsOneWidget);
+      expect(find.text('42,00'), findsOneWidget);
+      // Fişin tamamı değil, kıyaslanabilen kalemler.
+      expect(find.textContaining('BİM fişindeki 2 kalemi'), findsOneWidget);
+
+      // Kullanıcı neyle kıyaslandığını görmeden sayıya inanmak zorunda
+      // kalmasın: aynı üründe market + tarih, farklı üründe marka da.
+      expect(find.text('Şok · 19 TEM'), findsOneWidget);
+      expect(
+        find.text('Şenpiliç Tavuk göğsü kilogram · A101 · 2 AĞU'),
+        findsOneWidget,
+      );
+      expect(find.text('−28,00'), findsOneWidget);
+    });
+
+    testWidgets('kıyaslanacak veri yoksa kart hiç çıkmıyor', (tester) async {
+      // "Tasarruf yok" ile "kıyaslayacak şey yok" ayrı: ikincisinde ekran
+      // 0 TL yazmamalı, susmalı. Varsayılan sahte yol comparable:false.
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('DAHA UCUZA GÖRMÜŞTÜN'), findsNothing);
+    });
+  });
+
+  // Eşleşmeyen satır sessizce kapsam dışında kalıyordu: endeks doğru ama
+  // eksik bir sepetten hesaplanıyordu ve bunu söyleyen hiçbir şey yoktu.
+  group('Kapsam uyarısı', () {
+    testWidgets('endekse girmeyen kalem sayısı yazıyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      // Sahte fiş listesinde bekleyen kalemler var.
+      expect(find.textContaining('kalem endekse girmiyor'), findsOneWidget);
+    });
+
+    testWidgets('dokununca bekleyen fişe gidiyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.textContaining('kalem endekse girmiyor'));
+      await tester.pumpAndSettle();
+
+      // Uyarı bir sayı değil, bir kapı: çözülecek fişi açıyor.
+      expect(find.text('SIRAYLA ÇÖZ'), findsOneWidget);
+    });
+  });
+
   group('Kırılım', () {
     /// Endeks ekranından kırılıma gider.
     Future<void> open(WidgetTester tester) async {
       await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+      // Kapsam uyarısı eklendikten sonra şerit ekranın altına düştü.
+      await tester.ensureVisible(find.text('Kırılım'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Kırılım'));
       await tester.pumpAndSettle();

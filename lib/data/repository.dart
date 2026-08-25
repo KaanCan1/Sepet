@@ -142,6 +142,12 @@ class Repository {
         .toList();
   }
 
+  /// Son sepetin karşılaştırması. Kıyaslanacak veri yoksa
+  /// [BasketCompare.none] — hata değil, ekranın sessiz kalacağı durum.
+  Future<BasketCompare> basketCompare() async => BasketCompare.fromJson(
+    await _api.get('/index/basket') as Map<String, dynamic>,
+  );
+
   Future<Product> product(String id) async =>
       Product.fromJson(await _api.get('/products/$id') as Map<String, dynamic>);
 
