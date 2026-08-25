@@ -25,6 +25,11 @@ afterAll(async () => {
       WHERE category_id = (SELECT id FROM categories WHERE code = 'TEST')`,
   );
   await query(`DELETE FROM categories WHERE code = 'TEST'`);
+  // Markalar bu ağa takılmıyordu: senaryo kendi temizliğinde siliyor ama
+  // test yarıda düşerse o çalışmıyor ve referans katalogda "Sutas 395850cf"
+  // gibi artıklar birikiyordu. Sonek senaryoya özel (kullanıcı kimliğinin
+  // ilk 8 hanesi), başka kaydın adına benzemiyor.
+  await query(`DELETE FROM brands WHERE name ~ ' [0-9a-f]{8}$'`);
   await pool.end();
 });
 

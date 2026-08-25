@@ -16,7 +16,8 @@
     "deploy:prepare": "npm run migrate:up && npm run catalog",
     "catalog": "tsx scripts/load-catalog.ts",
     "official": "tsx scripts/fetch-official.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "match-eval": "tsx scripts/match-eval.ts"
   },
   "dependencies": {
     "express": "^5.2.1",
