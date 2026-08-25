@@ -66,6 +66,30 @@ class ProductRef {
   );
 }
 
+/// Katalogdaki bir ürün grubu — "Kaşar peyniri", kilogram.
+///
+/// Gramaj ekranında yalnızca kullanıcı grubun ölçü boyutunu değiştirdiğinde
+/// gerekiyor: gram giriliyorsa kalem litre cinsinden bir grupta duramaz.
+class ProductGroupRef {
+  const ProductGroupRef({
+    required this.id,
+    required this.name,
+    required this.unit,
+  });
+
+  final String id;
+  final String name;
+
+  /// litre, kilogram ya da adet.
+  final String unit;
+
+  static ProductGroupRef fromJson(Map<String, dynamic> j) => ProductGroupRef(
+    id: j['id'] as String,
+    name: j['name'] as String,
+    unit: j['unit'] as String,
+  );
+}
+
 /// Bir fiş satırı için sunucunun önerdiği adaylar.
 class MatchSuggestion {
   const MatchSuggestion({

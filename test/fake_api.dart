@@ -165,6 +165,19 @@ class FakeApi extends Api {
       ],
     },
     // Gramaj belirsiz: marka ve ürün çözülmüş, geriye yalnızca boy kalmış.
+    // Ölçü boyutu değiştiğinde açılan grup seçimi. Sunucu birime göre
+    // süzüyor; sahte istemci sorgu dizesini yok saydığı için liste sabit.
+    'GET /products/catalog/groups': [
+      {'id': 'g-beyaz', 'name': 'Beyaz peynir', 'unit': 'kilogram'},
+      {'id': 'g-kasar', 'name': 'Kaşar peyniri', 'unit': 'kilogram'},
+    ],
+    'POST /products/catalog': {
+      'id': 'yeni-1',
+      'name': 'Beyaz peynir',
+      'groupName': 'Beyaz peynir',
+      'brand': null,
+      'sizeLabel': '400 g',
+    },
     'GET /products/catalog/suggest': {
       'sizeAmbiguous': true,
       'autoId': null,

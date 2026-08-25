@@ -173,6 +173,24 @@ class Repository {
     return ProductRef.fromJson(json as Map<String, dynamic>);
   }
 
+  /// Ürün grupları, istenirse ölçü birimine göre süzülmüş.
+  ///
+  /// Gramaj ekranı bunu yalnızca kullanıcı grubun boyutunu değiştiren bir
+  /// birim seçtiğinde çağırıyor — gram giriliyorsa doğru grup litre
+  /// cinsinden olamaz.
+  Future<List<ProductGroupRef>> catalogGroups({
+    required String unit,
+    String query = '',
+  }) async {
+    final rows = await _api.get(
+      '/products/catalog/groups?unit=${Uri.encodeQueryComponent(unit)}'
+      '&q=${Uri.encodeQueryComponent(query)}',
+    ) as List;
+    return rows
+        .map((e) => ProductGroupRef.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<List<ProductRef>> searchCatalog(String query) async {
     final rows = await _api.get(
       '/products/catalog/search?q=${Uri.encodeQueryComponent(query)}',

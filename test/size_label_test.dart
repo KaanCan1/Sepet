@@ -38,11 +38,41 @@ void main() {
     });
   });
 
-  group('Grubun birimine göre seçenekler', () {
-    test('kilogram grubunda gram ve kilogram sunuluyor', () {
-      expect(SizeLabel.unitsFor('kilogram'), ['g', 'kg']);
-      expect(SizeLabel.unitsFor('litre'), ['mL', 'litre']);
-      expect(SizeLabel.unitsFor('adet'), ['adet']);
+  group('Birim seçenekleri', () {
+    // Liste eskiden grubun ölçü boyutuyla sınırlıydı ve bu bir çıkmaz
+    // üretiyordu: fişte "TACIROGLU SUT" yazan kalem aslında kaşar peyniriyse
+    // kullanıcının gireceği boy 400 g, ama ekran yalnızca mL ve litre
+    // öneriyordu. Yazan şey ile satın alınan şey her zaman aynı değil.
+    test('bütün birimler sunuluyor', () {
+      expect(SizeLabel.unitsFor('litre'), contains('g'));
+      expect(SizeLabel.unitsFor('kilogram'), contains('litre'));
+      expect(SizeLabel.unitsFor('adet'), contains('kg'));
+    });
+
+    // Sıra ürünün kendi boyutunu başa alıyor: yaygın hâl tek dokunuşta
+    // kalsın, boyut değiştirmek bilinçli bir seçim olsun.
+    test('grubun kendi boyutu başta duruyor', () {
+      expect(SizeLabel.unitsFor('kilogram').first, 'g');
+      expect(SizeLabel.unitsFor('litre').first, 'mL');
+      expect(SizeLabel.unitsFor('adet').first, 'adet');
+    });
+  });
+
+  group('Birimin ölçü boyutu', () {
+    // Gramaj ekranı bununla karar veriyor: girilen birim grubun boyutundan
+    // farklıysa yanlış olan birim değil, kalemin bağlı olduğu grup.
+    test('birim kanonik boyuta çözülüyor', () {
+      expect(SizeLabel.dimensionOf('g'), 'kilogram');
+      expect(SizeLabel.dimensionOf('kg'), 'kilogram');
+      expect(SizeLabel.dimensionOf('mL'), 'litre');
+      expect(SizeLabel.dimensionOf('litre'), 'litre');
+      expect(SizeLabel.dimensionOf('adet'), 'adet');
+    });
+
+    test('boyutun kısa adı birim fiyat etiketinde geçen sözcük', () {
+      expect(SizeLabel.shortUnit('kilogram'), 'kg');
+      expect(SizeLabel.shortUnit('litre'), 'litre');
+      expect(SizeLabel.shortUnit(null), 'adet');
     });
   });
 }

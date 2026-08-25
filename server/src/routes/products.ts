@@ -244,6 +244,33 @@ productsRouter.get('/catalog/search', async (req, res) => {
 });
 
 /**
+ * Ürün grupları — istenirse ölçü birimine göre süzülmüş.
+ *
+ * Gramaj ekranı bunu, kullanıcının seçtiği birim grubun birimiyle
+ * uyuşmadığında çağırıyor. Fişte "TACIROGLU SUT" yazan kalem aslında
+ * kaşar peyniriyse kullanıcı gram girmek ister; ama 400 g'ı "Süt, tam
+ * yağlı" grubunda saklamak endeksin birimini bozar — o grup litre
+ * cinsinden ve birim fiyat "litre fiyatı" diye yazılır.
+ *
+ * Yanlış olan birim değil grup. Bu uç nokta doğru grubu seçtiriyor:
+ * marka korunuyor, kalem kilogram cinsinden bir gruba giriyor.
+ */
+productsRouter.get('/catalog/groups', async (req, res) => {
+  const unit = String(req.query.unit ?? '').trim();
+  const q = String(req.query.q ?? '').trim();
+  const rows = await query<{ id: string; name: string; unit: string }>(
+    `SELECT id, name, unit FROM product_groups
+      WHERE ($1 = '' OR unit::text = $1)
+        AND ($2 = '' OR normalize_raw_text(name)
+             LIKE '%' || normalize_raw_text($2) || '%')
+      ORDER BY name
+      LIMIT 40`,
+    [unit, q],
+  );
+  res.json(rows.map((r) => ({ id: r.id, name: r.name, unit: r.unit })));
+});
+
+/**
  * Aynı grup ve boyda markalar arası fiyat farkı: "1,5 kg yoğurt kimde kaça".
  *
  * Karşılaştırma birim fiyat üzerinden, çünkü 1 kg ile 1,5 kg paketin
