@@ -308,6 +308,92 @@ void main() {
     });
   });
 
+  // Katalog ne kadar büyürse büyüsün kuyruk bitmiyor: rafta on binlerce
+  // kalem var. Bu ekran olmadan katalogda bulunmayan bir kalemin tek çaresi
+  // yanlış bir ürün seçmek (endeksi bozar) ya da satırı sonsuza kadar
+  // bekletmekti (kapsamı daraltır).
+  group('Yeni ürün tanımlama', () {
+    Future<void> ac(WidgetTester tester, FakeApi api) async {
+      await tester.pumpWidget(
+        AppScope(
+          api: api,
+          authStore: MemoryAuthStore('test-token'),
+          child: MaterialApp(
+            locale: const Locale('tr', 'TR'),
+            home: const RootGate(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-1')));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -260));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A101').first);
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -420));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('eşleşme bekliyor'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('katalogda yoksa tanımlama açılıyor', (tester) async {
+      final api = FakeApi();
+      await ac(tester, api);
+
+      // Sahte yolda boy sorusu geliyor; önce ürün sorusuna geçiliyor.
+      await tester.tap(find.text('Bu ürün değil'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Aradığım ürün katalogda yok'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('YENİ ÜRÜN'), findsOneWidget);
+      expect(find.text('KATEGORİ'), findsOneWidget);
+      expect(api.calls, contains('GET /products/catalog/categories'));
+    });
+
+    testWidgets('eksik alanla kaydedilemiyor', (tester) async {
+      final api = FakeApi();
+      await ac(tester, api);
+      await tester.tap(find.text('Bu ürün değil'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Aradığım ürün katalogda yok'));
+      await tester.pumpAndSettle();
+
+      // Kategori seçilmeden ve boy girilmeden düğme sunucuya gitmiyor:
+      // eksik tanım endekse birimsiz bir kalem sokardı.
+      await tester.tap(find.text('Kataloğa ekle'));
+      await tester.pumpAndSettle();
+      expect(api.calls, isNot(contains('POST /products/catalog/define')));
+    });
+
+    testWidgets('tanım sunucuya gidiyor', (tester) async {
+      final api = FakeApi();
+      await ac(tester, api);
+      await tester.tap(find.text('Bu ürün değil'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Aradığım ürün katalogda yok'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).at(0), 'Çikolata');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Şeker ve tatlı'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, '80');
+      await tester.pumpAndSettle();
+
+      // Birim ayrıca sorulmuyor; "80 g" yazan kullanıcı kilogram cinsinden
+      // ölçtüğünü söylemiş oluyor. Birim fiyat da ona göre: 184,50 / 0,08.
+      expect(find.textContaining('kg fiyatı'), findsOneWidget);
+
+      await tester.tap(find.text('Kataloğa ekle'));
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('POST /products/catalog/define'));
+    });
+  });
+
   group('Fiş silme', () {
     // Önce kaydırmanın kendisi siliyordu ve onay ayrı bir uyarı
     // penceresinden isteniyordu. Şimdi kaydırma yalnızca kırmızı alanı

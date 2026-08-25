@@ -396,6 +396,114 @@ describe('API', () => {
     });
   });
 
+  // Katalogda hiç olmayan ürün: kullanıcının çıkmazı buydu. Yanlış bir
+  // ürün seçmek endeksi bozuyor, satırı bekletmek kapsamı daraltıyor.
+  // Katalog ne kadar büyürse büyüsün kuyruk bitmiyor — çözüm listeyi
+  // uzatmak değil, kullanıcının uzatabilmesi.
+  describe('Ürün tanımlama', () => {
+    const grup = `Test Atıştırmalık ${Date.now()}`;
+
+    afterAll(async () => {
+      await query(
+        `DELETE FROM canonical_products cp USING product_groups g
+          WHERE cp.group_id = g.id AND g.name = $1`,
+        [grup],
+      );
+      await query(`DELETE FROM product_groups WHERE name = $1`, [grup]);
+    });
+
+    it('kategori listesi TÜİK kodlarıyla geliyor', async () => {
+      const res = await request(app)
+        .get('/products/catalog/categories')
+        .set(auth())
+        .expect(200);
+      // Endeks ağırlıkları kategori bazında; kategorisiz grup hesaba giremez.
+      expect(res.body.length).toBeGreaterThan(0);
+      expect(res.body[0]).toHaveProperty('code');
+      expect(res.body[0]).toHaveProperty('name');
+    });
+
+    it('yeni grup ve marka ile ürün tanımlanıyor', async () => {
+      const res = await request(app)
+        .post('/products/catalog/define')
+        .set(auth())
+        .send({
+          categoryCode: '01.1.8',
+          groupName: grup,
+          unit: 'kilogram',
+          brandName: 'Ülker',
+          sizeLabel: '80 g',
+          sizeValue: 0.08,
+        })
+        .expect(201);
+
+      expect(res.body.groupName).toBe(grup);
+      expect(res.body.brand).toBe('Ülker');
+      expect(res.body.sizeLabel).toBe('80 g');
+    });
+
+    it('aynı tanım katalogu ikizlemiyor', async () => {
+      const gövde = {
+        categoryCode: '01.1.8',
+        groupName: grup,
+        unit: 'kilogram',
+        brandName: 'Ülker',
+        sizeLabel: '80 g',
+        sizeValue: 0.08,
+      };
+      const a = await request(app)
+        .post('/products/catalog/define')
+        .set(auth())
+        .send(gövde)
+        .expect(201);
+      const b = await request(app)
+        .post('/products/catalog/define')
+        .set(auth())
+        .send(gövde)
+        .expect(201);
+      expect(a.body.id).toBe(b.body.id);
+    });
+
+    it('grubun birimi tutmuyorsa reddediliyor', async () => {
+      // 80 g'ı litre cinsinden bir grupta saklamak endeksin birimini bozar.
+      const res = await request(app)
+        .post('/products/catalog/define')
+        .set(auth())
+        .send({
+          categoryCode: '01.1.8',
+          groupName: grup,
+          unit: 'litre',
+          brandName: 'Ülker',
+          sizeLabel: '80 mL',
+          sizeValue: 0.08,
+        })
+        .expect(409);
+      expect(res.body.error).toContain('kilogram');
+    });
+
+    it('olmayan kategori reddediliyor', async () => {
+      await request(app)
+        .post('/products/catalog/define')
+        .set(auth())
+        .send({
+          categoryCode: '99.9.9',
+          groupName: `${grup} X`,
+          unit: 'adet',
+          sizeLabel: "6'lı",
+          sizeValue: 6,
+        })
+        .expect(400);
+    });
+
+    it('eksik alanla tanım reddediliyor', async () => {
+      await request(app)
+        .post('/products/catalog/define')
+        .set(auth())
+        .send({ categoryCode: '01.1.8', groupName: grup })
+        .expect(400);
+    });
+  });
+
   it('kategori kırılımı seri döndürüyor', async () => {
     const res = await request(app)
       .get('/index/by-category')

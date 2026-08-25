@@ -197,6 +197,41 @@ class Repository {
         .toList();
   }
 
+  /// Kategoriler — yeni grup tanımlanırken seçiliyor.
+  Future<List<Category>> catalogCategories() async {
+    final rows = await _api.get('/products/catalog/categories') as List;
+    return rows
+        .map((e) => Category.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Katalogda hiç olmayan bir ürünü tanımlar.
+  ///
+  /// Kullanıcının çıkmazı buydu: fişteki kalem katalogda yoksa yapabileceği
+  /// tek şey yanlış bir ürün seçmek ya da satırı sonsuza kadar bekletmekti.
+  /// İlki endeksi bozuyor, ikincisi kapsamı daraltıyor.
+  ///
+  /// Aynı ürün ikinci kez tanımlanırsa katalog ikizlenmiyor; sunucu mevcut
+  /// olanı döndürüyor.
+  Future<ProductRef> defineProduct({
+    required String categoryCode,
+    required String groupName,
+    required String unit,
+    String? brandName,
+    required String sizeLabel,
+    required double sizeValue,
+  }) async {
+    final json = await _api.post('/products/catalog/define', {
+      'categoryCode': categoryCode,
+      'groupName': groupName,
+      'unit': unit,
+      'brandName': brandName,
+      'sizeLabel': sizeLabel,
+      'sizeValue': sizeValue,
+    });
+    return ProductRef.fromJson(json as Map<String, dynamic>);
+  }
+
   Future<List<ProductRef>> searchCatalog(String query) async {
     final rows = await _api.get(
       '/products/catalog/search?q=${Uri.encodeQueryComponent(query)}',

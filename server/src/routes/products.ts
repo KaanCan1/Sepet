@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth, type AuthedRequest } from '../auth.js';
-import { query } from '../db.js';
+import { pool, query } from '../db.js';
 import { matchCatalog } from '../catalog-match.js';
 
 export const productsRouter = Router();
@@ -157,6 +157,158 @@ productsRouter.get('/catalog/suggest', async (req, res) => {
       score: c.score,
     })),
   });
+});
+
+/** Kategoriler — kullanıcı yeni bir grup tanımlarken seçiyor. */
+productsRouter.get('/catalog/categories', async (_req, res) => {
+  const rows = await query<{ code: string; name: string }>(
+    `SELECT code, name FROM categories ORDER BY code`,
+  );
+  res.json(rows.map((r) => ({ code: r.code, name: r.name })));
+});
+
+/**
+ * Katalogda hiç olmayan bir ürünü tanımlar.
+ *
+ * Şimdiye kadar kullanıcının çıkmazı buydu: fişteki kalem katalogda yoksa
+ * yapabileceği tek şey yanlış bir ürün seçmek ya da satırı sonsuza kadar
+ * "eşleşme bekliyor" bırakmaktı. İlki endeksi bozuyor, ikincisi kapsamı
+ * daraltıyor. Katalog ne kadar büyürse büyüsün kuyruk bitmiyor — rafta
+ * on binlerce kalem var — o yüzden çözüm listeyi uzatmak değil, listeyi
+ * kullanıcının uzatabilmesi.
+ *
+ * Grup KATEGORİ istiyor ve bu istemeden konulmuş bir zorunluluk değil:
+ * endeks ağırlıkları kategori bazında ve kategorisiz bir grup hesaba
+ * giremez. Kullanıcı 11 TÜİK kategorisinden birini seçiyor, karşılığında
+ * tanımladığı ürün kırılımda da doğru yerde duruyor.
+ *
+ * Birim sorulmuyor, girilen boydan çıkarılıyor: "400 g" yazan kullanıcı
+ * zaten kilogram cinsinden ölçtüğünü söylemiş oluyor.
+ *
+ * Her adım "varsa onu kullan": aynı ürün ikinci kez tanımlanırsa katalog
+ * ikizlenmiyor. Tek işlemde çalışıyor — yarıda kalan bir tanım, sahipsiz
+ * bir grup ya da marka bırakmamalı.
+ */
+productsRouter.post('/catalog/define', async (req: AuthedRequest, res) => {
+  const { categoryCode, groupName, unit, brandName, sizeLabel, sizeValue } =
+    req.body ?? {};
+  const value = Number(sizeValue);
+
+  if (
+    !categoryCode ||
+    !String(groupName ?? '').trim() ||
+    !['litre', 'kilogram', 'adet'].includes(unit) ||
+    !String(sizeLabel ?? '').trim() ||
+    !Number.isFinite(value) ||
+    value <= 0
+  ) {
+    res.status(400).json({
+      error:
+        'categoryCode, groupName, unit (litre/kilogram/adet), sizeLabel ve ' +
+        'pozitif sizeValue gerekli',
+    });
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { rows: kat } = await client.query<{ id: string }>(
+      `SELECT id FROM categories WHERE code = $1`,
+      [categoryCode],
+    );
+    if (!kat.length) {
+      await client.query('ROLLBACK');
+      res.status(400).json({ error: 'Böyle bir kategori yok' });
+      return;
+    }
+
+    // Grup adı tekil. Aynı ad başka bir kategoride ya da başka bir birimle
+    // duruyorsa YENİSİ AÇILMIYOR, mevcut olan dönüyor: kullanıcının
+    // "Çikolata"sı ile kataloğun "Çikolata"sı aynı şey.
+    const { rows: grp } = await client.query<{ id: string; unit: string }>(
+      `WITH yeni AS (
+         INSERT INTO product_groups (name, unit, category_id)
+         VALUES (btrim($1), $2::product_unit, $3)
+         ON CONFLICT (name) DO NOTHING
+         RETURNING id, unit
+       )
+       SELECT id, unit::text FROM yeni
+       UNION ALL
+       SELECT id, unit::text FROM product_groups WHERE name = btrim($1)
+       LIMIT 1`,
+      [groupName, unit, kat[0]!.id],
+    );
+    const grup = grp[0]!;
+
+    // Mevcut grubun birimi farklıysa girilen boy o birime çevrilemez —
+    // 400 g'ı litre cinsinden bir grupta saklamak endeksin birimini bozar.
+    if (grup.unit !== unit) {
+      await client.query('ROLLBACK');
+      res.status(409).json({
+        error: `"${String(groupName).trim()}" katalogda ${grup.unit} ile ölçülüyor`,
+      });
+      return;
+    }
+
+    let brandId: string | null = null;
+    const marka = String(brandName ?? '').trim();
+    if (marka) {
+      const { rows: br } = await client.query<{ id: string }>(
+        `WITH yeni AS (
+           INSERT INTO brands (name, normalized_name)
+           VALUES ($1, normalize_raw_text($1))
+           ON CONFLICT (normalized_name) DO NOTHING
+           RETURNING id
+         )
+         SELECT id FROM yeni
+         UNION ALL
+         SELECT id FROM brands WHERE normalized_name = normalize_raw_text($1)
+         LIMIT 1`,
+        [marka],
+      );
+      brandId = br[0]!.id;
+    }
+
+    const { rows: urun } = await client.query<{ id: string }>(
+      `WITH yeni AS (
+         INSERT INTO canonical_products (group_id, brand_id, size_label, size_value)
+         VALUES ($1, $2, btrim($3), $4)
+         ON CONFLICT DO NOTHING
+         RETURNING id
+       )
+       SELECT id FROM yeni
+       UNION ALL
+       SELECT id FROM canonical_products
+        WHERE group_id = $1
+          AND coalesce(brand_id, '00000000-0000-0000-0000-000000000000'::uuid)
+              = coalesce($2::uuid, '00000000-0000-0000-0000-000000000000'::uuid)
+          AND size_label = btrim($3)
+       LIMIT 1`,
+      [grup.id, brandId, sizeLabel, value],
+    );
+
+    await client.query('COMMIT');
+
+    const [full] = await query(
+      `SELECT id, short_name, group_name, brand_name, size_label
+         FROM v_canonical_products WHERE id = $1`,
+      [urun[0]!.id],
+    );
+    res.status(201).json({
+      id: full!.id,
+      name: full!.short_name,
+      groupName: full!.group_name,
+      brand: full!.brand_name,
+      sizeLabel: full!.size_label,
+    });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
 });
 
 /**
