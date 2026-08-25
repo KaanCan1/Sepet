@@ -64,6 +64,24 @@ export const MATCH_CASES: MatchCase[] = [
   { raw: 'TAT DOMATES SALCASI 700G', group: 'Salça, domates', brand: 'Tat', size: '700 g' },
   { raw: 'YAYLA KIRMIZI MERCIMEK 1 KG', group: 'Mercimek, kırmızı', brand: 'Yayla', size: '1 kg' },
   { raw: 'YUMURTA 30LU', group: 'Yumurta', brand: null, size: '30\'lu' },
+
+  // ── Katalog genişledi ───────────────────────────────────────────────────
+  // Bunlar bir zamanlar OLUMSUZ vakaydı: karşılıkları katalogda yoktu ve
+  // eşleştiricinin onlara dokunmaması doğruydu. Katalog o grupları
+  // kazanınca beklenen davranış tersine döndü — ölçüm kümesi kataloğun
+  // gerçeğini izlemek zorunda, yoksa doğru davranışı hata sayar.
+  { raw: 'LAYS PATATES CIPSI 150G', group: 'Cips', brand: 'Lays', size: '150 g' },
+  { raw: 'ORKID PED 16LI', group: 'Ped, hijyenik', brand: 'Orkid', size: '16\'lı' },
+  { raw: 'ULKER CIKOLATA 80G', group: 'Çikolata', brand: 'Ülker', size: '80 g' },
+  { raw: 'ETI BISKUVI 100G', group: 'Bisküvi', brand: 'Eti', size: '100 g' },
+  { raw: 'PINAR SUCUK 400G', group: 'Sucuk', brand: 'Pınar', size: '400 g' },
+  { raw: 'TORKU HELVA 350G', group: 'Helva', brand: 'Torku', size: '350 g' },
+  { raw: 'ULUDAG GAZOZ 1L', group: 'Gazoz', brand: 'Uludağ', size: '1 litre' },
+  { raw: 'SELPAK PECETE 100LU', group: 'Peçete', brand: 'Selpak', size: '100\'lü' },
+  { raw: 'BIZIM MARGARIN 250G', group: 'Margarin', brand: 'Bizim', size: '250 g' },
+  { raw: 'DOMESTOS YUZEY TEMIZLEYICI 750ML', group: 'Yüzey temizleyici', brand: 'Domestos', size: '750 mL' },
+  { raw: 'SEK KAYMAK 200G', group: 'Kaymak', brand: 'Sek', size: '200 g' },
+  { raw: 'NESCAFE GOLD 100G', group: 'Kahve, hazır', brand: 'Nescafe', size: '100 g' },
 ];
 
 /**
@@ -91,22 +109,25 @@ export const MATCH_CASES: MatchCase[] = [
  * doğru cevap.
  */
 export const NEGATIVE_CASES: string[] = [
-  'LAYS PATATES CIPSI 150G',
+  // Grubu katalogda var ama MARKASI yok: bağlamak yanlış markaya yazmak olur.
   'IPEK TUZ 750G',
-  'ORKID PED 16LI',
-  'NESCAFE GOLD 100G',
-  'COLGATE DIS FIRCASI ORTA',
-  'BEBEK BEZI 4 NUMARA 30LU',
-  'ULKER CIKOLATA 80G',
-  'ETI BISKUVI 100G',
-  'PINAR SUCUK 400G',
-  'TORKU HELVA 350G',
-  'ULUDAG GAZOZ 1L',
-  'SELPAK PECETE 100LU',
-  'BIZIM MARGARIN 250G',
-  'DOMESTOS YUZEY TEMIZLEYICI 750ML',
-  'MARLBORO TOUCH',
   'KINIK SIYAH ZEYTIN 400G',
   'DALIN BEBEK SAMPUANI 500ML',
-  'SEK KAYMAK 200G',
+  // Fişte marka hiç yazmıyor; katalogdaki ilk markaya bağlamak uydurmak olur.
+  'BEBEK BEZI 4 NUMARA 30LU',
+  // Marka katalogda var, ÜRÜN yok — en tehlikeli tür, çünkü marka güçlü
+  // bir sinyal ve puanı tek başına yukarı çekiyor.
+  'COLGATE DIS FIRCASI ORTA',
+  'COLGATE GARGARA 500ML',
+  'ULKER GOFRET 40G',
+  'PINAR LABNE 200G',
+  'ARKO TRAS KOPUGU 200ML',
+  'LIPTON ICE TEA 1L',
+  'NESTLE KAHVE KREMASI 400G',
+  'BALPARMAK PEKMEZ 380G',
+  'KOSKA LOKUM 350G',
+  'DORITOS SOS 300G',
+  // Katalogla hiç teması olmayan kalem.
+  'MARLBORO TOUCH',
+  'TADIM KURUYEMIS 150G',
 ];
