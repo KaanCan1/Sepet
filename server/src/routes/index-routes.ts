@@ -20,8 +20,9 @@ indexRouter.get('/', async (req: AuthedRequest, res) => {
     current_month: string;
     covered_weight: number;
   }>(
-    // to_char: DATE'i Date nesnesine çevirtmiyoruz, saat dilimi kaydırması
-    // ayın 1'ini bir önceki aya düşürüyor.
+    // to_char burada artık bir gereklilik değil, açık niyet: DATE
+    // sütunlarının dizge dönmesi db.ts'teki tür çözümleyicisinde
+    // garanti altında (saat dilimi kayması oradaki yorumda anlatılıyor).
     `SELECT change_pct, window_months, covered_weight,
             to_char(current_month, 'YYYY-MM-DD') AS current_month
        FROM v_index_headline WHERE user_id = $1`,
@@ -241,10 +242,10 @@ indexRouter.get('/movers', async (req: AuthedRequest, res) => {
  * kalemleri değil, bağımsız serileri — biri diğerine toplanmıyor.
  */
 indexRouter.get('/by-category', async (req: AuthedRequest, res) => {
-  // Ay SQL'de metne çevriliyor, Date olarak değil. pg bir DATE sütununu
-  // YEREL geceyarısı Date'i yapıyor; JSON'a giderken toISOString() bunu
-  // UTC'ye çevirdiği için UTC+3'te ayın 1'i bir önceki ayın 31'ine kayıyor
-  // ve ekranda Ağustos seviyesi "Temmuz" diye etiketleniyordu.
+  // Ay SQL'de metne çevriliyor. Bu ekranda bir kez ayın 1'i bir önceki ayın
+  // 31'ine kaymış ve Ağustos seviyesi "Temmuz" diye etiketlenmişti; kayma
+  // artık db.ts'teki DATE çözümleyicisiyle kaynağında kapalı, buradaki
+  // to_char niyeti görünür tutuyor.
   const rows = await query<{
     category_id: string;
     category_code: string;

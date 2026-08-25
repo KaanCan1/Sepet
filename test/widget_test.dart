@@ -186,6 +186,23 @@ void main() {
     // Fiş "116,70" basıyor ama "38,90 / litre" basmıyor — ve paketler
     // farklı boyda olduğu için karşılaştırılabilir tek fiyat bu. Endeks
     // olgunlaşmasa da kullanıcının ilk fişinde eline geçen yeni bilgi.
+    // Fiş tarihi bir gün geriden görünüyordu. Sahte yol sunucunun bugünkü
+    // biçimini taşıyor ("2026-08-18", saatsiz); ekrandaki gün ona eşit
+    // olmalı — arada saat dilimi girerse bu kırılır.
+    testWidgets('fiş tarihi yazılan günü gösteriyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-1')));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -260));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A101').first);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('18 AĞU 2026'), findsOneWidget);
+    });
+
     testWidgets('eşleşmiş satırda birim fiyat yazıyor', (tester) async {
       await tester.pumpWidget(bootstrap(token: 'test-token'));
       await tester.pumpAndSettle();
@@ -292,25 +309,182 @@ void main() {
   });
 
   group('Fiş silme', () {
-    testWidgets('sola kaydırınca onay isteniyor', (tester) async {
-      await tester.pumpWidget(bootstrap(token: 'test-token'));
+    // Önce kaydırmanın kendisi siliyordu ve onay ayrı bir uyarı
+    // penceresinden isteniyordu. Şimdi kaydırma yalnızca kırmızı alanı
+    // açıyor; silme oraya dokununca oluyor. Onay ayrı bir adım değil,
+    // hareketin kendisi.
+    testWidgets('kaydırmak silmiyor, sadece açıyor', (tester) async {
+      final api = FakeApi();
+      await tester.pumpWidget(
+        AppScope(
+          api: api,
+          authStore: MemoryAuthStore('test-token'),
+          child: MaterialApp(
+            locale: const Locale('tr', 'TR'),
+            home: const RootGate(),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('tab-1')));
       await tester.pumpAndSettle();
 
-      // Kaydırma tek başına silmiyor: fiş endeksi değiştiriyor ve işlem
-      // geri alınamıyor.
       await tester.drag(find.text('A101').first, const Offset(-400, 0));
       await tester.pumpAndSettle();
 
-      expect(find.text('Fişi sil'), findsOneWidget);
-      expect(find.textContaining('geri alınamaz'), findsOneWidget);
-
-      await tester.tap(find.text('Vazgeç'));
-      await tester.pumpAndSettle();
-      // Vazgeçilince fiş yerinde duruyor.
+      // Fiş yerinde duruyor ve sunucuya hiçbir şey gitmedi.
       expect(find.text('A101'), findsOneWidget);
+      expect(find.text('Sil'), findsOneWidget);
+      expect(api.calls, isNot(contains('DELETE /receipts/r1')));
+    });
+
+    testWidgets('açık satıra dokunmak fişi açmıyor, kapatıyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-1')));
+      await tester.pumpAndSettle();
+      await tester.drag(find.text('A101').first, const Offset(-400, 0));
+      await tester.pumpAndSettle();
+
+      // Açıkken satır bir "kapat" düğmesi: kullanıcı vazgeçtiğinde geri
+      // kaydırmak zorunda kalmasın ve yanlışlıkla fiş detayına düşmesin.
+      await tester.tap(find.text('A101').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('SIRAYLA ÇÖZ'), findsNothing);
+      expect(find.text('Sil'), findsNothing);
+    });
+
+    testWidgets('Sil e dokununca sunucuya gidiyor', (tester) async {
+      final api = FakeApi();
+      await tester.pumpWidget(
+        AppScope(
+          api: api,
+          authStore: MemoryAuthStore('test-token'),
+          child: MaterialApp(
+            locale: const Locale('tr', 'TR'),
+            home: const RootGate(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-1')));
+      await tester.pumpAndSettle();
+      await tester.drag(find.text('A101').first, const Offset(-400, 0));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Sil'));
+      await tester.pumpAndSettle();
+
+      expect(api.calls, contains('DELETE /receipts/r1'));
+      // Silinen fiş adıyla yazılıyor: işlem geri alınamıyor ve kullanıcının
+      // hangisinin gittiğini görebilmesi tek güvencesi.
+      expect(find.textContaining('A101 · 18 AĞU silindi'), findsOneWidget);
+    });
+
+    // Bir satır silinince kalanlar yukarı kayıyor ve kullanıcı hiç
+    // kaydırmadığı bir satırda "Sil" görmemeli. Satırların fiş kimliğiyle
+    // anahtarlanması da bunun için (bkz. receipts_screen.dart); test
+    // anahtarı değil, kullanıcının gördüğü sonucu doğruluyor.
+    testWidgets('silmeden sonra kalan satır kapalı', (tester) async {
+      final r1 = {
+        'id': 'r1',
+        'merchant': 'A101',
+        'purchasedAt': '2026-08-18',
+        'total': 842.6,
+        'itemCount': 11,
+        'pendingCount': 2,
+      };
+      final r2 = {
+        'id': 'r2',
+        'merchant': 'BİM',
+        'purchasedAt': '2026-08-11',
+        'total': 310.0,
+        'itemCount': 4,
+        'pendingCount': 0,
+      };
+      final routes = <String, Object?>{
+        ...FakeApi.defaultRoutes,
+        'GET /receipts': [r1, r2],
+      };
+
+      await tester.pumpWidget(
+        AppScope(
+          api: FakeApi(routes: routes),
+          authStore: MemoryAuthStore('test-token'),
+          child: MaterialApp(
+            locale: const Locale('tr', 'TR'),
+            home: const RootGate(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-1')));
+      await tester.pumpAndSettle();
+      await tester.drag(find.text('A101').first, const Offset(-400, 0));
+      await tester.pumpAndSettle();
+
+      // Silme sonrası sunucu tek fiş döndürecek.
+      routes['GET /receipts'] = [r2];
+      await tester.tap(find.text('Sil'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('A101'), findsNothing);
+      expect(find.text('BİM'), findsOneWidget);
+      // Kalan satır kapalı: kullanıcı onu hiç kaydırmadı.
+      expect(find.text('Sil'), findsNothing);
+    });
+
+    testWidgets('ikinci satır açılınca birincisi kapanıyor', (tester) async {
+      await tester.pumpWidget(
+        AppScope(
+          api: FakeApi(
+            routes: {
+              ...FakeApi.defaultRoutes,
+              'GET /receipts': [
+                {
+                  'id': 'r1',
+                  'merchant': 'A101',
+                  'purchasedAt': '2026-08-18',
+                  'total': 842.6,
+                  'itemCount': 11,
+                  'pendingCount': 2,
+                },
+                {
+                  'id': 'r2',
+                  'merchant': 'BİM',
+                  'purchasedAt': '2026-08-11',
+                  'total': 310.0,
+                  'itemCount': 4,
+                  'pendingCount': 0,
+                },
+              ],
+            },
+          ),
+          authStore: MemoryAuthStore('test-token'),
+          child: MaterialApp(
+            locale: const Locale('tr', 'TR'),
+            home: const RootGate(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-1')));
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.text('A101').first, const Offset(-400, 0));
+      await tester.pumpAndSettle();
+      await tester.drag(find.text('BİM').first, const Offset(-400, 0));
+      await tester.pumpAndSettle();
+
+      // İki satır birden açıkken kullanıcının hangisine bastığı gözle
+      // ayırt edilemiyor ve silme geri alınamıyor.
+      expect(find.text('Sil'), findsOneWidget);
     });
   });
 

@@ -16,6 +16,28 @@ void main() {
     });
   });
 
+  // Fiş tarihleri bir gün geriden görünüyordu: sunucu DATE'i UTC damgasına
+  // çeviriyor, istemci de `Z` yüzünden UTC bir DateTime alıyordu ve `.day`
+  // okununca gün geri kayıyordu. "2026-08-24" ekranda "23 AĞU" idi.
+  group('Tarih okuma', () {
+    test('saatsiz tarih olduğu gibi kalıyor', () {
+      // Sunucunun bugünkü biçimi: saat bileşeni yok, kayacak bir şey de yok.
+      final d = Fmt.day('2026-08-24');
+      expect(d.year, 2026);
+      expect(d.month, 8);
+      expect(d.day, 24);
+      expect(Fmt.dayMonth(d), '24 AĞU');
+    });
+
+    test('UTC damgası yerel güne çevriliyor', () {
+      // Sunucunun eski biçimi. UTC+3'te bu 24 Ağustos 00:00; ham
+      // DateTime.parse 23 derdi.
+      final d = Fmt.day('2026-08-23T21:00:00.000Z');
+      expect(d.isUtc, isFalse);
+      expect(d, DateTime.parse('2026-08-23T21:00:00.000Z').toLocal());
+    });
+  });
+
   group('Ağırlık ve hacim etiketleri', () {
     test('sayı ve birim ayrı yazılıyor', () {
       expect(SizeLabel.build(400, 'g'), '400 g');

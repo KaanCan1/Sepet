@@ -67,6 +67,19 @@ abstract final class Fmt {
     'Aralık',
   ];
 
+  /// Sunucudan gelen tarihi yerel güne çevirerek okur.
+  ///
+  /// Gün alanı olan alanlarda `DateTime.parse` tek başına yetmiyor: sondaki
+  /// `Z` yüzünden UTC bir DateTime dönüyor ve `.day` okunduğunda gün bir
+  /// geri kayıyor. Fiş tarihleri bir süre böyle görünüyordu —
+  /// "2026-08-24" ekranda "23 AĞU" idi.
+  ///
+  /// Asıl düzeltme sunucuda: DATE sütunları artık saatsiz dizge olarak
+  /// geliyor (bkz. server/src/db.ts) ve o hâlde `.toLocal()` işlemsiz
+  /// kalıyor. Buradaki çağrı ikinci hat — saatli bir damga geri gelirse
+  /// tarih yine doğru günü gösteriyor.
+  static DateTime day(String iso) => DateTime.parse(iso).toLocal();
+
   /// 18 AĞU
   static String dayMonth(DateTime d) => '${d.day} ${_monthsShort[d.month - 1]}';
 

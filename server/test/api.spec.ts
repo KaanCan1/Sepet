@@ -339,6 +339,63 @@ describe('API', () => {
     });
   });
 
+  // Fiş tarihleri bir gün geriden görünüyordu: pg bir DATE sütununu yerel
+  // gece yarısına bağlı bir Date yapıyor, JSON'a giderken de UTC'ye
+  // çeviriyordu. "2026-08-24" tel üzerinde "2026-08-23T21:00:00.000Z"
+  // oluyor ve istemci gün alanını okuyunca 23 çıkıyordu.
+  describe('Tarihler saat diliminden kaymıyor', () => {
+    const gun = '2026-03-14';
+    let fisId = '';
+
+    beforeAll(async () => {
+      const res = await request(app)
+        .post('/receipts')
+        .set(auth())
+        .send({
+          merchantId,
+          purchasedAt: gun,
+          lines: [{ raw: 'YUMURTA 30LU', amount: 150, canonicalProductId: yumurtaId }],
+        })
+        .expect(201);
+      fisId = res.body.id;
+    });
+
+    afterAll(async () => {
+      if (fisId) await query(`DELETE FROM receipts WHERE id = $1`, [fisId]);
+    });
+
+    it('fiş listesi yazılan günü döndürüyor', async () => {
+      const res = await request(app).get('/receipts').set(auth()).expect(200);
+      const fis = res.body.find((r: { id: string }) => r.id === fisId);
+      // Saat bileşeni hiç olmamalı: olduğu anda saat dilimi devreye giriyor.
+      expect(fis.purchasedAt).toBe(gun);
+    });
+
+    it('fiş detayı yazılan günü döndürüyor', async () => {
+      const res = await request(app)
+        .get(`/receipts/${fisId}`)
+        .set(auth())
+        .expect(200);
+      expect(res.body.purchasedAt).toBe(gun);
+    });
+
+    it('ürün geçmişindeki gözlem günü kaymıyor', async () => {
+      const res = await request(app)
+        .get(`/products/${yumurtaId}`)
+        .set(auth())
+        .expect(200);
+      for (const nokta of res.body.history) {
+        expect(nokta.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      }
+      expect(res.body.history.some((h: { date: string }) => h.date === gun)).toBe(
+        true,
+      );
+      for (const m of res.body.byMerchant) {
+        expect(m.seenOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      }
+    });
+  });
+
   it('kategori kırılımı seri döndürüyor', async () => {
     const res = await request(app)
       .get('/index/by-category')
