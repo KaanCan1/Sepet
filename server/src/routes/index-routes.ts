@@ -76,6 +76,138 @@ indexRouter.get('/', async (req: AuthedRequest, res) => {
   });
 });
 
+/**
+ * Son sepetin karşılaştırması: "aynı şeyleri daha ucuza görmüştün".
+ *
+ * Endeks iki FARKLI ayda fiş istiyor — bir fiyatın değiştiğini görmek için
+ * onu iki kez görmek gerekiyor. Bu, uygulamanın ilk günlerinde kullanıcının
+ * eline hiçbir şey geçmemesi demekti: ekran "bir ay daha lazım" yazıp
+ * duruyordu. Oysa ikinci fişten itibaren söylenebilecek gerçek bir şey var
+ * ve o zaman kaybı endeksi beklemiyor.
+ *
+ * Karşılaştırma GRUP + BOY üzerinden: "600 g beyaz peynir" raftaki gerçek
+ * seçim, markası kimin olursa olsun. Alternatifin markası ve marketi
+ * ekranda adıyla yazılıyor — kullanıcı neyle kıyaslandığını görmeden
+ * "tasarruf" sayısına inanmak zorunda kalmasın.
+ *
+ * İki şey kasıtlı olarak dışarıda:
+ *
+ * - AYNI ürün + AYNI market: aradaki fark zamandan geliyor, seçimden değil.
+ *   Onu tasarruf diye yazmak enflasyonu indirim gibi göstermek olurdu.
+ * - 90 günden eski gözlem: iki yıl önceki fiyatla kıyaslamak da aynı hatanın
+ *   daha büyüğü.
+ */
+indexRouter.get('/basket', async (req: AuthedRequest, res) => {
+  const userId = req.userId!;
+
+  const rows = await query<{
+    receipt_id: string;
+    merchant: string;
+    name: string;
+    amount: string;
+    unit_price: string;
+    best_name: string;
+    best_merchant: string;
+    best_unit_price: string;
+    best_seen_on: string;
+    best_amount: string;
+  }>(
+    `WITH son AS (
+       -- En son fiş değil, GÖZLEMİ OLAN en son fiş. Yeni çekilmiş bir fişin
+       -- kalemleri henüz eşleşmemiş olabiliyor; ona bağlanınca ekran, elde
+       -- kıyaslanacak veri varken bile boş kalıyordu.
+       SELECT r.id, r.merchant_id, r.purchased_at, m.name AS merchant
+         FROM receipts r
+         JOIN merchants m ON m.id = r.merchant_id
+        WHERE r.user_id = $1
+          AND EXISTS (
+            SELECT 1 FROM receipt_lines l
+              JOIN price_observations o ON o.receipt_line_id = l.id
+             WHERE l.receipt_id = r.id AND NOT o.is_outlier
+          )
+        ORDER BY r.purchased_at DESC, r.created_at DESC
+        LIMIT 1
+     ),
+     kalem AS (
+       SELECT son.id AS receipt_id, son.merchant, son.merchant_id,
+              son.purchased_at,
+              o.canonical_product_id, o.unit_price, o.amount,
+              c.group_id, c.size_value,
+              c.display_name AS name, c.size_label
+         FROM son
+         JOIN receipt_lines l ON l.receipt_id = son.id
+         JOIN price_observations o ON o.receipt_line_id = l.id
+         JOIN v_canonical_products c ON c.id = o.canonical_product_id
+        WHERE o.user_id = $1 AND NOT o.is_outlier
+     )
+     SELECT k.receipt_id, k.merchant, k.name, k.amount, k.unit_price,
+            a.name AS best_name, a.merchant AS best_merchant,
+            a.unit_price AS best_unit_price,
+            to_char(a.observed_on, 'YYYY-MM-DD') AS best_seen_on,
+            round(k.amount * a.unit_price / k.unit_price, 2) AS best_amount
+       FROM kalem k
+       JOIN LATERAL (
+         SELECT o2.unit_price, o2.observed_on,
+                c2.display_name AS name, m2.name AS merchant
+           FROM price_observations o2
+           JOIN v_canonical_products c2 ON c2.id = o2.canonical_product_id
+           JOIN merchants m2 ON m2.id = o2.merchant_id
+          WHERE o2.user_id = $1
+            AND NOT o2.is_outlier
+            AND c2.group_id = k.group_id
+            AND c2.size_value = k.size_value
+            AND o2.unit_price < k.unit_price
+            AND o2.observed_on >= k.purchased_at - interval '90 days'
+            -- Aynı ürünü aynı markette daha ucuza görmüş olmak bir seçim
+            -- değil, zaman farkı. Tasarruf diye yazılamaz.
+            AND (o2.merchant_id <> k.merchant_id
+                 OR o2.canonical_product_id <> k.canonical_product_id)
+          ORDER BY o2.unit_price
+          LIMIT 1
+       ) a ON true
+      ORDER BY (k.amount - round(k.amount * a.unit_price / k.unit_price, 2)) DESC`,
+    [userId],
+  );
+
+  if (!rows.length) {
+    // "Karşılaştıracak bir şey yok" ile "hiç tasarruf yok" ayrı durumlar.
+    // İstemci ikisini karıştırıp "0 TL kaybettin" yazmasın diye açıkça
+    // söyleniyor.
+    res.json({ comparable: false });
+    return;
+  }
+
+  const items = rows.map((r) => ({
+    // display_name marka + grup + boy; boy ayrıca gönderilmiyor.
+    name: r.name,
+    paid: Number(r.amount),
+    unitPrice: Number(r.unit_price),
+    bestName: r.best_name,
+    bestMerchant: r.best_merchant,
+    bestUnitPrice: Number(r.best_unit_price),
+    // Kıyaslanan fiyatın tarihi: "bugün bu fiyata alırsın" demiyoruz.
+    bestSeenOn: r.best_seen_on,
+    bestPaid: Number(r.best_amount),
+    saved: Number((Number(r.amount) - Number(r.best_amount)).toFixed(2)),
+  }));
+
+  const paid = items.reduce((a, i) => a + i.paid, 0);
+  const best = items.reduce((a, i) => a + i.bestPaid, 0);
+
+  res.json({
+    comparable: true,
+    receiptId: rows[0]!.receipt_id,
+    merchant: rows[0]!.merchant,
+    // Toplamlar yalnızca kıyaslanabilen kalemleri kapsıyor, fişin tamamını
+    // değil. "Sepetin toplamı" demek yanlış olurdu.
+    itemCount: items.length,
+    paid: Number(paid.toFixed(2)),
+    best: Number(best.toFixed(2)),
+    saved: Number((paid - best).toFixed(2)),
+    items,
+  });
+});
+
 /** Ekran 04'ün alt kısmı: bu ay en çok zamlananlar. */
 indexRouter.get('/movers', async (req: AuthedRequest, res) => {
   const rows = await query<{

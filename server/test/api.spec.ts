@@ -237,6 +237,108 @@ describe('API', () => {
     ).toBe(true);
   });
 
+  // Endeks iki FARKLI ayda fiş istiyor; sepet karşılaştırması istemiyor.
+  // Kullanıcının eline endeksten önce geçen tek somut şey bu.
+  describe('Sepet karşılaştırması', () => {
+    // Kendi kullanıcısı: dosyadaki diğer testler tek markette alışveriş
+    // ediyor ve karşılaştırma tam olarak İKİ market gerektiriyor.
+    let kToken = '';
+    let kUserId = '';
+
+    const kAuth = () => ({ Authorization: `Bearer ${kToken}` });
+
+    beforeAll(async () => {
+      const res = await request(app)
+        .post('/auth/dev-login')
+        .send({ email: `sepet-${Date.now()}@sepet.test` });
+      kToken = res.body.token;
+      kUserId = res.body.userId;
+
+      const ucuz = (
+        await one<{ id: string }>(
+          `SELECT id FROM merchants WHERE chain_code = 'A101'`,
+        )
+      ).id;
+
+      // Aynı ürün, iki market: A101'de 50, BİM'de 60. Endeks için iki ay
+      // gerekiyordu; buradaki soru "hangi market" olduğu için aynı ay da
+      // yetiyor — zaten fark ettirmek istediğimiz şey de bu.
+      await request(app)
+        .post('/receipts')
+        .set(kAuth())
+        .send({
+          merchantId: ucuz,
+          purchasedAt: monthsAgo(1),
+          lines: [{ raw: 'SUT TAM YAGLI 1L', amount: 50, canonicalProductId: sutId }],
+        })
+        .expect(201);
+
+      await request(app)
+        .post('/receipts')
+        .set(kAuth())
+        .send({
+          merchantId,
+          purchasedAt: monthsAgo(0),
+          lines: [{ raw: 'SUT TAM YAGLI 1L', amount: 60, canonicalProductId: sutId }],
+        })
+        .expect(201);
+    });
+
+    afterAll(async () => {
+      if (kUserId) await query(`DELETE FROM users WHERE id = $1`, [kUserId]);
+    });
+
+    it('daha ucuz gördüğü alternatifi adıyla söylüyor', async () => {
+      const res = await request(app)
+        .get('/index/basket')
+        .set(kAuth())
+        .expect(200);
+
+      expect(res.body.comparable).toBe(true);
+      expect(res.body.merchant).toBe('BİM');
+      expect(res.body.items).toHaveLength(1);
+
+      const [kalem] = res.body.items;
+      expect(kalem.paid).toBeCloseTo(60, 2);
+      expect(kalem.bestPaid).toBeCloseTo(50, 2);
+      expect(kalem.saved).toBeCloseTo(10, 2);
+      expect(res.body.saved).toBeCloseTo(10, 2);
+
+      // Kullanıcı neyle kıyaslandığını görmeden sayıya inanmak zorunda
+      // kalmasın: alternatifin adı, marketi ve tarihi geliyor.
+      expect(kalem.bestMerchant).toBe('A101');
+      expect(kalem.bestName).toContain('Süt');
+      expect(kalem.bestSeenOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+
+    it('aynı üründe zaman farkı tasarruf sayılmıyor', async () => {
+      // Aynı markette daha ucuza görmüş olmak bir seçim değil; onu tasarruf
+      // diye yazmak enflasyonu indirim gibi göstermek olurdu. Bu dosyadaki
+      // ana kullanıcı tek markette alışveriş ediyor ve fiyatları artmış.
+      const res = await request(app).get('/index/basket').set(auth()).expect(200);
+      expect(res.body.comparable).toBe(false);
+    });
+
+    it('kıyaslanacak veri yoksa comparable false', async () => {
+      const bos = await request(app)
+        .post('/auth/dev-login')
+        .send({ email: `bos-${Date.now()}@sepet.test` })
+        .expect(200);
+
+      const res = await request(app)
+        .get('/index/basket')
+        .set('Authorization', `Bearer ${bos.body.token}`)
+        .expect(200);
+
+      // "Tasarruf yok" ile "kıyaslayacak şey yok" ayrı: ekran ikincisinde
+      // 0 TL yazmamalı.
+      expect(res.body.comparable).toBe(false);
+      expect(res.body.saved).toBeUndefined();
+
+      await query(`DELETE FROM users WHERE id = $1`, [bos.body.userId]);
+    });
+  });
+
   it('kategori kırılımı seri döndürüyor', async () => {
     const res = await request(app)
       .get('/index/by-category')

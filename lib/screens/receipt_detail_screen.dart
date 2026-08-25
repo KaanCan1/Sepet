@@ -265,7 +265,23 @@ class _LineRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Text(Fmt.money(line.amount), style: T.num11),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(Fmt.money(line.amount), style: T.num11),
+                // Fişin basmadığı sayı. Kâğıtta "289,00" yazıyor ama
+                // "722,50 / kg" yazmıyor — ve paketler farklı boyda
+                // olduğu için karşılaştırılabilir tek fiyat bu.
+                if (line.unitPrice != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    '${Fmt.money(line.unitPrice!)} / '
+                    '${SizeLabel.shortUnit(line.unit)}',
+                    style: T.raw,
+                  ),
+                ],
+              ],
+            ),
           ],
         ),
       ),

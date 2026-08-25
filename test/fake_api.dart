@@ -47,6 +47,10 @@ class FakeApi extends Api {
         },
       ],
     },
+    // Varsayılan: kıyaslanacak veri yok. "Tasarruf yok" ile aynı şey değil
+    // ve ekran ikincisinde 0 TL yazmamalı — kartı gösteren testler bu
+    // yolu kendi verisiyle değiştiriyor.
+    'GET /index/basket': {'comparable': false},
     'GET /index/movers': [
       {
         'productId': 'p1',
@@ -142,6 +146,9 @@ class FakeApi extends Api {
           'amount': 116.7,
           'status': 'auto',
           'canonical': 'Süt, tam yağlı 1 litre',
+          // Fişin basmadığı sayı: 116,70 / (3 x 1 litre) = 38,90.
+          'unitPrice': 38.9,
+          'unit': 'litre',
         },
         {
           'id': 'l2',

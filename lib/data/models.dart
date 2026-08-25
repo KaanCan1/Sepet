@@ -254,6 +254,8 @@ class ReceiptLine {
     required this.quantity,
     this.needsMatch = false,
     this.status = 'auto',
+    this.unitPrice,
+    this.unit,
   });
 
   final String id;
@@ -270,6 +272,14 @@ class ReceiptLine {
 
   /// Sunucudaki durum: auto, confirmed, pending, excluded.
   final String status;
+
+  /// Kanonik birim başına fiyat — endeksin kullandığı sayı. Fiş bunu
+  /// basmıyor: "289,00" yazıyor ama "722,50 TL/kg" yazmıyor. Eşleşmemiş
+  /// satırda null.
+  final double? unitPrice;
+
+  /// Grubun kanonik birimi: litre, kilogram, adet.
+  final String? unit;
 
   /// Kasa poşeti gibi ürün olmayan kalem. Endekse girmiyor ve sorulmuyor.
   bool get isExcluded => status == 'excluded';
@@ -292,6 +302,98 @@ class ReceiptLine {
     quantity: (j['quantity'] as num?)?.toDouble() ?? 1,
     needsMatch: j['status'] == 'pending',
     status: (j['status'] ?? 'auto') as String,
+    unitPrice: (j['unitPrice'] as num?)?.toDouble(),
+    unit: j['unit'] as String?,
+  );
+}
+
+/// Son sepetin karşılaştırması: "aynı şeyleri daha ucuza görmüştün".
+///
+/// Endeks iki FARKLI ayda fiş istiyor. Bu, ilk günlerde kullanıcının eline
+/// hiçbir şey geçmemesi demekti; oysa ikinci fişten itibaren söylenebilecek
+/// gerçek bir şey var. [comparable] false ise kıyaslanacak veri YOK —
+/// "tasarruf yok" ile aynı şey değil, ekran 0 TL yazmamalı.
+class BasketCompare {
+  const BasketCompare({
+    required this.comparable,
+    this.receiptId,
+    this.merchant,
+    this.itemCount = 0,
+    this.paid = 0,
+    this.best = 0,
+    this.saved = 0,
+    this.items = const [],
+  });
+
+  final bool comparable;
+  final String? receiptId;
+  final String? merchant;
+
+  /// Toplamlar yalnızca kıyaslanabilen kalemleri kapsıyor, fişin tamamını
+  /// değil — ekranda "sepetin toplamı" denmiyor.
+  final int itemCount;
+  final double paid;
+  final double best;
+  final double saved;
+  final List<BasketItem> items;
+
+  static const none = BasketCompare(comparable: false);
+
+  static BasketCompare fromJson(Map<String, dynamic> j) {
+    if (j['comparable'] != true) return none;
+    return BasketCompare(
+      comparable: true,
+      receiptId: j['receiptId'] as String?,
+      merchant: j['merchant'] as String?,
+      itemCount: (j['itemCount'] as num?)?.toInt() ?? 0,
+      paid: (j['paid'] as num?)?.toDouble() ?? 0,
+      best: (j['best'] as num?)?.toDouble() ?? 0,
+      saved: (j['saved'] as num?)?.toDouble() ?? 0,
+      items: ((j['items'] as List?) ?? const [])
+          .map((e) => BasketItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+/// Kıyaslanan tek kalem. Alternatifin adı, marketi ve TARİHİ birlikte
+/// duruyor: "bugün bu fiyata alırsın" denmiyor.
+class BasketItem {
+  const BasketItem({
+    required this.name,
+    required this.paid,
+    required this.unitPrice,
+    required this.bestName,
+    required this.bestMerchant,
+    required this.bestUnitPrice,
+    required this.bestSeenOn,
+    required this.bestPaid,
+    required this.saved,
+  });
+
+  final String name;
+  final double paid;
+  final double unitPrice;
+  final String bestName;
+  final String bestMerchant;
+  final double bestUnitPrice;
+  final DateTime bestSeenOn;
+  final double bestPaid;
+  final double saved;
+
+  /// Alternatif başka bir ürün mü, yoksa aynı ürünün başka marketteki hâli mi.
+  bool get sameProduct => bestName == name;
+
+  static BasketItem fromJson(Map<String, dynamic> j) => BasketItem(
+    name: j['name'] as String,
+    paid: (j['paid'] as num).toDouble(),
+    unitPrice: (j['unitPrice'] as num).toDouble(),
+    bestName: j['bestName'] as String,
+    bestMerchant: j['bestMerchant'] as String,
+    bestUnitPrice: (j['bestUnitPrice'] as num).toDouble(),
+    bestSeenOn: DateTime.parse(j['bestSeenOn'] as String),
+    bestPaid: (j['bestPaid'] as num).toDouble(),
+    saved: (j['saved'] as num).toDouble(),
   );
 }
 

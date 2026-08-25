@@ -39,8 +39,18 @@ class IndexScreen extends StatelessWidget {
           // çizgisini gösteriyor.
           child: DataView<IndexCubit, IndexHome>(
             builder: (context, data) => data.isEmpty
-                ? _FirstRun(snapshot: data.snapshot, receipts: data.receipts)
-                : _Body(snapshot: data.snapshot, receipts: data.receipts),
+                ? _FirstRun(
+                    snapshot: data.snapshot,
+                    receipts: data.receipts,
+                    basket: data.basket,
+                    pending: data.pendingLines,
+                  )
+                : _Body(
+                    snapshot: data.snapshot,
+                    receipts: data.receipts,
+                    basket: data.basket,
+                    pending: data.pendingLines,
+                  ),
           ),
         ),
       ],
@@ -49,10 +59,17 @@ class IndexScreen extends StatelessWidget {
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.snapshot, required this.receipts});
+  const _Body({
+    required this.snapshot,
+    required this.receipts,
+    required this.basket,
+    required this.pending,
+  });
 
   final IndexSnapshot snapshot;
   final List<Receipt> receipts;
+  final BasketCompare basket;
+  final int pending;
 
   /// "SON 12 AY" sabit değil: 12 ay dolmadıysa gerçek pencere yazılıyor,
   /// yıllıklandırma yapılmıyor.
@@ -80,6 +97,11 @@ class _Body extends StatelessWidget {
               text: 'Geçen aya göre ${Fmt.dec1(delta)} puan',
               up: delta >= 0,
             ),
+          // Uyarı sayının hemen altında: nitelediği şey o sayı.
+          if (pending > 0) ...[
+            const SizedBox(height: 14),
+            _CoverageNote(pending: pending, receipts: receipts),
+          ],
           const SizedBox(height: 16),
           _SourcesCard(snapshot: snapshot, showOwn: true),
           const SizedBox(height: 16),
@@ -100,6 +122,12 @@ class _Body extends StatelessWidget {
             sub: 'Hangi kategori, hangi marka',
             onTap: () => Navigator.of(context).push(BreakdownScreen.route()),
           ),
+          if (basket.comparable) ...[
+            const SizedBox(height: 20),
+            const Hairline(),
+            const SizedBox(height: 14),
+            _BasketCard(basket: basket),
+          ],
           const SizedBox(height: 18),
           const Hairline(),
           const SizedBox(height: 12),
@@ -118,6 +146,177 @@ class _Body extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Son sepetin karşılaştırması — endeksin doldurmadığı boşluk.
+///
+/// Endeks iki FARKLI ayda fiş istiyor: bir fiyatın değiştiğini görmek için
+/// onu iki kez görmek gerekiyor. İlk günlerde ekran bu yüzden "bir ay daha
+/// lazım" yazıp duruyordu ve kullanıcının eline hiçbir şey geçmiyordu.
+///
+/// Buradaki sayı endeks değil, kayıp: aynı kalemleri daha önce daha ucuza
+/// görmüş olmanın parasal karşılığı. Endeks uzun vadeli bir vaat; bu ilk
+/// günden karşılığı olan bir vaat.
+///
+/// Kıyaslanan her kalemin yanında alternatifin marketi ve TARİHİ yazıyor.
+/// Sayının kaynağını göstermeden "şu kadar kaybettin" demek, kullanıcıdan
+/// doğrulayamayacağı bir şeye inanmasını istemek olurdu.
+class _BasketCard extends StatelessWidget {
+  const _BasketCard({required this.basket});
+
+  final BasketCompare basket;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = basket.items;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Lbl('DAHA UCUZA GÖRMÜŞTÜN'),
+        const SizedBox(height: 6),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(Fmt.money(basket.saved), style: T.display),
+            const SizedBox(width: 6),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 2),
+              child: Text('TL', style: T.label),
+            ),
+          ],
+        ),
+        const SizedBox(height: 7),
+        Text(
+          // Fişin tamamı değil, kıyaslanabilen kalemler. "Sepetin toplamı"
+          // demek yanlış olurdu — kalan kalemler için elimizde veri yok.
+          '${basket.merchant} fişindeki ${basket.itemCount} kalemi daha önce '
+          'gördüğün en ucuz yerlerden alsaydın bu kadar az öderdin.',
+          style: const TextStyle(fontSize: 12, height: 1.5, color: C.muted),
+        ),
+        const SizedBox(height: 10),
+        PaperCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              for (var i = 0; i < items.length && i < 3; i++) ...[
+                if (i > 0) const Hairline(),
+                _BasketRow(items[i]),
+              ],
+            ],
+          ),
+        ),
+        if (items.length > 3) ...[
+          const SizedBox(height: 7),
+          Text(
+            've ${items.length - 3} kalem daha',
+            style: T.label.copyWith(fontSize: 9.5),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _BasketRow extends StatelessWidget {
+  const _BasketRow(this.item);
+
+  final BasketItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    // Aynı ürünse ayırt eden şey market; farklıysa markanın kendisi de
+    // bilgi — "Şenpiliç yerine Banvit" başka bir karar.
+    final alt = item.sameProduct
+        ? '${item.bestMerchant} · ${Fmt.dayMonth(item.bestSeenOn)}'
+        : '${item.bestName} · ${item.bestMerchant} · '
+              '${Fmt.dayMonth(item.bestSeenOn)}';
+
+    return Container(
+      color: C.card,
+      padding: const EdgeInsets.fromLTRB(13, 11, 13, 11),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.name, style: T.title),
+                const SizedBox(height: 3),
+                Text(alt, style: T.raw),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(Fmt.money(item.paid), style: T.num12),
+              const SizedBox(height: 3),
+              Text(
+                '−${Fmt.money(item.saved)}',
+                style: T.num12.copyWith(color: C.ref),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "N kalem endekse girmiyor."
+///
+/// Eşleşmeyen satır sessizce kapsam dışında kalıyordu: endeks doğru ama
+/// eksik bir sepetten hesaplanıyordu ve bunu söyleyen hiçbir şey yoktu.
+/// Kullanıcı fişi eklerken "sonra hallederim" dediğinde o "sonra" hiç
+/// gelmiyordu, çünkü hatırlatan yoktu.
+class _CoverageNote extends StatelessWidget {
+  const _CoverageNote({required this.pending, required this.receipts});
+
+  final int pending;
+  final List<Receipt> receipts;
+
+  @override
+  Widget build(BuildContext context) {
+    final hedef = receipts.firstWhere((r) => r.pendingCount > 0);
+
+    return Pressable(
+      onTap: () =>
+          Navigator.of(context).push(ReceiptDetailScreen.route(hedef.id)),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(12, 10, 11, 11),
+        decoration: BoxDecoration(
+          color: C.hotBg,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$pending kalem endekse girmiyor',
+                    style: T.title.copyWith(color: C.hot),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Eşleşmesi çözülmeyen satırlar hesabın dışında kalıyor.',
+                    style: const TextStyle(fontSize: 11, color: C.hot),
+                  ),
+                ],
+              ),
+            ),
+            const LineIcon(Glyph.chevron, size: 15, color: C.hot),
+          ],
+        ),
       ),
     );
   }
@@ -239,10 +438,17 @@ class _SourcesCard extends StatelessWidget {
 /// göremiyordu. Şimdi üç şey var — kaç fiş kaldığı, tek bir birincil eylem,
 /// ve zaten bağımsız olan karşılaştırma çizgisi.
 class _FirstRun extends StatelessWidget {
-  const _FirstRun({required this.snapshot, required this.receipts});
+  const _FirstRun({
+    required this.snapshot,
+    required this.receipts,
+    required this.basket,
+    required this.pending,
+  });
 
   final IndexSnapshot snapshot;
   final List<Receipt> receipts;
+  final BasketCompare basket;
+  final int pending;
 
   /// Endeks iki FARKLI ayda fiş istiyor: bir fiyatın değiştiğini görmek için
   /// onu iki kez görmek gerekiyor.
@@ -297,6 +503,18 @@ class _FirstRun extends StatelessWidget {
               style: T.label.copyWith(fontSize: 9.5),
             ),
           ),
+          // Endeks olgunlaşana kadar ekranın söyleyebildiği tek somut şey
+          // burada, birincil eylemin hemen altında duruyor.
+          if (basket.comparable) ...[
+            const SizedBox(height: 26),
+            const Hairline(),
+            const SizedBox(height: 14),
+            _BasketCard(basket: basket),
+          ],
+          if (pending > 0) ...[
+            const SizedBox(height: 18),
+            _CoverageNote(pending: pending, receipts: receipts),
+          ],
           const SizedBox(height: 26),
           const Hairline(),
           const SizedBox(height: 14),
