@@ -52,6 +52,15 @@ class _MatchSheetState extends State<MatchSheet> {
   /// Kullanıcı arama kutusuna dokunduğu an öneri modundan çıkılıyor.
   bool _searching = false;
 
+  /// Katalogda hiç olmayan bir ürün tanımlanıyor.
+  bool _defining = false;
+  final _groupName = TextEditingController();
+  final _brandName = TextEditingController();
+  final _defineSize = TextEditingController();
+  String _defineUnit = 'g';
+  List<Category> _categories = const [];
+  Category? _pickedCategory;
+
   /// Katalogda olmayan bir boy giriliyor.
   bool _customSize = false;
   final _sizeInput = TextEditingController();
@@ -88,7 +97,77 @@ class _MatchSheetState extends State<MatchSheet> {
     _controller.dispose();
     _sizeInput.dispose();
     _groupInput.dispose();
+    _groupName.dispose();
+    _brandName.dispose();
+    _defineSize.dispose();
     super.dispose();
+  }
+
+  /// Tanımlama ekranını açar.
+  ///
+  /// Ürün adı arama kutusuna yazılanla dolduruluyor: kullanıcı aradığı şeyi
+  /// zaten yazmış oluyor. Marka boş bırakılıyor — fişteki markayı tahmin
+  /// etmek yanlış doldurmaktan iyi değil.
+  Future<void> _startDefine() async {
+    setState(() {
+      _defining = true;
+      _error = null;
+      if (_groupName.text.isEmpty) _groupName.text = _controller.text.trim();
+    });
+    if (_categories.isNotEmpty) return;
+
+    final repo = context.read<Repository>();
+    try {
+      final rows = await repo.catalogCategories();
+      if (mounted) setState(() => _categories = rows);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    }
+  }
+
+  /// Tanımlanan boyun kanonik birim cinsinden değeri.
+  double? get _defineValue {
+    final raw = double.tryParse(_defineSize.text.trim().replaceAll(',', '.'));
+    if (raw == null || raw <= 0) return null;
+    return SizeLabel.toCanonical(raw, _defineUnit);
+  }
+
+  bool get _defineReady =>
+      _groupName.text.trim().isNotEmpty &&
+      _pickedCategory != null &&
+      _defineValue != null &&
+      !_saving;
+
+  Future<void> _saveDefinition() async {
+    final raw = double.tryParse(_defineSize.text.trim().replaceAll(',', '.'));
+    final value = _defineValue;
+    final kategori = _pickedCategory;
+    if (raw == null || value == null || kategori == null) return;
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    final repo = context.read<Repository>();
+    try {
+      final created = await repo.defineProduct(
+        categoryCode: kategori.code,
+        groupName: _groupName.text.trim(),
+        // Birim ayrıca sorulmuyor: "400 g" yazan kullanıcı zaten kilogram
+        // cinsinden ölçtüğünü söylemiş oluyor.
+        unit: SizeLabel.dimensionOf(_defineUnit),
+        brandName: _brandName.text.trim().isEmpty
+            ? null
+            : _brandName.text.trim(),
+        sizeLabel: SizeLabel.build(raw, _defineUnit),
+        sizeValue: value,
+      );
+      if (mounted) Navigator.of(context).pop(created.id);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   /// Girilen birim, eşleşen grubun ölçü boyutundan farklı mı?
@@ -256,7 +335,12 @@ class _MatchSheetState extends State<MatchSheet> {
                 const SizedBox(height: 5),
                 Text(widget.line.rawLine, style: T.num12),
                 const SizedBox(height: 16),
-                if (_sizeOnly) ..._sizeMode() else ..._productMode(),
+                if (_defining)
+                  ..._defineMode()
+                else if (_sizeOnly)
+                  ..._sizeMode()
+                else
+                  ..._productMode(),
               ],
             ),
           ),
@@ -379,6 +463,160 @@ class _MatchSheetState extends State<MatchSheet> {
     ];
   }
 
+  // ── Yeni ürün tanımı ────────────────────────────────────────────
+  //
+  // Katalog ne kadar büyürse büyüsün kuyruk bitmiyor: rafta on binlerce
+  // kalem var. O yüzden çözüm listeyi uzatmak değil, listeyi kullanıcının
+  // uzatabilmesi. Bu ekran olmadan katalogda bulunmayan bir kalemin tek
+  // çaresi yanlış bir ürün seçmek ya da satırı sonsuza kadar bekletmekti.
+  List<Widget> _defineMode() {
+    final v = _defineValue;
+    final birimFiyat = v == null || v <= 0
+        ? '—'
+        : Fmt.money(widget.line.amount / (widget.line.quantity * v));
+
+    return [
+      const Lbl('YENİ ÜRÜN'),
+      const SizedBox(height: 8),
+      _Field(
+        label: 'Ne aldın?',
+        hint: 'Cips, çikolata, zeytin…',
+        controller: _groupName,
+        onChanged: () => setState(() {}),
+      ),
+      const SizedBox(height: 8),
+      _Field(
+        label: 'Marka',
+        hint: 'Boş bırakabilirsin',
+        controller: _brandName,
+        onChanged: () => setState(() {}),
+      ),
+      const SizedBox(height: 12),
+      const Lbl('KATEGORİ'),
+      const SizedBox(height: 6),
+      // Kategori endeksin ağırlıklarını belirliyor; kategorisiz bir grup
+      // hesaba giremez. Karşılığında tanımlanan ürün kırılımda da doğru
+      // yerde duruyor.
+      if (_categories.isEmpty)
+        const Text(
+          'Kategoriler yükleniyor…',
+          style: TextStyle(fontSize: 11.5, color: C.muted),
+        )
+      else
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final k in _categories)
+              _Chip(
+                label: k.name,
+                on: k.code == _pickedCategory?.code,
+                onTap: () => setState(() => _pickedCategory = k),
+              ),
+          ],
+        ),
+      const SizedBox(height: 12),
+      const Lbl('PAKET BOYU'),
+      const SizedBox(height: 6),
+      PaperCard(
+        padding: const EdgeInsets.fromLTRB(13, 10, 13, 12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _defineSize,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: '150',
+                      hintStyle: TextStyle(fontSize: 15, color: C.grey),
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 6),
+                    ),
+                    style: const TextStyle(
+                      fontFamily: F.mono,
+                      fontFamilyFallback: F.monoFallback,
+                      fontSize: 15,
+                      color: C.ink,
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                for (final u in const ['g', 'kg', 'mL', 'litre', 'adet']) ...[
+                  const SizedBox(width: 6),
+                  _Chip(
+                    label: u,
+                    on: u == _defineUnit,
+                    mono: true,
+                    onTap: () => setState(() => _defineUnit = u),
+                  ),
+                ],
+              ],
+            ),
+            const Hairline(),
+            const SizedBox(height: 9),
+            Row(
+              children: [
+                Text(
+                  '${SizeLabel.shortUnit(SizeLabel.dimensionOf(_defineUnit))}'
+                  ' fiyatı',
+                  style: T.raw,
+                ),
+                const Spacer(),
+                Text(birimFiyat, style: T.num12),
+              ],
+            ),
+          ],
+        ),
+      ),
+      if (_error != null) ...[
+        const SizedBox(height: 9),
+        Text(_error!, style: const TextStyle(fontSize: 12, color: C.hot)),
+      ],
+      const SizedBox(height: 10),
+      Pressable(
+        onTap: _defineReady ? _saveDefinition : null,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: _defineReady ? C.ink : C.line,
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Text(
+            _saving ? 'Ekleniyor…' : 'Kataloğa ekle',
+            style: TextStyle(
+              fontSize: 13,
+              color: _defineReady ? C.card : C.muted,
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(height: 10),
+      const Text(
+        'Eklediğin ürün senin kataloğuna giriyor; aynı fiş satırı bir daha '
+        'sorulmuyor.',
+        style: TextStyle(fontSize: 11, height: 1.4, color: C.muted),
+      ),
+      const SizedBox(height: 8),
+      Pressable(
+        onTap: () => setState(() {
+          _defining = false;
+          _error = null;
+        }),
+        child: const Text(
+          'Vazgeç, listeye dön',
+          style: TextStyle(fontSize: 12, color: C.ref),
+        ),
+      ),
+    ];
+  }
+
   // ── Ürün sorusu ─────────────────────────────────────────────────
   List<Widget> _productMode() {
     final rows = _searching ? _results : _suggestion.candidates;
@@ -428,6 +666,16 @@ class _MatchSheetState extends State<MatchSheet> {
         'Seçimin bu markete ait fiş formatı için kaydedilir.',
         style: TextStyle(fontSize: 11, color: C.muted),
       ),
+      const SizedBox(height: 10),
+      // Arama boş dönmese de duruyor: doğru cevabın katalogda OLMADIĞINI
+      // kullanıcı listeye bakınca anlıyor, arama sonucu boş dönünce değil.
+      Pressable(
+        onTap: _startDefine,
+        child: const Text(
+          'Aradığım ürün katalogda yok',
+          style: TextStyle(fontSize: 12, color: C.ref),
+        ),
+      ),
     ];
   }
 
@@ -455,11 +703,24 @@ class _MatchSheetState extends State<MatchSheet> {
     }
     if (!_searching) return const SizedBox.shrink();
     if (rows.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: Text(
-          'Katalogda eşleşen ürün yok. Farklı bir kelime dene.',
-          style: TextStyle(fontSize: 12, color: C.muted),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Katalogda eşleşen ürün yok.',
+              style: TextStyle(fontSize: 12, color: C.muted),
+            ),
+            const SizedBox(height: 8),
+            Pressable(
+              onTap: _startDefine,
+              child: const Text(
+                'Bu ürünü kendim tanımlayayım',
+                style: TextStyle(fontSize: 12.5, color: C.ref),
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -909,6 +1170,85 @@ class _GroupPicker extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Etiketli tek satırlık metin alanı.
+class _Field extends StatelessWidget {
+  const _Field({
+    required this.label,
+    required this.hint,
+    required this.controller,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String hint;
+  final TextEditingController controller;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return PaperCard(
+      padding: const EdgeInsets.fromLTRB(13, 8, 13, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: T.raw),
+          TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: hint,
+              hintStyle: const TextStyle(fontSize: 13.5, color: C.grey),
+              isDense: true,
+              contentPadding: const EdgeInsets.only(top: 4),
+            ),
+            style: const TextStyle(fontSize: 13.5, color: C.ink),
+            onChanged: (_) => onChanged(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Seçilebilir etiket. Kategori ve birim seçiminde aynı biçim.
+class _Chip extends StatelessWidget {
+  const _Chip({
+    required this.label,
+    required this.on,
+    required this.onTap,
+    this.mono = false,
+  });
+
+  final String label;
+  final bool on;
+  final bool mono;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: on ? C.ink : null,
+          borderRadius: BorderRadius.circular(999),
+          border: on ? null : Border.all(color: C.line),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: mono ? F.mono : null,
+            fontFamilyFallback: mono ? F.monoFallback : null,
+            fontSize: mono ? 11 : 11.5,
+            color: on ? C.card : C.muted,
+          ),
+        ),
+      ),
     );
   }
 }

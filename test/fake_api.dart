@@ -174,6 +174,17 @@ class FakeApi extends Api {
       ],
     },
     // Gramaj belirsiz: marka ve ürün çözülmüş, geriye yalnızca boy kalmış.
+    'GET /products/catalog/categories': [
+      {'code': '01.1.4', 'name': 'Süt, peynir, yumurta'},
+      {'code': '01.1.8', 'name': 'Şeker ve tatlı'},
+    ],
+    'POST /products/catalog/define': {
+      'id': 'tanim-1',
+      'name': 'Ülker Çikolata',
+      'groupName': 'Çikolata',
+      'brand': 'Ülker',
+      'sizeLabel': '80 g',
+    },
     // Ölçü boyutu değiştiğinde açılan grup seçimi. Sunucu birime göre
     // süzüyor; sahte istemci sorgu dizesini yok saydığı için liste sabit.
     'GET /products/catalog/groups': [

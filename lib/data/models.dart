@@ -67,6 +67,21 @@ class ProductRef {
   );
 }
 
+/// TÜİK kategorisi — kullanıcı yeni bir grup tanımlarken seçiyor.
+///
+/// İstemeden konulmuş bir zorunluluk değil: endeks ağırlıkları kategori
+/// bazında ve kategorisiz bir grup hesaba giremez. Karşılığında kullanıcının
+/// tanımladığı ürün kırılımda da doğru yerde duruyor.
+class Category {
+  const Category({required this.code, required this.name});
+
+  final String code;
+  final String name;
+
+  static Category fromJson(Map<String, dynamic> j) =>
+      Category(code: j['code'] as String, name: j['name'] as String);
+}
+
 /// Katalogdaki bir ürün grubu — "Kaşar peyniri", kilogram.
 ///
 /// Gramaj ekranında yalnızca kullanıcı grubun ölçü boyutunu değiştirdiğinde
