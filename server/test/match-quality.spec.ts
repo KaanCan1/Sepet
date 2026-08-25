@@ -52,10 +52,10 @@ describe('Eşleştirme kalitesi', () => {
         dogru++;
       }
     }
-    // Ölçülen: 40'ta 35 (%87,5). Taban biraz altında — katalog büyüdükçe
+    // Ölçülen: 52'de 45 (%86,5). Taban biraz altında — katalog büyüdükçe
     // bir iki vaka yer değiştirebilir ve testin kırılganlık nöbeti
-    // geçirmesi istenmiyor. Ama 33'ün altı gerileme demek.
-    expect(dogru).toBeGreaterThanOrEqual(33);
+    // geçirmesi istenmiyor. Ama 42'nin altı gerileme demek.
+    expect(dogru).toBeGreaterThanOrEqual(42);
   });
 
   it('katalogda olmayan ürün otomatik bağlanmıyor', async () => {
