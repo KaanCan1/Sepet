@@ -285,7 +285,7 @@ productsRouter.get('/groups/:id/spread', async (req: AuthedRequest, res) => {
     size_label: string;
     unit_price: number;
     pack_price: number;
-    observed_on: Date;
+    observed_on: string;
     merchant_name: string;
   }>(
     `SELECT canonical_product_id, group_name, brand_name, size_label,

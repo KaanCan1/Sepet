@@ -16,6 +16,13 @@ import '../widgets/screen_frame.dart';
 import 'match_queue_screen.dart';
 import 'receipt_detail_screen.dart';
 
+/// Aynı anda yalnızca bir satırın silme eylemi acik kalıyor.
+///
+/// iOS'un kendi davranışı bu ve sebebi var: iki satır birden acikken
+/// kullanıcının hangisine bastığı gözle ayırt edilemiyor, silme de geri
+/// alınamıyor.
+final ValueNotifier<String?> _openRow = ValueNotifier<String?>(null);
+
 /// Fişler sekmesi — endeksin ham malzemesi.
 class ReceiptsScreen extends StatelessWidget {
   const ReceiptsScreen({super.key});
@@ -54,7 +61,17 @@ class ReceiptsScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     const Hairline(),
                     const SizedBox(height: 4),
-                    for (final r in receipts) _SwipeToDelete(receipt: r),
+                    for (final r in receipts)
+                      // Anahtar fişin kimliğinden: bir satır silinince
+                      // kalanlar yukarı kayıyor ve anahtarsız eşleştirmede
+                      // Flutter durumu KONUMA göre tutuyordu — silinen
+                      // satırın açık kalmış silme alanı, yerine geçen fişin
+                      // üstünde beliriyordu.
+                      _SwipeToDelete(
+                        key: ValueKey(r.id),
+                        receipt: r,
+                        openRow: _openRow,
+                      ),
                   ],
                 ),
               );
@@ -66,82 +83,192 @@ class ReceiptsScreen extends StatelessWidget {
   }
 }
 
-/// Sola kaydırınca silme çıkan fiş satırı.
+/// Sola kaydırınca altından silme eylemi çıkan fiş satırı.
 ///
-/// Yanlışlıkla onaylanan bir fiş için tek çare "hepsini sil" olmamalı.
-/// Kaydırma tek başına silmiyor: fiş endeksi değiştirdiği için geri
-/// alınamayan bir işlem ve ayrıca onay isteniyor.
-class _SwipeToDelete extends StatelessWidget {
-  const _SwipeToDelete({required this.receipt});
+/// Önce kaydırmanın kendisi siliyordu ve onay ayrı bir uyarı penceresinden
+/// isteniyordu. İki sorun vardı: parmak henüz ekrandayken satır gidiyor,
+/// ve gelen pencere kaydırmayla ilgisiz bir yerde açılıyordu — kullanıcı
+/// neyi onayladığını satırdan kopuk okuyordu.
+///
+/// Şimdi kaydırma hiçbir şey silmiyor, yalnızca satırın altındaki kırmızı
+/// alanı açıyor. Silme o alana dokununca oluyor. Onay ayrı bir adım değil,
+/// hareketin kendisi: kaydır, sonra bas. İkisi de kasıtlı, ikisi de satırın
+/// üstünde.
+class _SwipeToDelete extends StatefulWidget {
+  const _SwipeToDelete({
+    super.key,
+    required this.receipt,
+    required this.openRow,
+  });
 
   final Receipt receipt;
 
+  /// Listedeki acik satır. Başkası açılınca bu kapanıyor.
+  final ValueNotifier<String?> openRow;
+
   @override
-  Widget build(BuildContext context) {
-    return Dismissible(
-      key: ValueKey(receipt.id),
-      direction: DismissDirection.endToStart,
-      background: const SizedBox.shrink(),
-      secondaryBackground: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 16),
-        color: C.hot,
-        child: const Text('Sil', style: TextStyle(fontSize: 13, color: C.card)),
-      ),
-      confirmDismiss: (_) => _confirm(context),
-      onDismissed: (_) => _delete(context),
-      child: Pressable(
-        onTap: () =>
-            Navigator.of(context).push(ReceiptDetailScreen.route(receipt.id)),
-        child: LedgerRow(
-          name: receipt.merchant,
-          sub:
-              '${Fmt.dayMonth(receipt.date)} · ${receipt.itemCount} ÜRÜN'
-              '${receipt.pendingCount > 0 ? ' · ${receipt.pendingCount} EŞLEŞME' : ''}',
-          amount: Fmt.money(receipt.total),
-        ),
-      ),
-    );
+  State<_SwipeToDelete> createState() => _SwipeToDeleteState();
+}
+
+class _SwipeToDeleteState extends State<_SwipeToDelete>
+    with SingleTickerProviderStateMixin {
+  /// Satırın genişliğinin ne kadarını silme alanı kaplıyor.
+  static const _actionFraction = .30;
+
+  /// Kaydırmanın acik sayılması için gereken oran; hız bunu geçersiz kılıyor.
+  static const _openThreshold = .5;
+
+  late final AnimationController _slide = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 200),
+  );
+
+  double _actionWidth = 0;
+
+  bool get _isOpen => _slide.value > 0;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.openRow.addListener(_onOpenRowChanged);
   }
 
-  Future<bool> _confirm(BuildContext context) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: C.card,
-        title: const Text('Fişi sil', style: T.title),
-        content: Text(
-          '${receipt.merchant} · ${Fmt.dayMonth(receipt.date)} · '
-          '${Fmt.money(receipt.total)}\n\n'
-          'Bu fişin satırları ve fiyat gözlemleri silinir, endeks yeniden '
-          'hesaplanır. Bu işlem geri alınamaz.',
-          style: const TextStyle(fontSize: 12.5, height: 1.5, color: C.ink),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Vazgeç', style: TextStyle(color: C.muted)),
+  @override
+  void dispose() {
+    widget.openRow.removeListener(_onOpenRowChanged);
+    _slide.dispose();
+    super.dispose();
+  }
+
+  void _onOpenRowChanged() {
+    if (widget.openRow.value != widget.receipt.id && _isOpen) _close();
+  }
+
+  void _open() {
+    widget.openRow.value = widget.receipt.id;
+    _slide.animateTo(1, curve: Curves.easeOutCubic);
+  }
+
+  void _close() {
+    if (widget.openRow.value == widget.receipt.id) {
+      widget.openRow.value = null;
+    }
+    _slide.animateTo(0, curve: Curves.easeOutCubic);
+  }
+
+  void _onDragUpdate(DragUpdateDetails d) {
+    if (_actionWidth <= 0) return;
+    _slide.value = (_slide.value - d.primaryDelta! / _actionWidth).clamp(0, 1);
+  }
+
+  void _onDragEnd(DragEndDetails d) {
+    // Hızlı bir savurma yarıyı geçmese de açıyor; parmak yavaşsa konum
+    // belirliyor.
+    final v = d.primaryVelocity ?? 0;
+    if (v < -320) return _open();
+    if (v > 320) return _close();
+    _slide.value > _openThreshold ? _open() : _close();
+  }
+
+  /// Satıra dokunmak acikken kapatıyor, kapalıyken fişi açıyor.
+  ///
+  /// Açık satırın kendisi "kapat" düğmesi: kullanıcı vazgeçtiğinde geri
+  /// kaydırmak zorunda kalmasın.
+  void _onRowTap() {
+    if (_isOpen) {
+      _close();
+      return;
+    }
+    Navigator.of(context).push(ReceiptDetailScreen.route(widget.receipt.id));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        _actionWidth = box.maxWidth * _actionFraction;
+
+        return GestureDetector(
+          onHorizontalDragUpdate: _onDragUpdate,
+          onHorizontalDragEnd: _onDragEnd,
+          child: AnimatedBuilder(
+            animation: _slide,
+            builder: (context, child) {
+              final acik = _actionWidth * _slide.value;
+              return SizedBox(
+                width: box.maxWidth,
+                child: Stack(
+                  children: [
+                    // Satır kaymıyor, daralıyor.
+                    //
+                    // Kaydırmak platformun alışkanlığı ama burada işe
+                    // yaramıyor: silme alanı satırın %30'u ve satır o kadar
+                    // sola kayınca market adı ekranın solundan tamamen
+                    // çıkıyor — kullanıcı tam da silmeye basacakken neyi
+                    // sildiğini göremiyor. Daralınca ad yerinde kalıyor,
+                    // tutar da sağ kenara yapışık geliyor.
+                    //
+                    // Konumlanmamış tek çocuk bu: yığının yüksekliğini
+                    // satırın kendisi veriyor.
+                    SizedBox(
+                      width: box.maxWidth - acik,
+                      child: ClipRect(child: child),
+                    ),
+                    // Kapalıyken hiç kurulmuyor: sıfır genişlikte de olsa
+                    // ağaçta durursa "Sil" dokunulabilir ve okunabilir
+                    // kalıyor — ekranda görünmediği hâlde.
+                    if (acik > 0)
+                      Positioned(
+                        top: 0,
+                        bottom: 0,
+                        right: 0,
+                        width: acik,
+                        child: ClipRect(
+                          child: OverflowBox(
+                            alignment: Alignment.centerLeft,
+                            minWidth: _actionWidth,
+                            maxWidth: _actionWidth,
+                            child: _DeleteAction(onTap: () => _delete(context)),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+            child: Pressable(
+              onTap: _onRowTap,
+              child: LedgerRow(
+                name: widget.receipt.merchant,
+                sub:
+                    '${Fmt.dayMonth(widget.receipt.date)} · '
+                    '${widget.receipt.itemCount} ÜRÜN'
+                    '${widget.receipt.pendingCount > 0 ? ' · ${widget.receipt.pendingCount} EŞLEŞME' : ''}',
+                amount: Fmt.money(widget.receipt.total),
+              ),
+            ),
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Sil', style: TextStyle(color: C.hot)),
-          ),
-        ],
-      ),
+        );
+      },
     );
-    return ok ?? false;
   }
 
   Future<void> _delete(BuildContext context) async {
     final repo = context.read<Repository>();
     final messenger = ScaffoldMessenger.of(context);
+    final r = widget.receipt;
+    _close();
+
     try {
-      await repo.deleteReceipt(receipt.id);
+      await repo.deleteReceipt(r.id);
       if (context.mounted) refreshUserData(context);
-      messenger.showSnackBar(_snack('Fiş silindi'));
+      // Silinen fiş adıyla yazılıyor: işlem geri alınamıyor ve kullanıcının
+      // hangisinin gittiğini sonradan görebilmesi tek güvencesi.
+      messenger.showSnackBar(
+        _snack('${r.merchant} · ${Fmt.dayMonth(r.date)} silindi'),
+      );
     } on ApiException catch (e) {
-      // Silme başarısızsa satır listeden gitmiş olacak; listeyi tazeleyip
-      // fişi geri getiriyoruz — kullanıcı silindi sanmasın.
+      // Silme başarısızsa liste bayat kalmasın; fiş yerinde duruyor.
       if (context.mounted) refreshUserData(context);
       messenger.showSnackBar(_snack(e.message));
     }
@@ -152,4 +279,45 @@ class _SwipeToDelete extends StatelessWidget {
     behavior: SnackBarBehavior.floating,
     content: Text(text, style: const TextStyle(fontSize: 12.5, color: C.card)),
   );
+}
+
+/// Satırın yanından açılan silme alanı.
+///
+/// Genişliği satırın %30'u: parmakla rahat vurulacak kadar büyük, satırın
+/// kimliğini (market, tarih, tutar) sıkıştırmayacak kadar dar — kullanıcı
+/// neyi sildiğini basarken hâlâ görüyor.
+///
+/// Kenardan kenara keskin bir blok değil, yuvarlatılmış bir kart: listenin
+/// geri kalanı da öyle ve keskin dikdörtgen satırdan çok "uyarı bandı" gibi
+/// duruyordu.
+class _DeleteAction extends StatelessWidget {
+  const _DeleteAction({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        // Soldaki boşluk hem yumuşatıyor hem işlevsel: satır daralınca tutar
+        // tam kırmızının dibine geliyor ve "224,00" okunamaz hâle geliyordu.
+        margin: const EdgeInsets.fromLTRB(12, 4, 0, 4),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: C.hot,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Text(
+          'Sil',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: C.card,
+          ),
+        ),
+      ),
+    );
+  }
 }

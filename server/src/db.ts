@@ -6,6 +6,20 @@ import pg from 'pg';
 // toplama işlemleri zaten veritabanında yapılıyor.
 pg.types.setTypeParser(pg.types.builtins.NUMERIC, (v) => Number(v));
 
+// DATE olduğu gibi, dizge olarak dönüyor — Date nesnesine çevrilmiyor.
+//
+// Varsayılan çözümleyici "2026-08-24" gününü yerel gece yarısına bağlı bir
+// Date yapıyor; JSON'a yazılırken de UTC'ye çevriliyor ve tel üzerinde
+// "2026-08-23T21:00:00.000Z" görünüyor. İstemci bunu ayrıştırdığında elinde
+// UTC bir tarih oluyor ve gün alanını okuyunca 24 değil 23 çıkıyor: fişler
+// bir gün geriden görünüyordu.
+//
+// Tek tek sorgulara to_char eklemek işe yarıyordu ama her yeni sorguda
+// hatırlanması gereken bir şey bırakıyordu — ve unutulduğunda hata sessiz.
+// Kaynağı kapatmak daha güvenli: bu sütunların saat bileşeni zaten yok,
+// dolayısıyla saat dilimi de yok.
+pg.types.setTypeParser(pg.types.builtins.DATE, (v) => v);
+
 const connectionString =
   process.env.DATABASE_URL ?? 'postgres://localhost:5432/sepet';
 

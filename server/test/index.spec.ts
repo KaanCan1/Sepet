@@ -30,13 +30,19 @@ afterAll(async () => {
 
 /** Bir kullanıcının endeks serisini ay -> seviye olarak döndürür. */
 async function levels(s: Scenario) {
-  const rows = await query<{ month: Date; level: number; covered_weight: number }>(
+  // DATE artık dizge dönüyor (bkz. src/db.ts): tarihlerin saat dilimine
+  // hiç uğramaması için tür çözümleyicisi kapatıldı.
+  const rows = await query<{
+    month: string;
+    level: number;
+    covered_weight: number;
+  }>(
     `SELECT month, level, covered_weight FROM index_levels
       WHERE user_id = $1 ORDER BY month`,
     [s.userId],
   );
   return rows.map((r) => ({
-    month: r.month.toISOString().slice(0, 10),
+    month: r.month,
     level: r.level,
     covered: r.covered_weight,
   }));

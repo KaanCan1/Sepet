@@ -1,3 +1,4 @@
+import 'fmt.dart';
 import 'product_name.dart';
 
 /// Kanonik ürüne yapılan hafif atıf — eşleşme adayları ve zamlanan listesi
@@ -186,7 +187,7 @@ class PricePoint {
   final double unitPrice;
 
   static PricePoint fromJson(Map<String, dynamic> j) => PricePoint(
-    DateTime.parse(j['date'] as String),
+    Fmt.day(j['date'] as String),
     (j['packPrice'] as num).toDouble(),
     (j['unitPrice'] as num).toDouble(),
   );
@@ -233,7 +234,7 @@ class Receipt {
     return Receipt(
       id: j['id'] as String,
       merchant: j['merchant'] as String,
-      date: DateTime.parse(j['purchasedAt'] as String),
+      date: Fmt.day(j['purchasedAt'] as String),
       itemCount: (j['itemCount'] as num?)?.toInt() ?? lines.length,
       total: (j['total'] as num).toDouble(),
       pendingCount:
@@ -391,7 +392,7 @@ class BasketItem {
     bestName: j['bestName'] as String,
     bestMerchant: j['bestMerchant'] as String,
     bestUnitPrice: (j['bestUnitPrice'] as num).toDouble(),
-    bestSeenOn: DateTime.parse(j['bestSeenOn'] as String),
+    bestSeenOn: Fmt.day(j['bestSeenOn'] as String),
     bestPaid: (j['bestPaid'] as num).toDouble(),
     saved: (j['saved'] as num).toDouble(),
   );
@@ -489,7 +490,7 @@ class BreakdownPoint {
   final double coveredWeight;
 
   static BreakdownPoint fromJson(Map<String, dynamic> j) => BreakdownPoint(
-    month: DateTime.parse(j['month'] as String),
+    month: Fmt.day(j['month'] as String),
     level: (j['level'] as num).toDouble(),
     coveredWeight: (j['coveredWeight'] as num?)?.toDouble() ?? 0,
   );
@@ -546,7 +547,7 @@ class OfficialEntry {
   final double yoyPct;
 
   static OfficialEntry fromJson(Map<String, dynamic> j) => OfficialEntry(
-    month: DateTime.parse(j['month'] as String),
+    month: Fmt.day(j['month'] as String),
     yoyPct: (j['yoyPct'] as num).toDouble(),
   );
 }
