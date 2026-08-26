@@ -125,6 +125,15 @@ class FakeApi extends Api {
       'month': '2026-06-01',
       'yoyPct': 35.0,
     },
+    'GET /merchants': [
+      {'id': 'm-a101', 'name': 'A101', 'chainCode': 'A101'},
+      {'id': 'm-bim', 'name': 'BİM', 'chainCode': 'BIM'},
+    ],
+    'POST /merchants': {
+      'id': 'm-onur',
+      'name': 'Onur Market',
+      'chainCode': 'ONUR_MARKET',
+    },
     'GET /receipts': [
       {
         'id': 'r1',

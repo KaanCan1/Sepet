@@ -81,9 +81,23 @@ class _DraftReceiptScreenState extends State<DraftReceiptScreen> {
       context: context,
       backgroundColor: const Color(0x00000000),
       barrierColor: const Color(0x3316181A),
-      builder: (_) => _MerchantSheet(merchants: _merchants),
+      // Klavye açıldığında sayfa kısalmasın: ekleme alanı klavyenin
+      // altında kalıyordu.
+      isScrollControlled: true,
+      builder: (_) => _MerchantSheet(
+        merchants: _merchants,
+        initialName: _merchant == null ? widget.parsed.merchantName : null,
+      ),
     );
-    if (picked != null && mounted) setState(() => _merchant = picked);
+    if (picked == null || !mounted) return;
+    setState(() {
+      _merchant = picked;
+      // Yeni eklenen market listede yoktu; sayfa yeniden açılırsa görünsün.
+      if (!_merchants.any((m) => m.id == picked.id)) {
+        _merchants = [..._merchants, picked]
+          ..sort((a, b) => a.name.compareTo(b.name));
+      }
+    });
   }
 
   Future<void> _pickDate() async {
@@ -370,65 +384,192 @@ class _Warning extends StatelessWidget {
   );
 }
 
-/// Market seçimi.
-class _MerchantSheet extends StatelessWidget {
-  const _MerchantSheet({required this.merchants});
+/// Market seçimi — ve listede yoksa eklenmesi.
+///
+/// Liste yalnızca zincirlerden oluşuyordu ve bu, fişi kaydetmenin önünde
+/// katı bir duvardı: "Onur Market"ten alınan fiş hiçbir şekilde
+/// girilemiyordu. Endeks için marketin kim olduğu sabit bir kimlik olması
+/// dışında önemli değil; üstelik "aynı ürünü nerede daha ucuza aldım"
+/// sorusu ancak yerel marketler de listede olunca cevaplanabiliyor.
+class _MerchantSheet extends StatefulWidget {
+  const _MerchantSheet({required this.merchants, this.initialName});
 
   final List<Merchant> merchants;
+
+  /// Fişin başlığından okunan ad. Zincir tanınmadıysa dolu geliyor.
+  final String? initialName;
+
+  @override
+  State<_MerchantSheet> createState() => _MerchantSheetState();
+}
+
+class _MerchantSheetState extends State<_MerchantSheet> {
+  late final TextEditingController _query = TextEditingController(
+    text: widget.initialName ?? '',
+  );
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  String get _typed => _query.text.trim().replaceAll(RegExp(r'\s+'), ' ');
+
+  List<Merchant> get _visible {
+    final q = _typed.toLowerCase();
+    if (q.isEmpty) return widget.merchants;
+    return widget.merchants
+        .where((m) => m.name.toLowerCase().contains(q))
+        .toList();
+  }
+
+  /// Yazılan ad zaten listedeyse ekleme satırı çıkmıyor: aynı market iki
+  /// kez açılmasın diye. Sunucu da aynı kontrolü yapıyor, bu yalnızca
+  /// kullanıcıya gereksiz bir seçenek göstermemek için.
+  bool get _canAdd =>
+      _typed.length >= 2 &&
+      !widget.merchants.any(
+        (m) => m.name.toLowerCase() == _typed.toLowerCase(),
+      );
+
+  Future<void> _add() async {
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      final created = await context.read<Repository>().addMerchant(_typed);
+      if (mounted) Navigator.of(context).pop(created);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final pad = MediaQuery.paddingOf(context).bottom;
+    final inset = MediaQuery.viewInsetsOf(context).bottom;
+    final rows = _visible;
+
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
       child: GlassBar(
         borderSide: GlassEdge.none,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(18, 14, 18, 14 + pad),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: C.line,
-                    borderRadius: BorderRadius.circular(2),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+          ),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(18, 14, 18, 14 + pad + inset),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: C.line,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              const Lbl('MARKET'),
-              const SizedBox(height: 8),
-              PaperCard(
-                padding: EdgeInsets.zero,
-                child: Column(
-                  children: [
-                    for (var i = 0; i < merchants.length; i++) ...[
-                      if (i > 0) const Hairline(),
-                      Pressable(
-                        scale: .99,
-                        onTap: () => Navigator.of(context).pop(merchants[i]),
-                        child: Container(
-                          color: C.card,
-                          width: double.infinity,
-                          padding: const EdgeInsets.fromLTRB(13, 13, 13, 13),
-                          child: Text(
-                            merchants[i].name,
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              color: C.ink,
-                            ),
-                          ),
+                const SizedBox(height: 16),
+                const Lbl('MARKET'),
+                const SizedBox(height: 8),
+                PaperCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 13),
+                  child: TextField(
+                    controller: _query,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: 'Ara ya da yeni market yaz',
+                      hintStyle: TextStyle(fontSize: 13.5, color: C.muted),
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 13),
+                    ),
+                    style: const TextStyle(fontSize: 13.5, color: C.ink),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                if (_canAdd) ...[
+                  const SizedBox(height: 8),
+                  Pressable(
+                    onTap: _saving ? null : _add,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: _saving ? C.line : C.ink,
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: Text(
+                        _saving ? 'Ekleniyor…' : '"$_typed" olarak ekle',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: _saving ? C.muted : C.card,
                         ),
                       ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
+                    ),
+                  ),
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _error!,
+                    style: const TextStyle(fontSize: 12, color: C.hot),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                if (rows.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    child: Text(
+                      'Listede eşleşen market yok.',
+                      style: TextStyle(fontSize: 12, color: C.muted),
+                    ),
+                  )
+                else
+                  PaperCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < rows.length; i++) ...[
+                          if (i > 0) const Hairline(),
+                          Pressable(
+                            scale: .99,
+                            onTap: () => Navigator.of(context).pop(rows[i]),
+                            child: Container(
+                              color: C.card,
+                              width: double.infinity,
+                              padding: const EdgeInsets.fromLTRB(
+                                13,
+                                13,
+                                13,
+                                13,
+                              ),
+                              child: Text(
+                                rows[i].name,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: C.ink,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

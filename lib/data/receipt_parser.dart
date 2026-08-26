@@ -46,6 +46,7 @@ class ParsedReceipt {
   const ParsedReceipt({
     required this.lines,
     this.merchantCode,
+    this.merchantName,
     this.date,
     this.total,
   });
@@ -54,6 +55,11 @@ class ParsedReceipt {
 
   /// Tanınan zincir kodu (BIM, A101 …). Tanınmadıysa kullanıcı seçecek.
   final String? merchantCode;
+
+  /// Zincir tanınmadıysa fişin başlığından okunan ad — "ONUR LULEBURGAZ
+  /// TASKIN" gibi. Market ekleme alanına ön dolgu olarak giriyor; doğru
+  /// olduğu iddiasında değil, kullanıcı düzeltiyor.
+  final String? merchantName;
 
   final DateTime? date;
 
@@ -373,6 +379,7 @@ abstract final class ReceiptParser {
     return ParsedReceipt(
       lines: lines.where((l) => l.amount > 0).toList(),
       merchantCode: merchantCode,
+      merchantName: merchantCode == null ? _findMerchantName(rawLines) : null,
       date: date,
       total: odenecek ?? total,
     );
@@ -404,6 +411,23 @@ abstract final class ReceiptParser {
     final head = lines.take(8).map(normalize).join(' ');
     for (final entry in _chains.entries) {
       if (entry.value.any(head.contains)) return entry.key;
+    }
+    return null;
+  }
+
+  /// Zincir tanınmadığında fişin başlığındaki ad.
+  ///
+  /// Yerel marketlerin listede olmaması fişi kaydetmenin önünde duruyordu.
+  /// Ad tahmini basit ve bilerek öyle: rakam içermeyen, yeterince uzun ilk
+  /// başlık satırı. Yanlış tahmin pahalı değil — kullanıcı alanı düzenleyip
+  /// kaydediyor; boş bırakmak ise ona baştan yazdırıyor.
+  static String? _findMerchantName(List<String> lines) {
+    for (final line in lines.take(4)) {
+      final t = line.trim().replaceAll(RegExp(r'\s+'), ' ');
+      if (t.length < 3 || t.length > 40) continue;
+      if (RegExp(r'[0-9]').hasMatch(t)) continue;
+      if (!RegExp(r'[A-Za-zÇĞİÖŞÜçğıöşü]{3}').hasMatch(t)) continue;
+      return t;
     }
     return null;
   }
