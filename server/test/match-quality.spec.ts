@@ -52,10 +52,17 @@ describe('Eşleştirme kalitesi', () => {
         dogru++;
       }
     }
-    // Ölçülen: 52'de 45 (%86,5). Taban biraz altında — katalog büyüdükçe
+    // Ölçülen: 57'de 48 (%84,2). Taban biraz altında — katalog büyüdükçe
     // bir iki vaka yer değiştirebilir ve testin kırılganlık nöbeti
-    // geçirmesi istenmiyor. Ama 42'nin altı gerileme demek.
-    expect(dogru).toBeGreaterThanOrEqual(42);
+    // geçirmesi istenmiyor.
+    //
+    // Oran 52'de 45'ten (%86,5) düşük görünüyor: kümeye eklenen beş
+    // yapışık vakanın ikisi hâlâ soruluyor. Küme büyüdü ve zorlaştı,
+    // eşleştirme gerilemedi — eski 52 vakanın hepsi aynı sonucu veriyor.
+    //
+    // Taban 46: yapışık okuma olmadan bu küme tam 45 veriyor, yani bu
+    // sayı okumanın kendisini de tutuyor.
+    expect(dogru).toBeGreaterThanOrEqual(46);
   });
 
   it('katalogda olmayan ürün otomatik bağlanmıyor', async () => {
@@ -68,6 +75,30 @@ describe('Eşleştirme kalitesi', () => {
       if (o.auto) bagli.push(`${raw} -> ${o.auto.displayName}`);
     }
     expect(bagli).toEqual([]);
+  });
+
+  // Yazıcı adı boşluksuz ve kesik basınca satır okunamaz hâle geliyordu.
+  // "LOGİKAĞITHAV12Lİ" için katalogda Kağıt havlu grubu 16 ürünle
+  // duruyordu ama aday listesi BOŞ dönüyordu: eşleştirme belirteç
+  // bazlıydı ve belirtecin içine bakmıyordu. Aynı satır boşluklu
+  // yazıldığında ("KAGIT HAVLU 12LI") 0,69 ile eşleşiyor.
+  it('yapışık yazılmış satır doğru grubu buluyor', async () => {
+    const o = await matchCatalog('LOGIKAGITHAV12LI', 6);
+    expect(o.candidates.length).toBeGreaterThan(0);
+    expect(o.candidates[0]!.groupName).toBe('Kağıt havlu');
+    // Marka ("Logi") katalogda yok: listedeki bir markaya bağlamak
+    // uydurmak olur. Doğru davranış sormak.
+    expect(o.auto).toBeNull();
+  });
+
+  // Yapışık yazım yanlış eşleşmeyi KOLAYLAŞTIRMAMALI. Belirteç markayı
+  // içerdiği için tamamen karşılanmış sayılırsa fişte yazan ürün adı
+  // ortadan kayboluyor ve puan, boşluklu hâlinin ÜSTÜNE çıkıyor.
+  it('yapışık yazım puanı boşluklu hâlinin üstüne çıkarmıyor', async () => {
+    const yapisik = await matchCatalog('BALPARMAKPEKMEZ380G', 6);
+    const bosluklu = await matchCatalog('BALPARMAK PEKMEZ 380G', 6);
+    expect(yapisik.auto).toBeNull();
+    expect(yapisik.best!.score).toBeLessThan(bosluklu.best!.score + 0.05);
   });
 
   it('boy fişte yazmıyorsa soruluyor', async () => {
