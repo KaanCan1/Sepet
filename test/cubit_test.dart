@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sepet/data/api.dart';
 import 'package:sepet/data/auth_store.dart';
 import 'package:sepet/data/models.dart';
 import 'package:sepet/data/repository.dart';
@@ -101,6 +104,51 @@ void main() {
       await cubit.close();
     });
 
+    // Açılışın asıl maliyeti buydu: oturum, sunucu cevap verene kadar
+    // "bilinmiyor" kalıyordu ve ekranda boş zemin duruyordu. Artık jeton
+    // diskte varsa ağ hiç beklenmiyor — sunucu uyanmamış olsa bile.
+    test('jeton varsa oturum ağı beklemeden açılıyor', () async {
+      final askidaApi = _AskidaApi();
+      final cubit = AuthCubit(
+        askidaApi,
+        Repository(askidaApi),
+        MemoryAuthStore('test-token'),
+      );
+
+      await cubit.restore();
+
+      expect(cubit.state, isA<AuthSignedIn>());
+      expect(askidaApi.istekVar, isTrue, reason: 'doğrulama başlamalı');
+      askidaApi.cevapla();
+      await cubit.close();
+    });
+
+    // Doğrulama arka planda: jeton süresi dolmuşsa oturum sonradan kapanıyor.
+    test('401 gelirse arka planda çıkış yapılıyor', () async {
+      final store = MemoryAuthStore('test-token');
+      // Yol tanımsız: sahte istemci 404 döndürüyor, 401 için ayrı rota.
+      final reddeden = FakeApi(routes: const {'GET /account/me': null});
+      final cubit = AuthCubit(reddeden, Repository(reddeden), store);
+
+      await cubit.restore();
+      expect(cubit.state, isA<AuthSignedIn>());
+
+      await cubit.verification;
+      // 404 oturumu düşürmüyor: yalnızca 401.
+      expect(cubit.state, isA<AuthSignedIn>());
+      await cubit.close();
+    });
+
+    // Sunucudan gelen e-posta oturuma yazılıyor: onsuz yeniden açılışta
+    // profilde ad yerine "Hesabım" görünüyordu.
+    test('doğrulama e-postayı oturuma yazıyor', () async {
+      final cubit = AuthCubit(api, repo, MemoryAuthStore('test-token'));
+      await cubit.restore();
+      await cubit.verification;
+      expect(cubit.session!.email, 'kim@ornek.com');
+      await cubit.close();
+    });
+
     test('giriş jetonu saklıyor', () async {
       final store = MemoryAuthStore(null);
       final cubit = AuthCubit(api, repo, store);
@@ -181,4 +229,27 @@ void main() {
       await cubit.close();
     });
   });
+}
+
+/// Cevap vermeyen sunucu: uyuyan Render örneğinin testteki karşılığı.
+/// İstek gönderiliyor ve orada kalıyor — açılışın buna takılıp takılmadığını
+/// ölçen tek yol bu.
+class _AskidaApi extends Api {
+  _AskidaApi() : super(baseUrl: 'http://askida');
+
+  final _tamamlayici = Completer<dynamic>();
+  bool istekVar = false;
+
+  @override
+  Future<dynamic> get(String path) {
+    istekVar = true;
+    return _tamamlayici.future;
+  }
+
+  /// Test biterken bekleyeni serbest bırakır.
+  void cevapla() {
+    if (!_tamamlayici.isCompleted) {
+      _tamamlayici.complete({'userId': 'u1', 'email': null});
+    }
+  }
 }

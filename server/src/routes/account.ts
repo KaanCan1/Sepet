@@ -18,3 +18,17 @@ accountRouter.delete('/', async (req: AuthedRequest, res) => {
   await query(`DELETE FROM users WHERE id = $1`, [req.userId]);
   res.json({ ok: true });
 });
+
+/// Jetonun hâlâ geçerli olup olmadığını söyleyen ucuz uç.
+///
+/// Doğrulamanın kendisi `requireAuth`'ta oluyor: buraya girildiyse jeton
+/// çözülmüş ve hesap duruyor demek. Uygulama açılışta bunu çağırıyor —
+/// eskiden `/index` çağırıyordu ve endeks SQL'i tam olarak "oturum hâlâ
+/// açık mı" sorusunu cevaplamak için çalışıyordu.
+accountRouter.get('/me', async (req: AuthedRequest, res) => {
+  const rows = await query<{ email: string | null }>(
+    `SELECT email FROM users WHERE id = $1`,
+    [req.userId],
+  );
+  res.json({ userId: req.userId, email: rows[0]?.email ?? null });
+});

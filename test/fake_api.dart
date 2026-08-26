@@ -25,6 +25,7 @@ class FakeApi extends Api {
   /// İki ürün, üç ay: endeks 100 -> 116 -> 120,83 (%20,8).
   static Map<String, Object?> get defaultRoutes => {
     'POST /auth/dev-login': {'token': 'test-token', 'userId': 'u1'},
+    'GET /account/me': {'userId': 'u1', 'email': 'kim@ornek.com'},
     'GET /index': {
       'headline': {
         'changePct': 20.8,

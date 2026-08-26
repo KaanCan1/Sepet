@@ -34,10 +34,24 @@ class IndexCubit extends DataCubit<IndexHome> {
 
   final Repository _repo;
 
+  /// Üç istek birbirini beklemiyor: sıralı yazıldığında ekranın açılması üç
+  /// gidiş-dönüşün toplamı kadar sürüyordu, oysa aralarında bağımlılık yok.
+  ///
+  /// Kayıt (record) sözdizimindeki `.wait` yerine [Future.wait]: o, hataları
+  /// `ParallelWaitError` içinde sarmalıyor ve DataCubit'in yakaladığı
+  /// `ApiException` görünmez oluyor — sunucu hatası ekranda hata durumuna
+  /// düşmek yerine yakalanmamış istisnaya dönüşüyordu.
   @override
-  Future<IndexHome> fetch() async => IndexHome(
-    snapshot: await _repo.index(),
-    receipts: await _repo.receipts(),
-    basket: await _repo.basketCompare(),
-  );
+  Future<IndexHome> fetch() async {
+    final r = await Future.wait<dynamic>([
+      _repo.index(),
+      _repo.receipts(),
+      _repo.basketCompare(),
+    ]);
+    return IndexHome(
+      snapshot: r[0] as IndexSnapshot,
+      receipts: r[1] as List<Receipt>,
+      basket: r[2] as BasketCompare,
+    );
+  }
 }

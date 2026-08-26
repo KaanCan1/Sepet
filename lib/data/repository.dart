@@ -1,5 +1,6 @@
 import 'api.dart';
 import 'models.dart';
+import 'session.dart';
 
 /// Endeks ekranının tek seferde ihtiyaç duyduğu her şey.
 class IndexSnapshot {
@@ -49,6 +50,16 @@ class Repository {
   const Repository(this._api);
 
   final Api _api;
+
+  /// Açık oturumun sahibi. Jeton geçersizse 401 dönüyor — açılıştaki
+  /// doğrulama bu ucu kullanıyor, çünkü endeksin hesaplanması gerekmiyor.
+  Future<Session> me() async {
+    final json = await _api.get('/account/me') as Map<String, dynamic>;
+    return Session(
+      provider: AuthProvider.email,
+      email: json['email'] as String?,
+    );
+  }
 
   Future<IndexSnapshot> index() async =>
       IndexSnapshot.fromJson(await _api.get('/index') as Map<String, dynamic>);

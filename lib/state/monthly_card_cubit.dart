@@ -21,9 +21,16 @@ class MonthlyCardCubit extends DataCubit<MonthlyCard> {
   final Repository _repo;
 
   @override
-  Future<MonthlyCard> fetch() async => MonthlyCard(
-    snapshot: await _repo.index(),
-    movers: await _repo.movers(),
-    receipts: await _repo.receipts(),
-  );
+  Future<MonthlyCard> fetch() async {
+    final r = await Future.wait<dynamic>([
+      _repo.index(),
+      _repo.movers(),
+      _repo.receipts(),
+    ]);
+    return MonthlyCard(
+      snapshot: r[0] as IndexSnapshot,
+      movers: r[1] as List<Mover>,
+      receipts: r[2] as List<Receipt>,
+    );
+  }
 }
