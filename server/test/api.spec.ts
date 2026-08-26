@@ -41,6 +41,20 @@ afterAll(async () => {
 
 const auth = () => ({ Authorization: `Bearer ${token}` });
 
+describe('GET /account/me', () => {
+  // Uygulama açılışta jetonu bununla doğruluyor. Endeks SQL'i çalıştırmadan
+  // cevap vermesi bu ucun tek varlık sebebi.
+  it('oturumun sahibini döndürüyor', async () => {
+    const res = await request(app).get('/account/me').set(auth()).expect(200);
+    expect(res.body.userId).toBe(userId);
+    expect(res.body.email).toMatch(/@sepet\.test$/);
+  });
+
+  it('jetonsuz 401', async () => {
+    await request(app).get('/account/me').expect(401);
+  });
+});
+
 /** Belirtilen ay ofsetinde bir tarih üretir. */
 function monthsAgo(n: number, day = 14): string {
   const d = new Date();

@@ -44,8 +44,20 @@ class Api {
 
   String? _token;
 
-  // ignore: use_setters_to_change_properties
-  void setToken(String? token) => _token = token;
+  void setToken(String? token) {
+    _token = token;
+    // Kimlik değişti: uçuştaki cevaplar artık başka birine ait.
+    _inflight.clear();
+  }
+
+  /// Uçuştaki GET istekleri, yol -> cevap. Aynı yol iki kez istenirse ikinci
+  /// çağrı birincinin cevabını bekliyor.
+  ///
+  /// Açılışta bunun somut karşılığı var: endeks ekranı da fişler sekmesi de
+  /// `/receipts` istiyor ve ikisi birlikte yükleniyor. Sunucu aynı yanıtı iki
+  /// kez hesaplıyordu. Yalnızca GET: gövdeli yöntemler yan etkili, birinin
+  /// yerine ötekinin cevabı verilemez.
+  final Map<String, Future<dynamic>> _inflight = {};
 
   /// İlk deneme. Uyanık bir sunucu bunun çok altında cevap veriyor.
   final Duration _timeout;
@@ -105,8 +117,17 @@ class Api {
     }
   }
 
-  Future<dynamic> get(String path) =>
-      _send(() => _client.get(Uri.parse('$baseUrl$path'), headers: _headers));
+  Future<dynamic> get(String path) {
+    final running = _inflight[path];
+    if (running != null) return running;
+    final future = _send(
+      () => _client.get(Uri.parse('$baseUrl$path'), headers: _headers),
+    );
+    _inflight[path] = future;
+    // Kayıt cevap gelince siliniyor; sonraki çağrı yeniden sunucuya gidiyor.
+    // Bu bir önbellek değil, yalnızca eşzamanlı isteklerin birleştirilmesi.
+    return future.whenComplete(() => _inflight.remove(path));
+  }
 
   Future<dynamic> put(String path, [Object? body]) => _send(
     () => _client.put(

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../data/api.dart';
@@ -43,7 +44,24 @@ class AuthCubit extends Cubit<AuthState> {
     _ => null,
   };
 
+  /// Arka planda süren jeton doğrulaması. Yalnızca testler bekliyor;
+  /// açılış yolu bilerek beklemiyor.
+  @visibleForTesting
+  Future<void>? verification;
+
   /// Açılışta bir kez: jetonu diskten okuyup istemciye yerleştirir.
+  ///
+  /// Jeton varsa oturum HEMEN açık sayılıyor ve doğrulama arka plana
+  /// alınıyor. Eskiden burada `/index` beklenirdi ve o bitene kadar ekranda
+  /// boş kâğıt zemin dururdu: Render ücretsiz katmanda uyuyan sunucu
+  /// uyanana kadar bu bekleyiş 12 sn + 50 sn'lik iki denemeye kadar
+  /// uzuyordu. Kullanıcının gördüğü şey bir dakikalık beyaz ekrandı,
+  /// üstelik henüz hiçbir şey yanlış gitmemişken.
+  ///
+  /// İyimserlik bedava değil: süresi dolmuş jetonla kabuk bir an açılıp
+  /// karşılama ekranına düşülüyor. Karşılığında açılış, Keychain okumasının
+  /// süresine iniyor. Eski kod zaten ağ hatasında oturumu koruyordu —
+  /// yani oturumu düşüren tek şey hâlâ 401.
   Future<void> restore() async {
     final token = await _store.read();
     if (token == null) {
@@ -51,18 +69,21 @@ class AuthCubit extends Cubit<AuthState> {
       return;
     }
     _api.setToken(token);
+    emit(const AuthSignedIn(Session(provider: AuthProvider.email)));
+    verification = _verify();
+  }
+
+  /// Jeton hâlâ geçerli mi? Süresi dolmuşsa ya da hesap silinmişse giriş
+  /// ekranına düşülüyor. Sunucudan gelen e-posta da buradan alınıyor:
+  /// onsuz yeniden açılışta profilde ad yerine "Hesabım" yazıyordu.
+  Future<void> _verify() async {
     try {
-      // Jeton hâlâ geçerli mi? Süresi dolmuşsa ya da hesap silinmişse
-      // giriş ekranına düşülmeli.
-      await _repo.index();
-      emit(const AuthSignedIn(Session(provider: AuthProvider.email)));
+      final session = await _repo.me();
+      if (!isClosed) emit(AuthSignedIn(session));
     } on ApiException catch (e) {
-      if (e.isUnauthorized) {
-        await signOut();
-        return;
-      }
+      if (isClosed) return;
       // Ağ hatası jetonu geçersiz kılmaz — oturumu koru.
-      emit(const AuthSignedIn(Session(provider: AuthProvider.email)));
+      if (e.isUnauthorized) await signOut();
     }
   }
 
