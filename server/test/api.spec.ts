@@ -31,6 +31,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (userId) await query(`DELETE FROM users WHERE id = $1`, [userId]);
+  // Test kendi açtığı marketleri bırakmasın.
+  await query(`DELETE FROM merchants WHERE name LIKE 'Onur Market 1%'`);
   // Test kendi alias izini bırakmasın.
   await query(
     `DELETE FROM product_aliases WHERE raw_text_normalized = normalize_raw_text($1)`,
@@ -40,6 +42,45 @@ afterAll(async () => {
 });
 
 const auth = () => ({ Authorization: `Bearer ${token}` });
+
+describe('POST /merchants', () => {
+  // Liste yalnızca zincirlerdi ve yerel bir marketin fişi hiç girilemiyordu.
+  const ad = `Onur Market ${Date.now()}`;
+
+  it('yeni market açıyor', async () => {
+    const res = await request(app)
+      .post('/merchants')
+      .set(auth())
+      .send({ name: ad })
+      .expect(201);
+    expect(res.body.name).toBe(ad);
+    expect(res.body.id).toBeTruthy();
+  });
+
+  // Aynı ad ikinci kez gönderilirse yenisi açılmamalı: iki kayıt, aynı
+  // marketin fiyat geçmişini ikiye bölerdi.
+  it('aynı ad ikinci kez yeni kayıt açmıyor', async () => {
+    const ilk = await request(app)
+      .post('/merchants')
+      .set(auth())
+      .send({ name: ad })
+      .expect(201);
+    const ikinci = await request(app)
+      .post('/merchants')
+      .set(auth())
+      .send({ name: `  ${ad.toLowerCase()}  ` })
+      .expect(201);
+    expect(ikinci.body.id).toBe(ilk.body.id);
+  });
+
+  it('çok kısa ad reddediliyor', async () => {
+    await request(app)
+      .post('/merchants')
+      .set(auth())
+      .send({ name: 'A' })
+      .expect(400);
+  });
+});
 
 describe('GET /account/me', () => {
   // Uygulama açılışta jetonu bununla doğruluyor. Endeks SQL'i çalıştırmadan

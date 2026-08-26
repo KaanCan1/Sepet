@@ -259,6 +259,15 @@ class Repository {
         .toList();
   }
 
+  /// Listede olmayan bir marketi ekler ve kimliğiyle döndürür.
+  ///
+  /// Aynı ad ikinci kez gönderilirse yenisi açılmıyor: sunucu
+  /// normalleştirilmiş ada bakıp mevcut olanı döndürüyor.
+  Future<Merchant> addMerchant(String name) async {
+    final json = await _api.post('/merchants', {'name': name});
+    return Merchant.fromJson(json as Map<String, dynamic>);
+  }
+
   /// Fişi kaydeder ve kimliğini döndürür. Sunucu satırları tek işlemde yazıp
   /// endeksi tazeliyor.
   Future<String> createReceipt({

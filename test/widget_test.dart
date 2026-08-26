@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sepet/data/app_scope.dart';
 import 'package:sepet/data/auth_store.dart';
 import 'package:sepet/data/fmt.dart';
+import 'package:sepet/data/receipt_parser.dart';
+import 'package:sepet/screens/draft_receipt_screen.dart';
 import 'package:sepet/screens/root_gate.dart';
 import 'package:sepet/screens/shell.dart';
 import 'package:sepet/screens/welcome_screen.dart';
@@ -893,6 +895,76 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(api.calls, contains('DELETE /receipts'));
+    });
+  });
+
+  group('Market ekleme', () {
+    // Listede olmayan market fişi kaydetmenin önünde katı bir duvardı:
+    // "Onur Market"ten alınan fiş hiçbir şekilde girilemiyordu.
+    ParsedReceipt taslak() => const ParsedReceipt(
+      lines: [ParsedLine(raw: 'DURU LIMON KOLO', quantity: 1, amount: 145)],
+      merchantName: 'ONUR LULEBURGAZ TASKIN',
+      total: 145,
+    );
+
+    Widget ekran(FakeApi api) => AppScope(
+      api: api,
+      authStore: MemoryAuthStore('test-token'),
+      child: MaterialApp(
+        locale: const Locale('tr', 'TR'),
+        home: DraftReceiptScreen(parsed: taslak()),
+      ),
+    );
+
+    testWidgets('fişten okunan ad ekleme alanına ön dolgu geliyor', (
+      tester,
+    ) async {
+      final api = FakeApi();
+      await tester.pumpWidget(ekran(api));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Seç'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('"ONUR LULEBURGAZ TASKIN" olarak ekle'), findsOneWidget);
+    });
+
+    testWidgets('yeni market sunucuya gidiyor ve seçili kalıyor', (
+      tester,
+    ) async {
+      final api = FakeApi();
+      await tester.pumpWidget(ekran(api));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Seç'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'Onur Market');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('"Onur Market" olarak ekle'));
+      await tester.pumpAndSettle();
+
+      expect(api.calls, contains('POST /merchants'));
+      // Sayfa kapandı ve market seçildi: artık "Önce market seç" yazmıyor.
+      expect(find.text('Onur Market'), findsOneWidget);
+      expect(find.text('Sepete ekle'), findsOneWidget);
+    });
+
+    // Listedeki bir market yeniden açılmasın: aynı ad iki kayıt üretmemeli.
+    testWidgets('listede olan ad için ekleme satırı çıkmıyor', (tester) async {
+      final api = FakeApi();
+      await tester.pumpWidget(ekran(api));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Seç'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'A101');
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('olarak ekle'), findsNothing);
+      // Biri arama kutusunda, biri listede: satır süzülmüş olarak duruyor.
+      expect(find.text('A101'), findsNWidgets(2));
+      expect(find.text('BİM'), findsNothing);
     });
   });
 }
