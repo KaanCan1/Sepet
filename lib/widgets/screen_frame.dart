@@ -1,8 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../screens/shell.dart';
 import '../theme/tokens.dart';
 import 'glass.dart';
+import 'pull_refresh.dart';
 
 /// Her ekranın ortak kabuğu: içerik akar, üstteki bar camdan onu bulanıklaştırır.
 class ScreenFrame extends StatelessWidget {
@@ -15,6 +17,7 @@ class ScreenFrame extends StatelessWidget {
     this.footer,
     this.reserveTabBar = false,
     this.showTopBar = true,
+    this.onRefresh,
   });
 
   final String? title;
@@ -27,6 +30,13 @@ class ScreenFrame extends StatelessWidget {
 
   final bool reserveTabBar;
   final bool showTopBar;
+
+  /// Aşağı çekince çalışan tazeleme. Verilmezse gösterge hiç kurulmuyor.
+  ///
+  /// Döndürdüğü Future işin bitişini söylüyor: gösterge ona bakarak
+  /// toplanıyor. Sabit süreli bir animasyon, yavaş ağda veri gelmeden
+  /// "güncel" der.
+  final Future<void> Function()? onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +52,28 @@ class ScreenFrame extends StatelessWidget {
               parent: AlwaysScrollableScrollPhysics(),
             ),
             slivers: [
+              // Yenileme denetimi İLK sliver olmak zorunda. Üst boşluğun
+              // arkasına konunca aşırı kaydırma ona hiç ulaşmıyor ve
+              // gösterge sessizce hiç çıkmıyordu.
+              if (onRefresh != null)
+                CupertinoSliverRefreshControl(
+                  // Eşik AŞIRI KAYDIRMA pikseli cinsinden, parmak yolu
+                  // değil. Zıplayan fizik çekişi sönümlediği için 110'luk
+                  // eşik ekranda 270 piksellik bir çekişe denk geliyordu —
+                  // kimsenin o kadar çekmesi beklenmez. 80 ölçülerek
+                  // seçildi: yaklaşık 180 piksel, rahat bir başparmak
+                  // hareketi, ama kazara kaydırmayla ulaşılacak kadar da
+                  // kısa değil.
+                  refreshTriggerPullDistance: 80,
+                  refreshIndicatorExtent: 68,
+                  onRefresh: onRefresh,
+                  builder: (context, mode, pulled, trigger, _) =>
+                      PaperRefreshIndicator(
+                        mode: mode,
+                        pulled: pulled,
+                        trigger: trigger,
+                      ),
+                ),
               SliverPadding(
                 padding: EdgeInsets.only(
                   top: pad.top + (showTopBar ? kTopBarHeight : 0) + 4,

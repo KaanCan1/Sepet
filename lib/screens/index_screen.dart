@@ -31,6 +31,7 @@ class IndexScreen extends StatelessWidget {
     return ScreenFrame(
       title: 'Sepetin',
       reserveTabBar: true,
+      onRefresh: () => refreshUserData(context),
       slivers: [
         SliverToBoxAdapter(
           // Boş durum DataView'a bırakılmıyor: o yalnızca ortada bir metin

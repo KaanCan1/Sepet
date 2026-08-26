@@ -394,6 +394,93 @@ void main() {
     });
   });
 
+  // Hazır çarkı kullanmıyoruz: uygulamanın dili kâğıt fiş. Gösterge
+  // çekildikçe açılan bir kesme çizgisi ve üstünde gidip gelen bir baskı
+  // kafası; hâller etiketle de okunuyor.
+  group('Aşağı çekerek yenileme', () {
+    Widget app(FakeApi api) => AppScope(
+      api: api,
+      authStore: MemoryAuthStore('test-token'),
+      child: MaterialApp(
+        locale: const Locale('tr', 'TR'),
+        home: const RootGate(),
+      ),
+    );
+
+    /// Parmak yolu, aşırı kaydırma pikseli değil: zıplayan fizik çekişi
+    /// sönümlüyor ve eşik ekranda bunun iki katına denk geliyor.
+    Future<TestGesture> cek(WidgetTester tester, double yol) async {
+      final g = await tester.startGesture(const Offset(400, 200));
+      // İlk adım kısa: dokunma eşiği onu yutuyor, kaydırma oradan
+      // başlıyor. Sonrası eşit adımlar — tek büyük sıçrama aradaki
+      // hâlleri hiç üretmiyor.
+      var kalan = yol;
+      final ilk = kalan < 30 ? kalan : 30.0;
+      await g.moveBy(Offset(0, ilk));
+      await tester.pump(const Duration(milliseconds: 16));
+      kalan -= ilk;
+      while (kalan > 0) {
+        final adim = kalan < 60 ? kalan : 60.0;
+        await g.moveBy(Offset(0, adim));
+        await tester.pump(const Duration(milliseconds: 16));
+        kalan -= adim;
+      }
+      return g;
+    }
+
+    testWidgets('çekme ilerledikçe hâl değişiyor', (tester) async {
+      await tester.pumpWidget(app(FakeApi()));
+      await tester.pumpAndSettle();
+
+      // Durağan hâlde gösterge hiç kurulmuyor.
+      expect(find.text('ÇEK'), findsNothing);
+
+      final g = await cek(tester, 90);
+      expect(find.text('ÇEK'), findsOneWidget);
+
+      // Eşiği geçince bırakmaya davet ediyor.
+      await g.moveBy(const Offset(0, 60));
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(find.text('BIRAK'), findsOneWidget);
+
+      await g.up();
+      await tester.pump(const Duration(seconds: 1));
+    });
+
+    testWidgets('bırakınca veri gerçekten yeniden çekiliyor', (tester) async {
+      final api = FakeApi();
+      await tester.pumpWidget(app(api));
+      await tester.pumpAndSettle();
+
+      final oncesi = api.calls.where((c) => c == 'GET /index').length;
+
+      final g = await cek(tester, 150);
+      await g.up();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Gösterge sahte bir animasyon değil: sunucuya gidiyor.
+      expect(
+        api.calls.where((c) => c == 'GET /index').length,
+        greaterThan(oncesi),
+      );
+    });
+
+    testWidgets('eşiğin altında bırakınca yenilenmiyor', (tester) async {
+      final api = FakeApi();
+      await tester.pumpWidget(app(api));
+      await tester.pumpAndSettle();
+
+      final oncesi = api.calls.where((c) => c == 'GET /index').length;
+
+      // Listeyi kaydırmak isteyen parmak yanlışlıkla tazelemeye düşmemeli.
+      final g = await cek(tester, 60);
+      await g.up();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(api.calls.where((c) => c == 'GET /index').length, oncesi);
+    });
+  });
+
   group('Fiş silme', () {
     // Önce kaydırmanın kendisi siliyordu ve onay ayrı bir uyarı
     // penceresinden isteniyordu. Şimdi kaydırma yalnızca kırmızı alanı

@@ -14,8 +14,12 @@ import 'receipts_cubit.dart';
 ///
 /// [silent] veriliyor: ekranlar yükleniyor durumuna düşüp içeriği bir anlığına
 /// boşaltmasın, eldeki veri yenisi gelene kadar kalsın.
-void refreshUserData(BuildContext context) {
-  context.read<IndexCubit>().load(silent: true);
-  context.read<ReceiptsCubit>().load(silent: true);
-  context.read<ProductsCubit>().load(silent: true);
-}
+///
+/// Üçü birden bitince tamamlanan bir Future dönüyor: aşağı çekerek
+/// tazeleme göstergesi ona bakarak toplanıyor. Çağıranların çoğu sonucu
+/// beklemiyor, o da geçerli — bekleyen tek yer tazeleme göstergesi.
+Future<void> refreshUserData(BuildContext context) => Future.wait([
+  context.read<IndexCubit>().load(silent: true),
+  context.read<ReceiptsCubit>().load(silent: true),
+  context.read<ProductsCubit>().load(silent: true),
+]);
