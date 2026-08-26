@@ -82,6 +82,16 @@ export const MATCH_CASES: MatchCase[] = [
   { raw: 'DOMESTOS YUZEY TEMIZLEYICI 750ML', group: 'Yüzey temizleyici', brand: 'Domestos', size: '750 mL' },
   { raw: 'SEK KAYMAK 200G', group: 'Kaymak', brand: 'Sek', size: '200 g' },
   { raw: 'NESCAFE GOLD 100G', group: 'Kahve, hazır', brand: 'Nescafe', size: '100 g' },
+  // Yapışık yazım — A101 ve e-arşiv yazıcıları adı boşluksuz basıyor.
+  // Boşluklu hâlleri zaten eşleşiyordu; ölçülen şey okumanın kendisi.
+  { raw: 'PINARYOGURT1.5KG', group: 'Yoğurt', brand: 'Pınar', size: '1,5 kg' },
+  { raw: 'BALKUPUTOZSEKER1KG', group: 'Şeker, toz', brand: 'Balküpü', size: '1 kg' },
+  { raw: 'FILIZBURGUMAKARNA500G', group: 'Makarna, burgu', brand: 'Filiz', size: '500 g' },
+  { raw: 'ERIKLISU5L', group: 'Su, doğal kaynak', brand: 'Erikli', size: '5 litre' },
+  // Ürün adı üç harf ("SUT") ve markanın hemen ardında: yapışık metinde
+  // kısa kelime aramak rastgele eşleşme ürettiği için bu satır hâlâ
+  // soruluyor. Doğru aday tepede — yanlış bağlanmıyor.
+  { raw: 'SUTASSUT1L', group: 'Süt, tam yağlı', brand: 'Sütaş', size: '1 litre' },
 ];
 
 /**
@@ -127,6 +137,15 @@ export const NEGATIVE_CASES: string[] = [
   'BALPARMAK PEKMEZ 380G',
   'KOSKA LOKUM 350G',
   'DORITOS SOS 300G',
+  // Yapışık yazım yanlış eşleşmeyi KOLAYLAŞTIRMAMALI. Belirteç markayı
+  // içerdiği için tamamen karşılanmış sayılırsa fişte yazan "PEKMEZ"
+  // ortadan kayboluyor ve puan boşluklu hâlinin üstüne çıkıyordu.
+  'BALPARMAKPEKMEZ380G',
+  'PINARLABNE200G',
+  // Markası katalogda olmayan yapışık satır: A101'in kendi markası.
+  // Kağıt havlu grubu katalogda var ama bunu Viva'ya bağlamak uydurmak
+  // olur — doğru davranış sormak.
+  'LOGIKAGITHAV12LI',
   // Katalogla hiç teması olmayan kalem.
   'MARLBORO TOUCH',
   'TADIM KURUYEMIS 150G',
