@@ -54,13 +54,43 @@ describe('API', () => {
   it('canlılık ucu veritabanına dokunmuyor', async () => {
     // Render dağıtım kararını buna bakarak veriyor; Neon askıdayken bile
     // 200 dönmeli, yoksa soğuk başlatma dağıtımı öldürür.
-    await request(app).get('/health').expect(200, { ok: true });
+    const res = await request(app).get('/health').expect(200);
+    expect(res.body.ok).toBe(true);
+
+    // Cevapta veritabanından gelen HİÇBİR alan olmamalı. Katalog sayısını
+    // buraya eklemek canlılık kontrolünü veritabanına bağlar ve tam da
+    // kaçınılan şeyi geri getirir.
+    expect(res.body).not.toHaveProperty('catalog');
+    expect(res.body).not.toHaveProperty('latencyMs');
+  });
+
+  it('canlılık ucu çalışan sürümü söylüyor', async () => {
+    // "Yeni kod canlıda mı?" sorusu dışarıdan cevaplanabilmeli. Uçların
+    // 401 dönmesi kanıt değil: requireAuth bütün router'a bağlı ve yolu
+    // olmayan bir istek de 401 dönüyor.
+    const res = await request(app).get('/health').expect(200);
+    expect(res.body).toHaveProperty('commit');
+    // Testte ortam değişkeni yok; alanın VARLIĞI sözleşme, değeri değil.
+    expect(res.body.commit === null || typeof res.body.commit === 'string')
+      .toBe(true);
   });
 
   it('hazırlık ucu veritabanını gerçekten yokluyor', async () => {
     const res = await request(app).get('/health/db').expect(200);
     expect(res.body.ok).toBe(true);
     expect(typeof res.body.latencyMs).toBe('number');
+  });
+
+  it('hazırlık ucu katalog sayılarını veriyor', async () => {
+    // Sayılar bir dağıtımın tohumu gerçekten uygulayıp uygulamadığını
+    // söylüyor: migration geçip katalog yüklenmediyse commit yeni görünür
+    // ama ürün sayısı eski kalır.
+    const res = await request(app).get('/health/db').expect(200);
+    expect(res.body.catalog.products).toBeGreaterThan(0);
+    expect(res.body.catalog.groups).toBeGreaterThan(0);
+    expect(res.body.catalog.products).toBeGreaterThanOrEqual(
+      res.body.catalog.groups,
+    );
   });
 
   it('oturumsuz istek 401 döner', async () => {

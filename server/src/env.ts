@@ -4,8 +4,27 @@
  */
 const dev = (process.env.NODE_ENV ?? 'development') !== 'production';
 
+/**
+ * Çalışan sürümün commit'i.
+ *
+ * Render bunu her dağıtımda kendi veriyor (RENDER_GIT_COMMIT). Yereldeyse
+ * yok ve olmaması normal — o yüzden eksikliği açılışta patlatılmıyor.
+ *
+ * Buna ihtiyaç ölçerek doğdu: "yeni kod canlıda mı?" sorusunu dışarıdan
+ * cevaplamanın hiçbir yolu yoktu. Uçların 401 dönmesi kanıt sanılmıştı,
+ * oysa requireAuth bütün router'a bağlı ve YOLU OLMAYAN bir istek de 401
+ * dönüyor. Dağıtımın geçip geçmediği tahminle konuşuluyordu.
+ */
+function commitOku(): string | null {
+  const ham = process.env.RENDER_GIT_COMMIT ?? process.env.GIT_COMMIT ?? '';
+  const temiz = ham.trim();
+  // Kısa hâli yeterli ve göze okunur; tam SHA'yı arayan zaten depoya bakar.
+  return temiz ? temiz.slice(0, 7) : null;
+}
+
 export const env = {
   isDev: dev,
+  commit: commitOku(),
   // 3000 sıklıkla dolu oluyor; Sepet 4000'de.
   port: Number(process.env.PORT ?? 4000),
   databaseUrl:
