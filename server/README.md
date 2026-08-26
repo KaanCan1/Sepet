@@ -41,6 +41,29 @@ aynı anda iki örnek açılsa da yarışmıyorlar.
 > desteklemiyor. Ücretli plana geçilirse oraya taşınabilir — o zaman her
 > uyanışta değil yalnızca dağıtımda çalışır.
 
+### Dağıtım gerçekten geçti mi
+
+Tek istekle bakılıyor:
+
+```bash
+curl -s https://sepet-api.onrender.com/health
+# {"ok":true,"commit":"318909d"}
+
+curl -s https://sepet-api.onrender.com/health/db
+# {"ok":true,"latencyMs":12,"commit":"318909d","catalog":{"products":437,"groups":96}}
+```
+
+`commit` Render'ın verdiği `RENDER_GIT_COMMIT`; `main`'in ucuyla
+karşılaştırılıyor. Yereldeyse `null` ve olması gereken de bu.
+
+Katalog sayıları `/health/db`'de, `/health`'te DEĞİL — canlılık kontrolünü
+veritabanına bağlamak Neon askıdayken dağıtımı öldürür. Ama ikisine birlikte
+bakmak bir şey daha söylüyor: `commit` yeni görünüp ürün sayısı eski
+kalıyorsa migration geçmiş, tohum yüklenmemiş demektir.
+
+Bir uca kimliksiz istek atıp 401 almak dağıtım kanıtı **değil**:
+`requireAuth` bütün router'a bağlı ve yolu olmayan bir istek de 401 dönüyor.
+
 ### Giriş neden hâlâ dev-login
 
 Gerçek Apple/Google akışı Apple Developer üyeliği ve Google istemci kimlikleri
@@ -53,8 +76,8 @@ sunucu açılışta hata verip duruyor.
 
 | Uç | İş |
 |---|---|
-| `GET /health` | Canlılık. Veritabanına dokunmuyor — Render dağıtım kararını buna bakarak veriyor. |
-| `GET /health/db` | Hazırlık. Veritabanını yoklayıp gecikmeyi döndürüyor. |
+| `GET /health` | Canlılık + çalışan commit. Veritabanına dokunmuyor — Render dağıtım kararını buna bakarak veriyor. |
+| `GET /health/db` | Hazırlık. Veritabanını yoklayıp gecikmeyi, commit'i ve katalog sayılarını döndürüyor. |
 | `POST /auth/dev-login` | Sağlayıcısız geliştirme girişi. Üretimde kapalı (`DEV_LOGIN`). |
 | `GET /index` | Ekran 01: manşet, kendi serin, resmî seriler. |
 | `GET /index/movers` | Ekran 04: bu ay en çok zamlananlar. |
