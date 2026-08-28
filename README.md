@@ -137,6 +137,20 @@ kartının tırtıklı kenarı fişin koparma çizgisi.
 çubuğu (ondan ayrık kamera düğmesiyle) arkasını bulanıklaştırıyor, üst kenarında
 ışık topluyor. İçerik camın altından akıyor.
 
+**Hareket — basılıyor, kaymıyor.** Üçüncü katman ilk ikisinin metaforunu sürdürüyor:
+yazıcıdan çıkan bir fiş satır satır belirir, hepsi birden değil. Endeks ekranı
+okuma sırasıyla basılıyor — önce cevap (büyük sayı), sonra kanıtı. Bloklar 10
+piksel aşağıdan yükselerek soluyor; mesafe kasten kısa, "kaydı" demeyecek kadar.
+
+Grafik solmuyor, **çiziliyor**: yatay eksen zaman, çizginin soldan sağa
+ilerlemesi o ekseni okutuyor. Hareket burada süs değil, veriyi anlatan şeyin
+kendisi. Süreler `lib/widgets/motion.dart` içinde tek yerde — renk ve tipografi
+gibi hareket de belirteçle.
+
+Animasyon bir kez oynuyor: aşağı çekip tazelemek her şeyi yeniden zıplatmıyor.
+İşletim sisteminde **Hareketi Azalt** açıksa hiçbir şey oynamıyor — bu incelik
+değil, vestibüler rahatsızlığı olan kullanıcı için gereklilik.
+
 Serif ve mono fontlar depoya gömülü — Source Serif 4 ve IBM Plex Mono, ikisi de
 OFL. Sistem fontlarına güvenilseydi Android tarafında tipografi çökerdi.
 
