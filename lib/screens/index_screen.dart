@@ -10,6 +10,7 @@ import '../widgets/atoms.dart';
 import '../widgets/chart.dart';
 import '../widgets/glass.dart';
 import '../widgets/icons.dart';
+import '../widgets/motion.dart';
 import '../widgets/screen_frame.dart';
 import '../state/app_data.dart';
 import 'breakdown_screen.dart';
@@ -82,68 +83,116 @@ class _Body extends StatelessWidget {
   Widget build(BuildContext context) {
     final delta = snapshot.monthDeltaPoints;
 
+    // Ekran okuma sırasıyla basılıyor: önce cevap (sayı), sonra kanıtı.
+    // Numaralar burada duruyor ki sıra tek bakışta görünsün.
     return Padding(
       padding: kGutter,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 8),
-          Lbl(_windowLabel),
-          Padding(
-            padding: const EdgeInsets.only(top: 6, bottom: 8),
-            child: BigNumber(Fmt.dec1(snapshot.changePct ?? 0)),
-          ),
-          if (delta != null && delta.abs() >= 0.05)
-            DeltaPill(
-              text: 'Geçen aya göre ${Fmt.dec1(delta)} puan',
-              up: delta >= 0,
+          // Cevap tek blok: etiket, sayı ve rozet ayrı ayrı belirirse
+          // sayı bir an bağlamsız kalıyor.
+          Printed(
+            step: 0,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Lbl(_windowLabel),
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, bottom: 8),
+                  child: BigNumber(Fmt.dec1(snapshot.changePct ?? 0)),
+                ),
+                if (delta != null && delta.abs() >= 0.05)
+                  DeltaPill(
+                    text: 'Geçen aya göre ${Fmt.dec1(delta)} puan',
+                    up: delta >= 0,
+                  ),
+              ],
             ),
+          ),
           // Uyarı sayının hemen altında: nitelediği şey o sayı.
-          if (pending > 0) ...[
-            const SizedBox(height: 14),
-            _CoverageNote(pending: pending, receipts: receipts),
-          ],
+          if (pending > 0)
+            Printed(
+              step: 1,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 14),
+                child: _CoverageNote(pending: pending, receipts: receipts),
+              ),
+            ),
           const SizedBox(height: 16),
-          _SourcesCard(snapshot: snapshot, showOwn: true),
+          Printed(
+            step: 2,
+            child: _SourcesCard(snapshot: snapshot, showOwn: true),
+          ),
           const SizedBox(height: 16),
-          LineChart(
+          // Çizgi solmuyor, çiziliyor: yatay eksen zaman. Üstündeki kart
+          // belirmeden başlamasın diye sırası kadar bekliyor.
+          DrawnLineChart(
+            delay: M.stagger * 3,
             series: [
               ChartSeries(values: snapshot.levels, color: C.ink, endDot: true),
             ],
           ),
           const SizedBox(height: 18),
-          _SummaryStrip(
-            title: '${Fmt.monthLong(DateTime.now())} özeti',
-            sub: 'Paylaşılabilir kartı gör',
-            onTap: () => Navigator.of(context).push(MonthlyCardScreen.route()),
+          Printed(
+            step: 4,
+            child: _SummaryStrip(
+              title: '${Fmt.monthLong(DateTime.now())} özeti',
+              sub: 'Paylaşılabilir kartı gör',
+              onTap: () =>
+                  Navigator.of(context).push(MonthlyCardScreen.route()),
+            ),
           ),
           const SizedBox(height: 8),
-          _SummaryStrip(
-            title: 'Kırılım',
-            sub: 'Hangi kategori, hangi marka',
-            onTap: () => Navigator.of(context).push(BreakdownScreen.route()),
+          Printed(
+            step: 5,
+            child: _SummaryStrip(
+              title: 'Kırılım',
+              sub: 'Hangi kategori, hangi marka',
+              onTap: () => Navigator.of(context).push(BreakdownScreen.route()),
+            ),
           ),
-          if (basket.comparable) ...[
-            const SizedBox(height: 20),
-            const Hairline(),
-            const SizedBox(height: 14),
-            _BasketCard(basket: basket),
-          ],
+          if (basket.comparable)
+            Printed(
+              step: 6,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
+                  const Hairline(),
+                  const SizedBox(height: 14),
+                  _BasketCard(basket: basket),
+                ],
+              ),
+            ),
           const SizedBox(height: 18),
-          const Hairline(),
-          const SizedBox(height: 12),
-          const Lbl('SON FİŞLER'),
-          const SizedBox(height: 2),
-          for (final r in receipts.take(5))
-            Pressable(
-              onTap: () =>
-                  Navigator.of(context).push(ReceiptDetailScreen.route(r.id)),
-              child: LedgerRow(
-                name: r.merchant,
-                sub:
-                    '${Fmt.dayMonth(r.date)} · ${r.itemCount} ÜRÜN'
-                    '${r.pendingCount > 0 ? ' · ${r.pendingCount} EŞLEŞME' : ''}',
-                amount: Fmt.money(r.total),
+          Printed(
+            step: 7,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Hairline(),
+                SizedBox(height: 12),
+                Lbl('SON FİŞLER'),
+                SizedBox(height: 2),
+              ],
+            ),
+          ),
+          // Fişler tek tek: liste bir defter, satırları sırayla yazılıyor.
+          for (final (i, r) in receipts.take(5).indexed)
+            Printed(
+              step: 8 + i,
+              child: Pressable(
+                onTap: () =>
+                    Navigator.of(context).push(ReceiptDetailScreen.route(r.id)),
+                child: LedgerRow(
+                  name: r.merchant,
+                  sub:
+                      '${Fmt.dayMonth(r.date)} · ${r.itemCount} ÜRÜN'
+                      '${r.pendingCount > 0 ? ' · ${r.pendingCount} EŞLEŞME' : ''}',
+                  amount: Fmt.money(r.total),
+                ),
               ),
             ),
         ],
@@ -466,42 +515,58 @@ class _FirstRun extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 8),
-          const Lbl('SEPETİN'),
-          const SizedBox(height: 6),
-          Text(
-            receipts.isEmpty ? 'İlk fişini ekle' : 'Bir ay daha lazım',
-            style: T.display,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            receipts.isEmpty
-                ? 'Kendi enflasyonun, senin ödediğin fiyatlardan hesaplanıyor. '
-                      'Market fişini çek, gerisini uygulama yapıyor.'
-                : '${receipts.length} fiş eklendi. Endeks için en az iki '
-                      'FARKLI ayda fiş gerekiyor — bir fiyatın değiştiğini '
-                      'görebilmek için onu iki kez görmek lazım.',
-            style: const TextStyle(
-              fontSize: 12.5,
-              height: 1.55,
-              color: C.muted,
+          Printed(
+            step: 0,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Lbl('SEPETİN'),
+                const SizedBox(height: 6),
+                Text(
+                  receipts.isEmpty ? 'İlk fişini ekle' : 'Bir ay daha lazım',
+                  style: T.display,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  receipts.isEmpty
+                      ? 'Kendi enflasyonun, senin ödediğin fiyatlardan '
+                            'hesaplanıyor. Market fişini çek, gerisini '
+                            'uygulama yapıyor.'
+                      : '${receipts.length} fiş eklendi. Endeks için en az iki '
+                            'FARKLI ayda fiş gerekiyor — bir fiyatın '
+                            'değiştiğini görebilmek için onu iki kez görmek '
+                            'lazım.',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    height: 1.55,
+                    color: C.muted,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 18),
-          PrimaryButton(
-            label: receipts.isEmpty ? 'Fiş çek' : 'Fiş ekle',
-            onTap: () async {
-              final added = await Navigator.of(context)
-                  .push<bool>(CaptureScreen.route());
-              if (added == true && context.mounted) refreshUserData(context);
-            },
+          Printed(
+            step: 1,
+            child: PrimaryButton(
+              label: receipts.isEmpty ? 'Fiş çek' : 'Fiş ekle',
+              onTap: () async {
+                final added = await Navigator.of(context)
+                    .push<bool>(CaptureScreen.route());
+                if (added == true && context.mounted) refreshUserData(context);
+              },
+            ),
           ),
           const SizedBox(height: 10),
-          Center(
-            child: Text(
-              receipts.isEmpty
-                  ? 'Fişin fotoğrafı cihazından çıkmıyor.'
-                  : 'Kalan: $need farklı ay',
-              style: T.label.copyWith(fontSize: 9.5),
+          Printed(
+            step: 2,
+            child: Center(
+              child: Text(
+                receipts.isEmpty
+                    ? 'Fişin fotoğrafı cihazından çıkmıyor.'
+                    : 'Kalan: $need farklı ay',
+                style: T.label.copyWith(fontSize: 9.5),
+              ),
             ),
           ),
           // Endeks olgunlaşana kadar ekranın söyleyebildiği tek somut şey

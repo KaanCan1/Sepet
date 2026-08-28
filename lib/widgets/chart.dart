@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 
 import '../theme/tokens.dart';
+import 'motion.dart';
 
 class ChartSeries {
   const ChartSeries({
@@ -216,4 +219,85 @@ class _LinePainter extends CustomPainter {
       old.series != series ||
       old.marker != marker ||
       old.guides != guides;
+}
+
+/// Çizgisi soldan sağa çizilen grafik.
+///
+/// [LineChart] bunu ilk günden `progress` ile destekliyordu, çalıştıran
+/// yoktu. Hareketin sebebi süs değil: grafiğin yatay ekseni zaman, çizginin
+/// soldan sağa ilerlemesi o ekseni okutuyor. Aynı sebeple ters yönde ya da
+/// solarak girmiyor.
+///
+/// Bir kez oynuyor. Aşağı çekip tazelemek çizgiyi baştan çizdirmiyor —
+/// tazeleme yeni bir zaman ekseni değil.
+class DrawnLineChart extends StatefulWidget {
+  const DrawnLineChart({
+    super.key,
+    required this.series,
+    this.height = 74,
+    this.marker,
+    this.markerLabel,
+    this.guides = true,
+    this.delay = Duration.zero,
+  });
+
+  final List<ChartSeries> series;
+  final double height;
+  final int? marker;
+  final String? markerLabel;
+  final bool guides;
+
+  /// Kademeli girişte sıranın kaçıncısıysa o kadar bekliyor: çizgi, üstündeki
+  /// kart daha belirmeden çizilmeye başlamasın.
+  final Duration delay;
+
+  @override
+  State<DrawnLineChart> createState() => _DrawnLineChartState();
+}
+
+class _DrawnLineChartState extends State<DrawnLineChart>
+    with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: M.draw);
+  late final _t = CurvedAnimation(parent: _c, curve: M.curve);
+  Timer? _delay;
+
+  @override
+  void initState() {
+    super.initState();
+    _delay = Timer(widget.delay, () {
+      if (mounted) _c.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _delay?.cancel();
+    _t.dispose();
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (M.off(context)) {
+      return LineChart(
+        series: widget.series,
+        height: widget.height,
+        marker: widget.marker,
+        markerLabel: widget.markerLabel,
+        guides: widget.guides,
+      );
+    }
+    return AnimatedBuilder(
+      animation: _t,
+      builder: (context, _) => LineChart(
+        series: widget.series,
+        height: widget.height,
+        marker: widget.marker,
+        markerLabel: widget.markerLabel,
+        guides: widget.guides,
+        progress: _t.value,
+      ),
+    );
+  }
 }
