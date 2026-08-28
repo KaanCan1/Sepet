@@ -1,5 +1,9 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../data/notifications.dart';
 import '../theme/tokens.dart';
 import '../state/app_data.dart';
 import '../widgets/glass.dart';
@@ -9,6 +13,7 @@ import 'products_screen.dart';
 import 'profile_screen.dart';
 import 'receipts_screen.dart';
 import 'capture_screen.dart';
+import 'monthly_card_screen.dart';
 
 /// Yüzen kapsülün yüksekliği ve alt boşluğu — içerik bunun altından akıyor.
 const kTabCapsuleHeight = 58.0;
@@ -27,6 +32,8 @@ class _ShellState extends State<Shell> {
   /// durum — Bloc'a taşınacak bir şey değil, yeri burası.
   int _tab = 0;
 
+  StreamSubscription<void>? _cardTaps;
+
   @override
   void initState() {
     super.initState();
@@ -34,6 +41,33 @@ class _ShellState extends State<Shell> {
     // dolayısıyla burada çağırmak "giriş yapıldı" demekle aynı şey; cubit'ler
     // kurulurken yüklenselerdi jeton gelmeden istek atıp 401 alırlardı.
     refreshUserData(context);
+
+    // Aylık kart bildirimi. Aynı gerekçe: plan yalnızca oturum açıkken
+    // tazeleniyor, çünkü kartın arkasındaki veri oturuma bağlı.
+    final reminder = context.read<MonthlyReminder>();
+    reminder.restore();
+    // Uygulama bildirime dokunularak açıldıysa kart doğrudan açılıyor.
+    if (reminder.takePendingCard()) _openCard();
+    _cardTaps = reminder.cardTaps.listen((_) => _openCard());
+  }
+
+  /// Kart tam ekran bir sayfa; üst üste iki tane açılmasın.
+  void _openCard() {
+    if (!mounted) return;
+    final nav = Navigator.of(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _cardOpen) return;
+      _cardOpen = true;
+      nav.push(MonthlyCardScreen.route()).whenComplete(() => _cardOpen = false);
+    });
+  }
+
+  bool _cardOpen = false;
+
+  @override
+  void dispose() {
+    _cardTaps?.cancel();
+    super.dispose();
   }
 
   @override

@@ -307,7 +307,7 @@ Ayrıntı ve bilinen sınırlar: [server/README.md](server/README.md)
 - [x] TÜİK TÜFE serisinin TCMB EVDS üzerinden aylık çekimi
 - [ ] Apple ile Giriş — kimlik sağlayıcı ucu henüz yok, giriş `/auth/dev-login`
       üzerinden. Apple Developer Program üyeliğine bağlı.
-- [ ] Ayın 3'ünde aylık kart bildirimi
+- [x] Ayın 3'ünde aylık kart bildirimi — yerel bildirim, sunucu kimseye itmiyor
 - [ ] App Store yayını
 
 Android OCR yazılmadı: `sepet/ocr` kanalının yalnızca iOS karşılığı var. Hedef

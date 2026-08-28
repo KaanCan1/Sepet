@@ -10,6 +10,7 @@ import '../state/receipts_cubit.dart';
 import '../state/index_cubit.dart';
 import '../widgets/data_view.dart';
 import '../data/models.dart';
+import '../data/notifications.dart';
 import '../data/session.dart';
 import '../theme/tokens.dart';
 import '../widgets/atoms.dart';
@@ -32,7 +33,44 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool _monthlyPush = true;
+  /// Anahtarın durumu tercihten okunuyor, varsayılan kapalı: bildirim
+  /// göndermek izin ister, izinsiz açık göstermek yalan olurdu.
+  bool _monthlyPush = false;
+  bool _pushBusy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _readReminder();
+  }
+
+  Future<void> _readReminder() async {
+    final on = await context.read<MonthlyReminder>().isOn();
+    if (mounted) setState(() => _monthlyPush = on);
+  }
+
+  Future<void> _toggleReminder(bool v) async {
+    if (_pushBusy) return;
+    setState(() => _pushBusy = true);
+    final reminder = context.read<MonthlyReminder>();
+    try {
+      if (!v) {
+        await reminder.disable();
+        if (mounted) setState(() => _monthlyPush = false);
+        return;
+      }
+      final r = await reminder.enable();
+      if (!mounted) return;
+      setState(() => _monthlyPush = r == ReminderResult.on);
+      if (r == ReminderResult.denied) {
+        // Reddedilen izin uygulama içinden yeniden sorulamıyor; tek yol
+        // Ayarlar. Anahtarı açık bırakmak yerine ne olduğu söyleniyor.
+        _toast(context, 'Bildirim izni kapalı — Ayarlar > Sepet > Bildirimler');
+      }
+    } finally {
+      if (mounted) setState(() => _pushBusy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,10 +147,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         Switch.adaptive(
+                          key: const Key('monthly-reminder'),
                           value: _monthlyPush,
                           activeThumbColor: C.card,
                           activeTrackColor: C.ink,
-                          onChanged: (v) => setState(() => _monthlyPush = v),
+                          onChanged: _pushBusy ? null : _toggleReminder,
                         ),
                       ],
                     ),

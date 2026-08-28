@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sepet/data/app_scope.dart';
 import 'package:sepet/data/auth_store.dart';
 import 'package:sepet/data/fmt.dart';
+import 'package:sepet/data/notifications.dart';
 import 'package:sepet/data/receipt_parser.dart';
 import 'package:sepet/screens/draft_receipt_screen.dart';
 import 'package:sepet/screens/root_gate.dart';
@@ -16,6 +17,7 @@ import 'fake_api.dart';
 Widget bootstrap({String? token, FakeApi? api}) => AppScope(
   api: api ?? FakeApi(),
   authStore: MemoryAuthStore(token),
+  reminder: MemoryMonthlyReminder(),
   child: MaterialApp(locale: const Locale('tr', 'TR'), home: const RootGate()),
 );
 
@@ -128,6 +130,7 @@ void main() {
         },
       ),
       authStore: MemoryAuthStore('test-token'),
+      reminder: MemoryMonthlyReminder(),
       child: MaterialApp(
         locale: const Locale('tr', 'TR'),
         home: const RootGate(),
@@ -320,6 +323,7 @@ void main() {
         AppScope(
           api: api,
           authStore: MemoryAuthStore('test-token'),
+          reminder: MemoryMonthlyReminder(),
           child: MaterialApp(
             locale: const Locale('tr', 'TR'),
             home: const RootGate(),
@@ -403,6 +407,7 @@ void main() {
     Widget app(FakeApi api) => AppScope(
       api: api,
       authStore: MemoryAuthStore('test-token'),
+      reminder: MemoryMonthlyReminder(),
       child: MaterialApp(
         locale: const Locale('tr', 'TR'),
         home: const RootGate(),
@@ -494,6 +499,7 @@ void main() {
         AppScope(
           api: api,
           authStore: MemoryAuthStore('test-token'),
+          reminder: MemoryMonthlyReminder(),
           child: MaterialApp(
             locale: const Locale('tr', 'TR'),
             home: const RootGate(),
@@ -538,6 +544,7 @@ void main() {
         AppScope(
           api: api,
           authStore: MemoryAuthStore('test-token'),
+          reminder: MemoryMonthlyReminder(),
           child: MaterialApp(
             locale: const Locale('tr', 'TR'),
             home: const RootGate(),
@@ -590,6 +597,7 @@ void main() {
         AppScope(
           api: FakeApi(routes: routes),
           authStore: MemoryAuthStore('test-token'),
+          reminder: MemoryMonthlyReminder(),
           child: MaterialApp(
             locale: const Locale('tr', 'TR'),
             home: const RootGate(),
@@ -641,6 +649,7 @@ void main() {
             },
           ),
           authStore: MemoryAuthStore('test-token'),
+          reminder: MemoryMonthlyReminder(),
           child: MaterialApp(
             locale: const Locale('tr', 'TR'),
             home: const RootGate(),
@@ -725,6 +734,7 @@ void main() {
         },
       ),
       authStore: MemoryAuthStore('test-token'),
+      reminder: MemoryMonthlyReminder(),
       child: MaterialApp(
         locale: const Locale('tr', 'TR'),
         home: const RootGate(),
@@ -859,6 +869,7 @@ void main() {
         AppScope(
           api: api,
           authStore: MemoryAuthStore('test-token'),
+          reminder: MemoryMonthlyReminder(),
           child: MaterialApp(
             locale: const Locale('tr', 'TR'),
             home: const RootGate(),
@@ -910,6 +921,7 @@ void main() {
     Widget ekran(FakeApi api) => AppScope(
       api: api,
       authStore: MemoryAuthStore('test-token'),
+      reminder: MemoryMonthlyReminder(),
       child: MaterialApp(
         locale: const Locale('tr', 'TR'),
         home: DraftReceiptScreen(parsed: taslak()),
