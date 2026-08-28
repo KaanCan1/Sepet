@@ -156,8 +156,11 @@ fiyatı belirliyor.
 
 - **Paket değişimi.** 30'lu ve 15'li yumurta ayrı kanonik ürün; kullanıcı
   birinden diğerine geçerse biri bayatlar, öbürü sıfırdan başlar ve sepet
-  parçalanır. `substitute_group_id` alanı ileride birim fiyat üzerinden
-  zincirlemek için şimdiden duruyor.
+  parçalanır. Endeks `canonical_product_id` üzerinden zincirliyor
+  (`005_index_functions.sql`), boy oraya gömülü. Çözümün yolu açık: ikisi
+  zaten aynı `product_groups` satırına bağlı ve gözlemler birim fiyat
+  taşıyor, yani zincirleme grup düzeyine çekilebilir. (008 öncesindeki
+  `substitute_group_id` alanı grup şemasıyla gereksizleşti ve düşürüldü.)
 - **Mevsimsellik.** Taze ürün fiyatları mevsime göre oynuyor; endeks bunu
   düzeltmiyor.
 - **Market değişimi.** Endeks fiilen ödenen fiyatı ölçüyor, yani daha ucuz

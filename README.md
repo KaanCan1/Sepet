@@ -148,17 +148,17 @@ OFL. Sistem fontlarına güvenilseydi Android tarafında tipografi çökerdi.
 | Vitrin tipografisi | **Montserrat** | Gotham'ın (Obama 2008 kampanyası) ücretsiz en yakın karşılığı — kelime işareti, manşet sayı ve büyük başlıklarda |
 | OCR | **Apple Vision** (cihaz üstünde) | Fişin fotoğrafı cihazdan çıkmıyor. ML Kit yerine Vision: ek pod yok, Apple Silicon simülatöründe de çalışıyor |
 | Krom | **liquid_glass_widgets** | Yüzen kapsül ve daire düğme gerçek kırılma/speküler kenar ile — elle yazılmış `BackdropFilter` taklidi değil |
-| Normalizasyon | **Claude API**, yalnızca belirsiz satırlar | Maliyeti gözlem başına değil, belirsizlik başına ödemek |
+| Normalizasyon | Kural + bulanık eşleşme (Postgres `pg_trgm`) | Fiş satırı ile katalog arasındaki köprü. Model çağrısı yok, ölçülebilir: `match-quality.spec.ts` |
 | Backend | **Node.js/Express + PostgreSQL** | Kullanıcı, fiş, kanonik ürün, alias tablosu, fiyat gözlemleri, Laspeyres endeksi |
 | Karşılaştırma | TÜİK TÜFE, **TCMB EVDS** üzerinden | Resmî dağıtım kanalı; TÜİK'in kendi portalı otomatik erişime kapalı |
 
-> API anahtarı hiçbir koşulda istemciye gömülmüyor — derlenmiş uygulamadan
-> çıkarılabilir. Her model çağrısı kendi backend'imiz üzerinden geçiyor.
-
 > [!NOTE]
-> Bu depoda şu an **arayüz katmanı ve demo verisi** var. Backend, gerçek OCR ve
-> veri çekimi yol haritasında. Modeller backend'e geçerken değişmeyecek şekilde
-> ayrıldı.
+> Eşleşemeyen satırlar için **Claude API ile normalizasyon** düşünüldü ama
+> yazılmadı: bulanık eşleşme ölçülüp kalibre edilince otomatik eşleşme oranı
+> %57,5'ten %88'in üzerine çıktı (`server/test/match-quality.spec.ts` bu tabanı
+> koruyor), kalanı modele sormanın maliyeti kendini savunmuyor. Yapılırsa anahtar
+> istemciye gömülmez — derlenmiş uygulamadan çıkarılabilir — çağrı kendi
+> backend'imiz üzerinden geçer.
 
 ## KVKK
 
@@ -301,12 +301,17 @@ Ayrıntı ve bilinen sınırlar: [server/README.md](server/README.md)
 
 ## Yol haritası
 
-- [ ] Gerçek kamera + ML Kit / Vision OCR
-- [ ] Node/Express + Postgres backend, JWT oturum
-- [ ] Kanonik ürün + alias şeması, Laspeyres endeks SQL'i
+- [x] Cihaz üstünde OCR — Apple Vision; fişin fotoğrafı telefondan çıkmıyor
+- [x] Node/Express + Postgres backend, JWT oturum
+- [x] Kanonik ürün şeması (grup + marka + boy), Laspeyres endeks SQL'i
 - [x] TÜİK TÜFE serisinin TCMB EVDS üzerinden aylık çekimi
+- [ ] Apple ile Giriş — kimlik sağlayıcı ucu henüz yok, giriş `/auth/dev-login`
+      üzerinden. Apple Developer Program üyeliğine bağlı.
 - [ ] Ayın 3'ünde aylık kart bildirimi
-- [ ] App Store / Play Store yayını
+- [ ] App Store yayını
+
+Android OCR yazılmadı: `sepet/ocr` kanalının yalnızca iOS karşılığı var. Hedef
+şimdilik yalnızca App Store, Android tarafı derlenebilir kalıyor.
 
 ## Lisans
 
