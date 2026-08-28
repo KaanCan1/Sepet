@@ -7,6 +7,7 @@ import '../state/products_cubit.dart';
 import '../state/receipts_cubit.dart';
 import 'api.dart';
 import 'auth_store.dart';
+import 'notifications.dart';
 import 'repository.dart';
 
 /// Uygulama genelindeki bağımlılıkları ve uzun ömürlü cubit'leri kurar.
@@ -20,12 +21,19 @@ import 'repository.dart';
 /// bağlı olsaydı sekme değiştirmeden tazelenemezlerdi. Ayrıntı ekranlarının
 /// cubit'leri ise yönlendirmeyle birlikte doğup ölüyor.
 class AppScope extends StatelessWidget {
-  AppScope({super.key, Api? api, AuthStore? authStore, required this.child})
-    : api = api ?? Api(),
-      authStore = authStore ?? const SecureAuthStore();
+  AppScope({
+    super.key,
+    Api? api,
+    AuthStore? authStore,
+    MonthlyReminder? reminder,
+    required this.child,
+  }) : api = api ?? Api(),
+       authStore = authStore ?? const SecureAuthStore(),
+       reminder = reminder ?? LocalMonthlyReminder();
 
   final Api api;
   final AuthStore authStore;
+  final MonthlyReminder reminder;
   final Widget child;
 
   @override
@@ -34,16 +42,19 @@ class AppScope extends StatelessWidget {
 
     return RepositoryProvider.value(
       value: repository,
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider(
-            create: (_) => AuthCubit(api, repository, authStore)..restore(),
-          ),
-          BlocProvider(create: (_) => IndexCubit(repository)),
-          BlocProvider(create: (_) => ReceiptsCubit(repository)),
-          BlocProvider(create: (_) => ProductsCubit(repository)),
-        ],
-        child: child,
+      child: RepositoryProvider<MonthlyReminder>.value(
+        value: reminder,
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (_) => AuthCubit(api, repository, authStore)..restore(),
+            ),
+            BlocProvider(create: (_) => IndexCubit(repository)),
+            BlocProvider(create: (_) => ReceiptsCubit(repository)),
+            BlocProvider(create: (_) => ProductsCubit(repository)),
+          ],
+          child: child,
+        ),
       ),
     );
   }
