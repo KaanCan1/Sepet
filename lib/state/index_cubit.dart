@@ -11,10 +11,16 @@ class IndexHome {
     required this.snapshot,
     required this.receipts,
     required this.basket,
+    required this.movers,
   });
 
   final IndexSnapshot snapshot;
   final List<Receipt> receipts;
+
+  /// En çok artan ürünler. Ana ekran artık sayının altında bunları
+  /// gösteriyor: "ne kadar zamlandım" sorusunun hemen ardından gelen soru
+  /// "neyden" ve cevabı bir dokunuş uzakta olmamalı.
+  final List<Mover> movers;
 
   /// Endeks olgunlaşana kadar ekranın söyleyebildiği tek somut şey.
   final BasketCompare basket;
@@ -34,7 +40,7 @@ class IndexCubit extends DataCubit<IndexHome> {
 
   final Repository _repo;
 
-  /// Üç istek birbirini beklemiyor: sıralı yazıldığında ekranın açılması üç
+  /// İstekler birbirini beklemiyor: sıralı yazıldığında ekranın açılması üç
   /// gidiş-dönüşün toplamı kadar sürüyordu, oysa aralarında bağımlılık yok.
   ///
   /// Kayıt (record) sözdizimindeki `.wait` yerine [Future.wait]: o, hataları
@@ -47,11 +53,13 @@ class IndexCubit extends DataCubit<IndexHome> {
       _repo.index(),
       _repo.receipts(),
       _repo.basketCompare(),
+      _repo.movers(),
     ]);
     return IndexHome(
       snapshot: r[0] as IndexSnapshot,
       receipts: r[1] as List<Receipt>,
       basket: r[2] as BasketCompare,
+      movers: r[3] as List<Mover>,
     );
   }
 }

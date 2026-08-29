@@ -205,7 +205,11 @@ abstract final class C {
 /// `context.c.ink` — her widget'ta `Theme.of(context).extension<...>()!`
 /// yazmamak için.
 extension SepetColorsX on BuildContext {
-  SepetColors get c => Theme.of(this).extension<SepetColors>()!;
+  /// Uzantı yoksa açık temaya düşüyor. Kendi MaterialApp'ini kuran testler
+  /// ve önizlemeler tema vermiyor; orada patlamak yerine varsayılanı
+  /// kullanmak doğru — renk kümesi zaten uygulamanın esas hâli.
+  SepetColors get c =>
+      Theme.of(this).extension<SepetColors>() ?? SepetColors.light;
 }
 
 /// Kategori adından renk indeksine sabit eşleme.

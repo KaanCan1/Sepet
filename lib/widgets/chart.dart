@@ -12,6 +12,7 @@ class ChartSeries {
     this.width = 1.8,
     this.dashed = false,
     this.endDot = false,
+    this.fill,
   });
 
   final List<double> values;
@@ -19,6 +20,11 @@ class ChartSeries {
   final double width;
   final bool dashed;
   final bool endDot;
+
+  /// Çizginin altını dolduran renk. Verilirse tepede bu renk, tabanda
+  /// saydam bir geçiş çiziliyor — çizginin taşıdığı yönü zeminde de
+  /// tekrarlıyor, ayrı bir bilgi eklemiyor.
+  final Color? fill;
 }
 
 /// Taslaktaki iki grafiğin ortak motoru: alt taban çizgisi, kesikli orta çizgi,
@@ -131,6 +137,26 @@ class _LinePainter extends CustomPainter {
 
       final drawn = _trim(pts, progress);
       if (drawn.length < 2) continue;
+
+      if (s.fill != null) {
+        final base = size.height;
+        final area = Path()..moveTo(drawn.first.dx, base);
+        for (final p in drawn) {
+          area.lineTo(p.dx, p.dy);
+        }
+        area
+          ..lineTo(drawn.last.dx, base)
+          ..close();
+        canvas.drawPath(
+          area,
+          Paint()
+            ..shader = LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [s.fill!, s.fill!.withValues(alpha: 0)],
+            ).createShader(Rect.fromLTWH(0, top, size.width, base - top)),
+        );
+      }
 
       if (s.dashed) {
         for (var i = 0; i < drawn.length - 1; i++) {
