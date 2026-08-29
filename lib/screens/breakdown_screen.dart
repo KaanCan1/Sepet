@@ -35,14 +35,7 @@ class BreakdownScreen extends StatelessWidget {
     final axis = cubit.axis;
 
     return ScreenFrame(
-      title: 'Kırılım',
-      leading: Pressable(
-        onTap: () => Navigator.of(context).pop(),
-        child: const Padding(
-          padding: EdgeInsets.all(4),
-          child: LineIcon(Glyph.back, size: 17, color: C.ink, stroke: 1.6),
-        ),
-      ),
+      showTopBar: false,
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
@@ -50,7 +43,11 @@ class BreakdownScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 4),
+                LargeTitle(
+                  'Kırılım',
+                  trailing: 'SON 12 AY',
+                  onBack: () => Navigator.of(context).pop(),
+                ),
                 _AxisToggle(value: axis, onChanged: cubit.select),
                 const SizedBox(height: 16),
                 // Eksen de veri de cubit'te: seçim değişince yeni liste
@@ -87,11 +84,15 @@ class _AxisToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
+    // Oluk `track`, seçili yarım `ink`. Eskiden oluk için çizgi rengine
+    // alfa uygulanıyordu; çizgi rengi yarı saydama dönünce üst üste binip
+    // koyu gri bir levhaya çıkıyordu.
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: C.line.withValues(alpha: .55),
-        borderRadius: BorderRadius.circular(9),
+        color: c.track,
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         children: [
@@ -104,15 +105,16 @@ class _AxisToggle extends StatelessWidget {
                   curve: Curves.easeOut,
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
-                    color: axis == value ? C.card : const Color(0x00000000),
-                    borderRadius: BorderRadius.circular(7),
+                    color: axis == value ? c.ink : const Color(0x00000000),
+                    borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     axis.tab,
                     textAlign: TextAlign.center,
                     style: T.label.copyWith(
-                      fontSize: 10.5,
-                      color: axis == value ? C.ink : C.muted,
+                      fontSize: 10,
+                      letterSpacing: 1.2,
+                      color: axis == value ? c.paper : c.faint,
                     ),
                   ),
                 ),
@@ -134,6 +136,10 @@ class _List extends StatelessWidget {
   Widget build(BuildContext context) {
     final top = rows.first;
     final bottom = rows.last;
+    final peak = rows.fold<double>(
+      0,
+      (a, r) => r.changePct.abs() > a ? r.changePct.abs() : a,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,18 +160,27 @@ class _List extends StatelessWidget {
         const SizedBox(height: 14),
         LineChart(
           height: 96,
-          series: [ChartSeries(values: top.levels, color: C.ink, endDot: true)],
+          series: [
+            ChartSeries(
+              values: top.levels,
+              color: context.c.ink,
+              endDot: true,
+              fill: context.c.ink.withValues(alpha: context.c.areaFade),
+            ),
+          ],
         ),
         const SizedBox(height: 18),
         const Hairline(),
         const SizedBox(height: 12),
         Lbl('TÜM ${axis.label}LER'),
         const SizedBox(height: 2),
-        for (final row in rows)
-          Pressable(
+        for (final (i, row) in rows.indexed)
+          _Row(
+            row: row,
+            peak: peak,
+            step: i,
             onTap: () =>
                 Navigator.of(context).push(_DetailScreen.route(axis, row)),
-            child: _Row(row: row),
           ),
         const SizedBox(height: 16),
         // Yüzdeler toplanabilir sanılmasın.
@@ -186,69 +201,32 @@ class _List extends StatelessWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.row});
+  const _Row({
+    required this.row,
+    required this.peak,
+    required this.step,
+    this.onTap,
+  });
 
   final Breakdown row;
 
+  /// Listedeki en büyük mutlak değişim — bar bunun oranında doluyor.
+  final double peak;
+  final int step;
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
-    final up = row.changePct >= 0;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: C.line)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  row.name,
-                  style: T.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${row.series.length} AY',
-                  style: T.label.copyWith(fontSize: 9, letterSpacing: .6),
-                ),
-              ],
-            ),
-          ),
-          // Satır içi kıvılcım grafiği: iki noktadan azına çizgi çizilmez.
-          if (row.series.length >= 2)
-            SizedBox(
-              width: 68,
-              child: LineChart(
-                height: 26,
-                guides: false,
-                series: [
-                  ChartSeries(values: row.levels, color: C.grey, width: 1.4),
-                ],
-              ),
-            ),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 62,
-            child: Text(
-              Fmt.signedPct1(row.changePct),
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontFamily: F.mono,
-                fontFamilyFallback: F.monoFallback,
-                fontSize: 12.5,
-                color: up ? C.hot : C.ref,
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-          const LineIcon(Glyph.chevron, size: 13, color: C.muted),
-        ],
-      ),
+    // Bar oranı listedeki en büyük değişime göre; renk kategoriden geliyor
+    // ve satırdaki sayıyla aynı. İkisi aynı şeyi söylüyor.
+    return StatRow(
+      step: step,
+      name: row.name,
+      value: Fmt.signedPct1(row.changePct),
+      ratio: peak == 0 ? 0 : row.changePct.abs() / peak,
+      color: context.c.category[categoryIndex(row.name)],
+      sub: '${row.series.length} AY',
+      onTap: onTap,
     );
   }
 }
