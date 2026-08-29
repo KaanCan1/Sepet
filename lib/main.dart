@@ -30,6 +30,28 @@ void main() async {
   );
 }
 
+/// İki tema tek yerden kuruluyor; aralarındaki tek fark renk kümesi.
+ThemeData _theme(SepetColors c, Brightness brightness) => ThemeData(
+  useMaterial3: true,
+  brightness: brightness,
+  scaffoldBackgroundColor: c.paper,
+  colorScheme: ColorScheme.fromSeed(
+    seedColor: c.hot,
+    brightness: brightness,
+    surface: c.paper,
+  ),
+  extensions: [c],
+  // Sayfa geçişleri her platformda iOS gibi kaysın.
+  pageTransitionsTheme: const PageTransitionsTheme(
+    builders: {
+      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+    },
+  ),
+  textTheme: const TextTheme().apply(bodyColor: c.ink, displayColor: c.ink),
+);
+
 class SepetApp extends StatelessWidget {
   const SepetApp({super.key});
 
@@ -38,23 +60,13 @@ class SepetApp extends StatelessWidget {
     return MaterialApp(
       title: 'Sepet',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        scaffoldBackgroundColor: C.paper,
-        colorScheme: ColorScheme.fromSeed(seedColor: C.ink, surface: C.paper),
-        // Sayfa geçişleri her platformda iOS gibi kaysın.
-        pageTransitionsTheme: const PageTransitionsTheme(
-          builders: {
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-          },
-        ),
-        textTheme: const TextTheme().apply(
-          bodyColor: C.ink,
-          displayColor: C.ink,
-        ),
-      ),
+      // Hedef ThemeMode.system — telefon karanlığa geçince uygulama da
+      // geçecek. Ekranlar C köprüsünden context.c'ye taşınana kadar açık
+      // temada kilitli: yarım çevrilmiş bir ekran koyu zeminde açık tema
+      // renkleriyle çizer, bu da hiç koyu tema olmamasından kötü.
+      themeMode: ThemeMode.light,
+      theme: _theme(SepetColors.light, Brightness.light),
+      darkTheme: _theme(SepetColors.dark, Brightness.dark),
       // Tek yerel: Türkçe. Sayı/tarih biçimlendirmesi Fmt üzerinden.
       locale: const Locale('tr', 'TR'),
       // Tarih seçici Türkçe olsun; delegeler olmadan İngilizce açılıyor.

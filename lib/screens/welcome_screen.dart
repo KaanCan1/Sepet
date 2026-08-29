@@ -100,12 +100,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               const Text(
                 'Kendi enflasyonunu\nkendi fişinden ölç',
                 style: TextStyle(
-                  fontFamily: F.display,
-                  fontFamilyFallback: F.displayFallback,
-                  fontWeight: FontWeight.w800,
+                  fontFamily: F.ui,
+                  fontWeight: FontWeight.w700,
                   fontSize: 31,
                   height: 1.18,
-                  letterSpacing: -1,
+                  letterSpacing: -1.1,
                   color: C.ink,
                 ),
               ),

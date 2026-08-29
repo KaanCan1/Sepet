@@ -768,10 +768,10 @@ class _SizeOption extends StatelessWidget {
               child: Text(
                 product.sizeLabel,
                 style: const TextStyle(
-                  fontFamily: F.display,
-                  fontFamilyFallback: F.displayFallback,
-                  fontWeight: FontWeight.w700,
+                  fontFamily: F.ui,
+                  fontWeight: FontWeight.w600,
                   fontSize: 14,
+                  letterSpacing: -.2,
                   color: C.ink,
                 ),
               ),
