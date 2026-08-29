@@ -1,6 +1,8 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
+import 'glass.dart';
+import 'motion.dart';
 
 /// Küçük mono etiket. Metin ZATEN büyük harfle yazılır — Dart'ın
 /// `toUpperCase()`'i Türkçe'de i → I yapıp noktayı düşürüyor.
@@ -280,4 +282,268 @@ class BrandChip extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Ekranın büyük başlığı. Üst bar yerine geçiyor: cam bar içeriği
+/// bulanıklaştırıp yer kaplıyordu, oysa başlık kaydırılıp gidebilir.
+class LargeTitle extends StatelessWidget {
+  const LargeTitle(this.title, {super.key, this.trailing, this.onBack});
+
+  final String title;
+
+  /// Sağdaki küçük mono etiket — ay, adet gibi.
+  final String? trailing;
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 24, top: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        if (onBack != null)
+          GestureDetector(
+            onTap: onBack,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 4, top: 2),
+              child: Text(
+                '‹',
+                style: TextStyle(fontSize: 21, color: context.c.muted),
+              ),
+            ),
+          ),
+        Expanded(
+          child: Text(
+            title,
+            style: T.largeTitle.copyWith(color: context.c.ink),
+          ),
+        ),
+        if (trailing != null)
+          Text(
+            trailing!,
+            style: T.label.copyWith(
+              fontSize: 9.5,
+              letterSpacing: 1.5,
+              color: context.c.faint,
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+/// Sıralı satır: ad solda, yüzde sağda, altında ince bar.
+///
+/// Kutu yok — ayırma işini alt çizgi yapıyor. Bar oranı gösteriyor ve
+/// rengini kategoriden alıyor; sayı da aynı renkte, çünkü ikisi aynı şeyi
+/// söylüyor.
+class StatRow extends StatefulWidget {
+  const StatRow({
+    super.key,
+    required this.name,
+    required this.value,
+    required this.ratio,
+    required this.color,
+    this.sub,
+    this.onTap,
+    this.step = 0,
+  });
+
+  final String name;
+  final String value;
+
+  /// 0..1 — bar dolgusu.
+  final double ratio;
+  final Color color;
+  final String? sub;
+  final VoidCallback? onTap;
+
+  /// Kademeli girişte sıra.
+  final int step;
+
+  @override
+  State<StatRow> createState() => _StatRowState();
+}
+
+class _StatRowState extends State<StatRow> {
+  double _w = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Bar soldan doluyor: oran zaten soldan sağa okunuyor.
+    Future.delayed(M.stagger * (widget.step.clamp(0, M.maxStep) + 2), () {
+      if (mounted) setState(() => _w = widget.ratio);
+    });
+  }
+
+  @override
+  void didUpdateWidget(StatRow old) {
+    super.didUpdateWidget(old);
+    if (old.ratio != widget.ratio) setState(() => _w = widget.ratio);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Pressable(
+      onTap: widget.onTap,
+      scale: 1,
+      child: Container(
+        padding: const EdgeInsets.only(top: 13, bottom: 12),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: c.line)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.name,
+                    style: T.rowName.copyWith(color: c.ink),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  widget.value,
+                  style: T.value.copyWith(color: widget.color),
+                ),
+              ],
+            ),
+            if (widget.sub != null) ...[
+              const SizedBox(height: 3),
+              Text(
+                widget.sub!,
+                style: T.label.copyWith(fontSize: 8.5, color: c.faint),
+              ),
+            ],
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: Stack(
+                children: [
+                  Container(height: 3, color: c.track),
+                  AnimatedFractionallySizedBox(
+                    duration: M.off(context) ? Duration.zero : M.draw,
+                    curve: M.curve,
+                    widthFactor: _w.clamp(0, 1),
+                    alignment: Alignment.centerLeft,
+                    child: Container(height: 3, color: widget.color),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Düz eylem satırı: solda ne olduğu, sağda küçük mono ipucu.
+///
+/// Chevron yok — ipucu zaten "burada ne var" diyor ve bir ayarlar
+/// menüsünden ayırıyor.
+class ActionRow extends StatelessWidget {
+  const ActionRow({super.key, required this.label, this.hint, this.onTap});
+
+  final String label;
+  final String? hint;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Pressable(
+      onTap: onTap,
+      scale: 1,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: c.line)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(label, style: T.rowName.copyWith(color: c.ink)),
+            ),
+            if (hint != null)
+              Text(hint!, style: T.label.copyWith(fontSize: 9, color: c.faint)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Manşetin altındaki karşılaştırma satırı: resmî ölçüm ve aradaki fark.
+///
+/// Kontrol değil, okuma. Segment kaldırıldı — manşet her zaman senin sayın,
+/// TÜİK burada ve grafikte kesikli çizgide duruyor.
+class CompareRow extends StatelessWidget {
+  const CompareRow({
+    super.key,
+    required this.label,
+    required this.value,
+    this.difference,
+  });
+
+  final String label;
+  final String value;
+  final String? difference;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.only(top: 12),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: c.line)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          // Kesikli tire: grafikteki çizginin aynısı, lejant gerekmiyor.
+          CustomPaint(size: const Size(13, 2), painter: _Dashes(c.ref)),
+          const SizedBox(width: 6),
+          Text(label, style: T.body.copyWith(fontSize: 11.5, color: c.muted)),
+          const SizedBox(width: 9),
+          Text(value, style: T.value.copyWith(fontSize: 13, color: c.ref)),
+          const Spacer(),
+          if (difference != null)
+            Text(
+              difference!,
+              style: T.label.copyWith(fontSize: 10, color: c.faint),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Dashes extends CustomPainter {
+  _Dashes(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size s) {
+    final p = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    for (var x = 0.0; x < s.width; x += 5) {
+      canvas.drawLine(Offset(x, 1), Offset((x + 3).clamp(0, s.width), 1), p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Dashes old) => old.color != color;
 }
