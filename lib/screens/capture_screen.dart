@@ -83,9 +83,14 @@ class _CaptureScreenState extends State<CaptureScreen> {
       title: 'Fiş ekle',
       trailing: Pressable(
         onTap: () => Navigator.of(context).pop(false),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(4),
-          child: LineIcon(Glyph.close, size: 17, color: C.muted, stroke: 1.6),
+          child: LineIcon(
+            Glyph.close,
+            size: 17,
+            color: context.c.muted,
+            stroke: 1.6,
+          ),
         ),
       ),
       slivers: [
@@ -96,10 +101,14 @@ class _CaptureScreenState extends State<CaptureScreen> {
               const SizedBox(height: 8),
               const Text('Fişi okut', style: T.display),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Fişin fotoğrafı cihazdan çıkmaz. Metin cihaz üstünde okunur; '
                 'sunucuya yalnızca eşleşmiş satırlar gider.',
-                style: TextStyle(fontSize: 12.5, height: 1.55, color: C.muted),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  height: 1.55,
+                  color: context.c.muted,
+                ),
               ),
               const SizedBox(height: 22),
               const _Guide(),
@@ -118,10 +127,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
                 const SizedBox(height: 16),
                 Text(
                   _error!,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     height: 1.5,
-                    color: C.hot,
+                    color: context.c.hot,
                   ),
                 ),
               ],
@@ -161,18 +170,18 @@ class _Guide extends StatelessWidget {
                   margin: const EdgeInsets.only(top: 6, right: 9),
                   width: 4,
                   height: 4,
-                  decoration: const BoxDecoration(
-                    color: C.muted,
+                  decoration: BoxDecoration(
+                    color: context.c.muted,
                     shape: BoxShape.circle,
                   ),
                 ),
                 Expanded(
                   child: Text(
                     tip,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
                       height: 1.5,
-                      color: C.muted,
+                      color: context.c.muted,
                     ),
                   ),
                 ),

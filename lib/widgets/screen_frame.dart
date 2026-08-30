@@ -44,7 +44,7 @@ class ScreenFrame extends StatelessWidget {
     final bottomReserve = (reserveTabBar ? kTabBarHeight + pad.bottom : 0.0);
 
     return Scaffold(
-      backgroundColor: C.paper,
+      backgroundColor: context.c.paper,
       body: Stack(
         children: [
           CustomScrollView(
@@ -163,9 +163,13 @@ class PrimaryButton extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 13),
         decoration: BoxDecoration(
-          color: !enabled ? C.card : (dark ? C.ink : C.card),
+          color: !enabled
+              ? context.c.card
+              : (dark ? context.c.ink : context.c.card),
           border: Border.all(
-            color: !enabled ? C.line : (dark ? C.ink : C.line),
+            color: !enabled
+                ? context.c.line
+                : (dark ? context.c.ink : context.c.line),
           ),
           borderRadius: BorderRadius.circular(8),
         ),
@@ -175,7 +179,9 @@ class PrimaryButton extends StatelessWidget {
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w500,
-            color: !enabled ? C.muted : (dark ? C.card : C.ink),
+            color: !enabled
+                ? context.c.muted
+                : (dark ? context.c.card : context.c.ink),
           ),
         ),
       ),

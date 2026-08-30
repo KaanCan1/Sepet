@@ -77,12 +77,15 @@ void main() {
   });
 
   group('DrawnLineChart', () {
-    const seri = [
-      ChartSeries(values: [100.0, 104.0, 111.0], color: C.ink),
+    final seri = [
+      ChartSeries(
+        values: const [100.0, 104.0, 111.0],
+        color: SepetColors.light.ink,
+      ),
     ];
 
     testWidgets('çizim ilerliyor ve tamamlanıyor', (tester) async {
-      await tester.pumpWidget(wrap(const DrawnLineChart(series: seri)));
+      await tester.pumpWidget(wrap(DrawnLineChart(series: seri)));
 
       double progress() =>
           tester.widget<LineChart>(find.byType(LineChart)).progress;
@@ -99,7 +102,7 @@ void main() {
 
     testWidgets('Hareketi Azalt açıkken çizgi ilk karede tam', (tester) async {
       await tester.pumpWidget(
-        wrap(const DrawnLineChart(series: seri), reduceMotion: true),
+        wrap(DrawnLineChart(series: seri), reduceMotion: true),
       );
       expect(tester.widget<LineChart>(find.byType(LineChart)).progress, 1);
     });

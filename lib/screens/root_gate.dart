@@ -20,7 +20,7 @@ class RootGate extends StatelessWidget {
     return BlocBuilder<AuthCubit, AuthState>(
       builder: (context, state) => switch (state) {
         // Boş kâğıt zemin beyaz sıçramayı engelliyor.
-        AuthUnknown() => const ColoredBox(color: C.paper),
+        AuthUnknown() => ColoredBox(color: context.c.paper),
         AuthSignedOut() => const WelcomeScreen(),
         AuthSignedIn() => const Shell(),
       },

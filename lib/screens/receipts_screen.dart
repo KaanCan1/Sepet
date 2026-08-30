@@ -34,9 +34,14 @@ class ReceiptsScreen extends StatelessWidget {
       reserveTabBar: true,
       trailing: Pressable(
         onTap: () => Navigator.of(context).push(MatchQueueScreen.route()),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(4),
-          child: LineIcon(Glyph.check, size: 18, color: C.ink, stroke: 1.6),
+          child: LineIcon(
+            Glyph.check,
+            size: 18,
+            color: context.c.ink,
+            stroke: 1.6,
+          ),
         ),
       ),
       slivers: [
@@ -275,9 +280,12 @@ class _SwipeToDeleteState extends State<_SwipeToDelete>
   }
 
   SnackBar _snack(String text) => SnackBar(
-    backgroundColor: C.ink,
+    backgroundColor: context.c.ink,
     behavior: SnackBarBehavior.floating,
-    content: Text(text, style: const TextStyle(fontSize: 12.5, color: C.card)),
+    content: Text(
+      text,
+      style: TextStyle(fontSize: 12.5, color: context.c.card),
+    ),
   );
 }
 
@@ -306,15 +314,15 @@ class _DeleteAction extends StatelessWidget {
         margin: const EdgeInsets.fromLTRB(12, 4, 0, 4),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: C.hot,
+          color: context.c.hot,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Text(
+        child: Text(
           'Sil',
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: C.card,
+            color: context.c.card,
           ),
         ),
       ),

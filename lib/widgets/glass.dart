@@ -24,13 +24,16 @@ class GlassBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final border = BorderSide(color: C.line.withValues(alpha: .5), width: .5);
+    final border = BorderSide(
+      color: context.c.line.withValues(alpha: .5),
+      width: .5,
+    );
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: C.paper.withValues(alpha: .55),
+            color: context.c.paper.withValues(alpha: .55),
             border: Border(
               top: borderSide == GlassEdge.top ? border : BorderSide.none,
               bottom: borderSide == GlassEdge.bottom ? border : BorderSide.none,
@@ -52,7 +55,7 @@ class PaperCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
     this.radius = 10,
-    this.borderColor = C.line,
+    this.borderColor,
     this.borderWidth = 1,
     this.elevated = false,
   });
@@ -60,7 +63,9 @@ class PaperCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets padding;
   final double radius;
-  final Color borderColor;
+
+  /// Verilmezse temanın çizgi rengi.
+  final Color? borderColor;
   final double borderWidth;
   final bool elevated;
 
@@ -68,9 +73,12 @@ class PaperCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: C.card,
+        color: context.c.card,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: borderColor, width: borderWidth),
+        border: Border.all(
+          color: borderColor ?? context.c.line,
+          width: borderWidth,
+        ),
         boxShadow: elevated
             ? const [
                 BoxShadow(
@@ -191,7 +199,7 @@ abstract final class GlassSettings {
 
   /// Üst bar ve alt sayfa — içeriğin okunması gerektiği için daha sakin.
   static const bar = LiquidGlassSettings(
-    glassColor: C.paper,
+    glassColor: SepetColors.lightPaper,
     visibility: .46,
     thickness: 9,
     blur: 14,
@@ -207,7 +215,7 @@ abstract final class GlassSettings {
 
   /// Uygulama genelindeki varsayılan — tema katmanı ayrı bir tip istiyor.
   static const theme = GlassThemeSettings(
-    glassColor: C.paper,
+    glassColor: SepetColors.lightPaper,
     visibility: .34,
     thickness: 14,
     blur: 8,

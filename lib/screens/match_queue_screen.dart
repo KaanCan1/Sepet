@@ -30,9 +30,14 @@ class MatchQueueScreen extends StatelessWidget {
       title: 'Eşleşmeler',
       trailing: Pressable(
         onTap: () => Navigator.of(context).pop(),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(4),
-          child: LineIcon(Glyph.close, size: 17, color: C.muted, stroke: 1.6),
+          child: LineIcon(
+            Glyph.close,
+            size: 17,
+            color: context.c.muted,
+            stroke: 1.6,
+          ),
         ),
       ),
       slivers: [
@@ -61,14 +66,14 @@ class MatchQueueScreen extends StatelessWidget {
                       'SATIR ONAY BEKLİYOR',
                     ),
                     const SizedBox(height: 10),
-                    const Text(
+                    Text(
                       'Bu satırların hangi kanonik ürüne denk geldiğinden emin '
                       'olunamadı. Onayladığın eşleşme kaydedilir ve aynı fiş '
                       'formatı bir daha sorulmaz.',
                       style: TextStyle(
                         fontSize: 12,
                         height: 1.5,
-                        color: C.muted,
+                        color: context.c.muted,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -83,7 +88,7 @@ class MatchQueueScreen extends StatelessWidget {
                           name: r.merchant,
                           sub: '${Fmt.dayMonth(r.date)} · ${r.itemCount} ÜRÜN',
                           amount: '${r.pendingCount}',
-                          amountColor: C.ref,
+                          amountColor: context.c.ref,
                         ),
                       ),
                   ],

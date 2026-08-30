@@ -39,9 +39,14 @@ class OfficialScreen extends StatelessWidget {
       title: 'Resmî veriler',
       leading: Pressable(
         onTap: () => Navigator.of(context).pop(),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(4),
-          child: LineIcon(Glyph.back, size: 17, color: C.ink, stroke: 1.6),
+          child: LineIcon(
+            Glyph.back,
+            size: 17,
+            color: context.c.ink,
+            stroke: 1.6,
+          ),
         ),
       ),
       slivers: [
@@ -53,10 +58,14 @@ class OfficialScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'TÜİK sayısını henüz otomatik çekmiyoruz. Uydurmak '
                     'yerine boş bırakıyoruz — buraya sen giriyorsun.',
-                    style: TextStyle(fontSize: 12, height: 1.5, color: C.muted),
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.5,
+                      color: context.c.muted,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   _RefreshRow(),
@@ -93,26 +102,28 @@ class _RefreshRowState extends State<_RefreshRow> {
     setState(() => _busy = true);
     final cubit = context.read<OfficialCubit>();
     final messenger = ScaffoldMessenger.of(context);
+    // Renkler await'ten ÖNCE yakalanıyor: sonrasında context ölmüş olabilir.
+    final c = context.c;
     try {
       final n = await cubit.refreshFromSource();
       messenger.showSnackBar(
         SnackBar(
-          backgroundColor: C.ink,
+          backgroundColor: c.ink,
           behavior: SnackBarBehavior.floating,
           content: Text(
             n == 0 ? 'Yeni ay yok' : '$n ay güncellendi',
-            style: const TextStyle(fontSize: 12.5, color: C.card),
+            style: TextStyle(fontSize: 12.5, color: c.card),
           ),
         ),
       );
     } on ApiException catch (e) {
       messenger.showSnackBar(
         SnackBar(
-          backgroundColor: C.ink,
+          backgroundColor: c.ink,
           behavior: SnackBarBehavior.floating,
           content: Text(
             e.message,
-            style: const TextStyle(fontSize: 12.5, color: C.card),
+            style: TextStyle(fontSize: 12.5, color: c.card),
           ),
         ),
       );
@@ -129,7 +140,7 @@ class _RefreshRowState extends State<_RefreshRow> {
         padding: const EdgeInsets.fromLTRB(13, 11, 11, 11),
         child: Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -137,7 +148,7 @@ class _RefreshRowState extends State<_RefreshRow> {
                   SizedBox(height: 3),
                   Text(
                     'TÜİK TÜFE’nin resmî dağıtım kanalı',
-                    style: TextStyle(fontSize: 11, color: C.muted),
+                    style: TextStyle(fontSize: 11, color: context.c.muted),
                   ),
                 ],
               ),
@@ -145,7 +156,7 @@ class _RefreshRowState extends State<_RefreshRow> {
             if (_busy)
               const CupertinoLikeSpinner()
             else
-              const LineIcon(Glyph.chevron, size: 15, color: C.muted),
+              LineIcon(Glyph.chevron, size: 15, color: context.c.muted),
           ],
         ),
       ),
@@ -174,12 +185,12 @@ class _SeriesBlock extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: C.ink,
+                  color: context.c.ink,
                   borderRadius: BorderRadius.circular(7),
                 ),
                 child: Text(
                   'AY EKLE',
-                  style: T.label.copyWith(fontSize: 9.5, color: C.card),
+                  style: T.label.copyWith(fontSize: 9.5, color: context.c.card),
                 ),
               ),
             ),
@@ -192,11 +203,11 @@ class _SeriesBlock extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         if (series.entries.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
             child: Text(
               'Henüz ay girilmedi.',
-              style: TextStyle(fontSize: 12, color: C.muted),
+              style: TextStyle(fontSize: 12, color: context.c.muted),
             ),
           )
         else
@@ -207,7 +218,7 @@ class _SeriesBlock extends StatelessWidget {
                 name: Fmt.monthLong(e.month),
                 sub: '${e.month.year}',
                 amount: Fmt.signedPct1(e.yoyPct),
-                amountColor: e.yoyPct >= 0 ? C.hot : C.ref,
+                amountColor: e.yoyPct >= 0 ? context.c.hot : context.c.ref,
               ),
             ),
       ],
@@ -222,10 +233,12 @@ class _SeriesBlock extends StatelessWidget {
     // Cubit'i önden al: alt sayfa bir async boşluk açıyor.
     final cubit = context.read<OfficialCubit>();
     final messenger = ScaffoldMessenger.of(context);
+    // Renkler await'ten ÖNCE yakalanıyor: sonrasında context ölmüş olabilir.
+    final c = context.c;
 
     final result = await showModalBottomSheet<_FormResult>(
       context: context,
-      backgroundColor: C.paper,
+      backgroundColor: context.c.paper,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
@@ -238,7 +251,7 @@ class _SeriesBlock extends StatelessWidget {
       if (result.delete) {
         await cubit.remove(code: series.code, month: result.month);
         messenger.showSnackBar(
-          _snack('${Fmt.monthLong(result.month)} silindi'),
+          _snack(c, '${Fmt.monthLong(result.month)} silindi'),
         );
       } else {
         await cubit.save(
@@ -247,18 +260,18 @@ class _SeriesBlock extends StatelessWidget {
           yoyPct: result.yoyPct!,
         );
         messenger.showSnackBar(
-          _snack('${Fmt.monthLong(result.month)} kaydedildi'),
+          _snack(c, '${Fmt.monthLong(result.month)} kaydedildi'),
         );
       }
     } on ApiException catch (e) {
-      messenger.showSnackBar(_snack(e.message));
+      messenger.showSnackBar(_snack(c, e.message));
     }
   }
 
-  SnackBar _snack(String text) => SnackBar(
-    backgroundColor: C.ink,
+  SnackBar _snack(SepetColors c, String text) => SnackBar(
+    backgroundColor: c.ink,
     behavior: SnackBarBehavior.floating,
-    content: Text(text, style: const TextStyle(fontSize: 12.5, color: C.card)),
+    content: Text(text, style: TextStyle(fontSize: 12.5, color: c.card)),
   );
 }
 
@@ -348,16 +361,16 @@ class _EntryFormState extends State<_EntryForm> {
           const SizedBox(height: 2),
           Text(
             'Yıllık değişim, kaynağın açıkladığı gibi.',
-            style: const TextStyle(fontSize: 11.5, color: C.muted),
+            style: TextStyle(fontSize: 11.5, color: context.c.muted),
           ),
           const SizedBox(height: 16),
           const Lbl('AY'),
           const SizedBox(height: 6),
           DecoratedBox(
             decoration: BoxDecoration(
-              color: C.card,
+              color: context.c.card,
               borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: C.line),
+              border: Border.all(color: context.c.line),
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -395,20 +408,20 @@ class _EntryFormState extends State<_EntryForm> {
               decimal: true,
               signed: true,
             ),
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: F.mono,
               fontFamilyFallback: F.monoFallback,
               fontSize: 17,
-              color: C.ink,
+              color: context.c.ink,
             ),
             decoration: InputDecoration(
               hintText: '33,5',
               errorText: _error,
               filled: true,
-              fillColor: C.card,
+              fillColor: context.c.card,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(color: C.line),
+                borderSide: BorderSide(color: context.c.line),
               ),
             ),
             onSubmitted: (_) => _submit(),
@@ -426,7 +439,7 @@ class _EntryFormState extends State<_EntryForm> {
                   padding: const EdgeInsets.all(8),
                   child: Text(
                     'Bu ayı sil',
-                    style: T.label.copyWith(fontSize: 10, color: C.hot),
+                    style: T.label.copyWith(fontSize: 10, color: context.c.hot),
                   ),
                 ),
               ),

@@ -107,6 +107,7 @@ class _PaperRefreshIndicatorState extends State<PaperRefreshIndicator>
                 painter: _TearLinePainter(
                   acilma: calisiyor ? 1 : t,
                   kafa: calisiyor ? _head.value : null,
+                  colors: context.c,
                 ),
               ),
             ),
@@ -126,7 +127,14 @@ class _PaperRefreshIndicatorState extends State<PaperRefreshIndicator>
 
 /// Ortadan dışa açılan kesme çizgisi ve üstünde gidip gelen baskı kafası.
 class _TearLinePainter extends CustomPainter {
-  const _TearLinePainter({required this.acilma, required this.kafa});
+  const _TearLinePainter({
+    required this.acilma,
+    required this.kafa,
+    required this.colors,
+  });
+
+  /// Boyacının context'i yok; renkler buradan geliyor.
+  final SepetColors colors;
 
   /// 0..1 — çizginin ne kadarı açıldı.
   final double acilma;
@@ -143,7 +151,7 @@ class _TearLinePainter extends CustomPainter {
 
     // Kesik çizgi: fişin koparma yeri. Eşiğe gelince mürekkebe dönüyor.
     final kalem = Paint()
-      ..color = Color.lerp(C.line, C.ink, acilma)!
+      ..color = Color.lerp(colors.line, colors.ink, acilma)!
       ..strokeWidth = 1.4
       ..strokeCap = StrokeCap.round;
 
@@ -162,10 +170,10 @@ class _TearLinePainter extends CustomPainter {
     final gidis = k < .5 ? k * 2 : (1 - k) * 2;
     final egri = Curves.easeInOut.transform(gidis);
     final x = (orta - yari) + (yari * 2) * egri;
-    canvas.drawCircle(Offset(x, y), 3, Paint()..color = C.hot);
+    canvas.drawCircle(Offset(x, y), 3, Paint()..color = colors.hot);
   }
 
   @override
   bool shouldRepaint(_TearLinePainter old) =>
-      old.acilma != acilma || old.kafa != kafa;
+      old.colors != colors || old.acilma != acilma || old.kafa != kafa;
 }

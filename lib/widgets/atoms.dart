@@ -19,11 +19,14 @@ class Lbl extends StatelessWidget {
 }
 
 class Hairline extends StatelessWidget {
-  const Hairline({super.key, this.color = C.line});
-  final Color color;
+  const Hairline({super.key, this.color});
+
+  /// Verilmezse temanın çizgi rengi.
+  final Color? color;
 
   @override
-  Widget build(BuildContext context) => Container(height: 1, color: color);
+  Widget build(BuildContext context) =>
+      Container(height: 1, color: color ?? context.c.line);
 }
 
 /// .delta — "Geçen aya göre 1,4 puan" rozeti.
@@ -34,10 +37,10 @@ class DeltaPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = up ? C.hot : C.ref;
+    final color = up ? context.c.hot : context.c.ref;
     return Container(
       decoration: BoxDecoration(
-        color: up ? C.hotBg : C.refBg,
+        color: up ? context.c.hotBg : context.c.refBg,
         borderRadius: BorderRadius.circular(999),
       ),
       padding: const EdgeInsets.fromLTRB(8, 3.5, 9, 4.5),
@@ -129,7 +132,7 @@ class SeriesRow extends StatelessWidget {
         Expanded(
           child: Text(
             name,
-            style: const TextStyle(fontSize: 11.5, color: C.muted),
+            style: TextStyle(fontSize: 11.5, color: context.c.muted),
           ),
         ),
         Text(value, style: T.num12),
@@ -145,13 +148,15 @@ class LedgerRow extends StatelessWidget {
     required this.name,
     this.sub,
     required this.amount,
-    this.amountColor = C.ink,
+    this.amountColor,
   });
 
   final String name;
   final String? sub;
   final String amount;
-  final Color amountColor;
+
+  /// Verilmezse mürekkep rengi.
+  final Color? amountColor;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -163,7 +168,7 @@ class LedgerRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name, style: const TextStyle(fontSize: 12, color: C.ink)),
+              Text(name, style: TextStyle(fontSize: 12, color: context.c.ink)),
               if (sub != null) ...[
                 const SizedBox(height: 2),
                 Text(sub!, style: T.label),
@@ -174,7 +179,10 @@ class LedgerRow extends StatelessWidget {
         const SizedBox(width: 10),
         Text(
           amount,
-          style: T.num11.copyWith(fontSize: 11.5, color: amountColor),
+          style: T.num11.copyWith(
+            fontSize: 11.5,
+            color: amountColor ?? context.c.ink,
+          ),
         ),
       ],
     ),
@@ -183,36 +191,41 @@ class LedgerRow extends StatelessWidget {
 
 /// Serif başlık + üst simge sayı ("47,2%").
 class BigNumber extends StatelessWidget {
-  const BigNumber(this.value, {super.key, this.size = 60, this.color = C.ink});
+  const BigNumber(this.value, {super.key, this.size = 52, this.color});
   final String value;
   final double size;
-  final Color color;
+
+  /// Verilmezse mürekkep rengi.
+  final Color? color;
 
   @override
-  Widget build(BuildContext context) => Text.rich(
-    TextSpan(
-      children: [
-        TextSpan(text: value),
-        // vertical-align: super — TextStyle'da baseline kaydırma yok,
-        // WidgetSpan'ı metnin tepesine hizalıyoruz.
-        WidgetSpan(
-          alignment: PlaceholderAlignment.top,
-          child: Padding(
-            padding: EdgeInsets.only(top: size * .15),
-            child: Text(
-              '%',
-              style: T.bigNumber.copyWith(
-                fontSize: size * .43,
-                color: color,
-                height: 1,
+  Widget build(BuildContext context) {
+    final ink = color ?? context.c.ink;
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: value),
+          // vertical-align: super — TextStyle'da baseline kaydırma yok,
+          // WidgetSpan'ı metnin tepesine hizalıyoruz.
+          WidgetSpan(
+            alignment: PlaceholderAlignment.top,
+            child: Padding(
+              padding: EdgeInsets.only(top: size * .15),
+              child: Text(
+                '%',
+                style: T.bigNumber.copyWith(
+                  fontSize: size * .43,
+                  color: ink,
+                  height: 1,
+                ),
               ),
             ),
           ),
-        ),
-      ],
-    ),
-    style: T.bigNumber.copyWith(fontSize: size, color: color),
-  );
+        ],
+      ),
+      style: T.bigNumber.copyWith(fontSize: size, color: ink),
+    );
+  }
 }
 
 /// Fişin koparma çizgisi. Aylık kartın alt kenarında ve karşılama ekranının
@@ -223,21 +236,27 @@ class TearEdge extends StatelessWidget {
   final double height;
 
   @override
-  Widget build(BuildContext context) =>
-      CustomPaint(size: Size(double.infinity, height), painter: _TearPainter());
+  Widget build(BuildContext context) => CustomPaint(
+    size: Size(double.infinity, height),
+    painter: _TearPainter(context.c.ink),
+  );
 }
 
 class _TearPainter extends CustomPainter {
+  _TearPainter(this.color);
+
+  final Color color;
+
   @override
   void paint(Canvas canvas, Size s) {
-    final p = Paint()..color = C.ink.withValues(alpha: .18);
+    final p = Paint()..color = color.withValues(alpha: .18);
     for (var x = 0.0; x < s.width; x += 8) {
       canvas.drawRect(Rect.fromLTWH(x, 0, 4, s.height), p);
     }
   }
 
   @override
-  bool shouldRepaint(_TearPainter old) => false;
+  bool shouldRepaint(_TearPainter old) => old.color != color;
 }
 
 /// Marka rozeti — logo değil, baş harfler.
@@ -265,9 +284,9 @@ class BrandChip extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: known ? C.refBg : null,
+        color: known ? context.c.refBg : null,
         borderRadius: BorderRadius.circular(size * .23),
-        border: known ? null : Border.all(color: C.line),
+        border: known ? null : Border.all(color: context.c.line),
       ),
       child: Text(
         known ? text : '?',
@@ -277,7 +296,7 @@ class BrandChip extends StatelessWidget {
           fontSize: size * .36,
           fontWeight: FontWeight.w600,
           height: 1,
-          color: known ? C.ref : C.grey,
+          color: known ? context.c.ref : context.c.grey,
         ),
       ),
     );

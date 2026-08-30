@@ -55,6 +55,8 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
 
     final repo = context.read<Repository>();
     final messenger = ScaffoldMessenger.of(context);
+    // Renkler await'ten ÖNCE yakalanıyor: sonrasında context ölmüş olabilir.
+    final c = context.c;
     try {
       await repo.confirmMatch(
         receiptId: widget.receiptId,
@@ -71,12 +73,9 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(
-          backgroundColor: C.ink,
+          backgroundColor: c.ink,
           behavior: SnackBarBehavior.floating,
-          content: Text(
-            '$e',
-            style: const TextStyle(fontSize: 12.5, color: C.card),
-          ),
+          content: Text('$e', style: TextStyle(fontSize: 12.5, color: c.card)),
         ),
       );
       return false;
@@ -89,9 +88,14 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
       title: 'Fiş',
       leading: Pressable(
         onTap: () => Navigator.of(context).pop(),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(4),
-          child: LineIcon(Glyph.back, size: 17, color: C.ink, stroke: 1.6),
+          child: LineIcon(
+            Glyph.back,
+            size: 17,
+            color: context.c.ink,
+            stroke: 1.6,
+          ),
         ),
       ),
       slivers: [
@@ -144,14 +148,14 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
                     ),
                     if (pending > 0) ...[
                       const SizedBox(height: 12),
-                      const Text(
+                      Text(
                         'İşaretli satırlarda hangi kanonik ürüne denk geldiğinden '
                         'emin olunamadı. Onayladığın eşleşme kaydedilir; aynı fiş '
                         'formatı bir daha sorulmaz.',
                         style: TextStyle(
                           fontSize: 11,
                           height: 1.5,
-                          color: C.muted,
+                          color: context.c.muted,
                         ),
                       ),
                     ],
@@ -181,7 +185,7 @@ class _PendingBanner extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
         decoration: BoxDecoration(
-          color: C.hotBg,
+          color: context.c.hotBg,
           borderRadius: BorderRadius.circular(9),
           border: Border.all(color: const Color(0x389F2F2D)),
         ),
@@ -190,7 +194,7 @@ class _PendingBanner extends StatelessWidget {
             Expanded(
               child: Text(
                 '$count kalem eşleşme bekliyor',
-                style: const TextStyle(fontSize: 12.5, color: C.hot),
+                style: TextStyle(fontSize: 12.5, color: context.c.hot),
               ),
             ),
             Container(
@@ -199,7 +203,10 @@ class _PendingBanner extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(color: const Color(0x669F2F2D)),
               ),
-              child: Text('SIRAYLA ÇÖZ', style: T.label.copyWith(color: C.hot)),
+              child: Text(
+                'SIRAYLA ÇÖZ',
+                style: T.label.copyWith(color: context.c.hot),
+              ),
             ),
           ],
         ),
@@ -227,9 +234,9 @@ class _LineRow extends StatelessWidget {
       scale: .99,
       child: Container(
         decoration: BoxDecoration(
-          color: waiting ? C.hotBg : C.card,
+          color: waiting ? context.c.hotBg : context.c.card,
           border: waiting
-              ? const Border(left: BorderSide(color: C.hot, width: 2))
+              ? Border(left: BorderSide(color: context.c.hot, width: 2))
               : null,
         ),
         padding: EdgeInsets.fromLTRB(waiting ? 9 : 11, 10, 11, 10),
@@ -256,11 +263,13 @@ class _LineRow extends StatelessWidget {
                     line.canonical ?? line.displayName,
                     style: TextStyle(
                       fontSize: 11,
-                      color: line.canonical == null ? C.muted : C.ink,
+                      color: line.canonical == null
+                          ? context.c.muted
+                          : context.c.ink,
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Text(_hint(line), style: _hintStyle(line)),
+                  Text(_hint(line), style: _hintStyle(context, line)),
                 ],
               ),
             ),
@@ -304,6 +313,6 @@ class _LineRow extends StatelessWidget {
     return line.rawLine;
   }
 
-  static TextStyle _hintStyle(ReceiptLine line) =>
-      line.needsMatch ? T.label.copyWith(color: C.hot) : T.raw;
+  static TextStyle _hintStyle(BuildContext context, ReceiptLine line) =>
+      line.needsMatch ? T.label.copyWith(color: context.c.hot) : T.raw;
 }

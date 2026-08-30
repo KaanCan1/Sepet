@@ -41,12 +41,12 @@ class _ConsentScreenState extends State<ConsentScreen> {
               ? null
               : Pressable(
                   onTap: () => Navigator.of(context).pop(),
-                  child: const Padding(
+                  child: Padding(
                     padding: EdgeInsets.all(4),
                     child: LineIcon(
                       Glyph.back,
                       size: 17,
-                      color: C.ink,
+                      color: context.c.ink,
                       stroke: 1.6,
                     ),
                   ),
@@ -65,13 +65,13 @@ class _ConsentScreenState extends State<ConsentScreen> {
                   const SizedBox(height: 6),
                   const Text('İsteğe bağlı\nizinler', style: T.display),
                   const SizedBox(height: 10),
-                  const Text(
+                  Text(
                     'Endeksin hesaplanması için bunlara ihtiyaç yok. İkisi de '
                     'kapalıyken uygulama aynen çalışır.',
                     style: TextStyle(
                       fontSize: 12,
                       height: 1.55,
-                      color: C.muted,
+                      color: context.c.muted,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -99,30 +99,41 @@ class _ConsentScreenState extends State<ConsentScreen> {
                         Navigator.of(context).push(PrivacyScreen.route()),
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 13),
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         border: Border(
-                          top: BorderSide(color: C.line),
-                          bottom: BorderSide(color: C.line),
+                          top: BorderSide(color: context.c.line),
+                          bottom: BorderSide(color: context.c.line),
                         ),
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
                           Expanded(
                             child: Text(
                               'Aydınlatma metni',
-                              style: TextStyle(fontSize: 12.5, color: C.ink),
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: context.c.ink,
+                              ),
                             ),
                           ),
-                          LineIcon(Glyph.chevron, size: 13, color: C.muted),
+                          LineIcon(
+                            Glyph.chevron,
+                            size: 13,
+                            color: context.c.muted,
+                          ),
                         ],
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'Verdiğin rızayı istediğin an bu ekrandan geri alabilirsin. '
                     'Geri aldığında ilgili işleme durur.',
-                    style: TextStyle(fontSize: 11, height: 1.5, color: C.muted),
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.5,
+                      color: context.c.muted,
+                    ),
                   ),
                 ],
               ),
@@ -150,7 +161,7 @@ class _ConsentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PaperCard(
     padding: const EdgeInsets.fromLTRB(13, 12, 8, 12),
-    borderColor: value ? C.ink : C.line,
+    borderColor: value ? context.c.ink : context.c.line,
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -158,14 +169,17 @@ class _ConsentTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontSize: 12.5, color: C.ink)),
+              Text(
+                title,
+                style: TextStyle(fontSize: 12.5, color: context.c.ink),
+              ),
               const SizedBox(height: 4),
               Text(
                 body,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   height: 1.5,
-                  color: C.muted,
+                  color: context.c.muted,
                 ),
               ),
             ],
@@ -173,8 +187,8 @@ class _ConsentTile extends StatelessWidget {
         ),
         Switch.adaptive(
           value: value,
-          activeThumbColor: C.card,
-          activeTrackColor: C.ink,
+          activeThumbColor: context.c.card,
+          activeTrackColor: context.c.ink,
           onChanged: onChanged,
         ),
       ],

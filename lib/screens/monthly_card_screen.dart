@@ -80,6 +80,8 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
 
   Future<void> _save() async {
     final messenger = ScaffoldMessenger.of(context);
+    // Renkler await'ten ÖNCE yakalanıyor: sonrasında context ölmüş olabilir.
+    final c = context.c;
     final file = await _writeTemp();
     if (file == null || !mounted) return;
     final size = await file.length();
@@ -87,12 +89,12 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
       ..clearSnackBars()
       ..showSnackBar(
         SnackBar(
-          backgroundColor: C.ink,
+          backgroundColor: c.ink,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
           content: Text(
             'Görsel kaydedildi · ${(size / 1024).round()} KB',
-            style: const TextStyle(fontSize: 12.5, color: C.card),
+            style: TextStyle(fontSize: 12.5, color: c.card),
           ),
         ),
       );
@@ -106,9 +108,14 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
       title: '$month özeti',
       trailing: Pressable(
         onTap: () => Navigator.of(context).pop(),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(4),
-          child: LineIcon(Glyph.close, size: 17, color: C.muted, stroke: 1.6),
+          child: LineIcon(
+            Glyph.close,
+            size: 17,
+            color: context.c.muted,
+            stroke: 1.6,
+          ),
         ),
       ),
       slivers: [
@@ -168,7 +175,7 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
                     ),
                     const SizedBox(height: 2),
                     if (movers.isEmpty)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.symmetric(vertical: 12),
                         child: Text(
                           'Bu ay iki kez gözlenmiş ürün yok — değişim ancak '
@@ -176,7 +183,7 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
                           style: TextStyle(
                             fontSize: 11.5,
                             height: 1.5,
-                            color: C.muted,
+                            color: context.c.muted,
                           ),
                         ),
                       ),
@@ -188,7 +195,9 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
                         child: LedgerRow(
                           name: m.title,
                           amount: Fmt.signedPct1(m.pct),
-                          amountColor: m.pct >= 0 ? C.hot : C.ref,
+                          amountColor: m.pct >= 0
+                              ? context.c.hot
+                              : context.c.ref,
                         ),
                       ),
                   ],
@@ -219,7 +228,7 @@ class _ShareCard extends StatelessWidget {
 
     return PaperCard(
       radius: 12,
-      borderColor: C.ink,
+      borderColor: context.c.ink,
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,7 +248,11 @@ class _ShareCard extends StatelessWidget {
             '${known.isEmpty ? '' : ' Aynı dönemde '
                       '${known.map((s) => '${s.publisher} ${Fmt.pct1(s.value!)}').join(', ')} '
                       'açıkladı.'}',
-            style: const TextStyle(fontSize: 11.5, height: 1.5, color: C.muted),
+            style: TextStyle(
+              fontSize: 11.5,
+              height: 1.5,
+              color: context.c.muted,
+            ),
           ),
           const SizedBox(height: 14),
           const TearEdge(),

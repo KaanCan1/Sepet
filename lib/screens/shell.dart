@@ -73,7 +73,7 @@ class _ShellState extends State<Shell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: C.paper,
+      backgroundColor: context.c.paper,
       // Kapsül içeriğin üstünde yüzüyor: gövde ekranın tamamını kaplıyor.
       extendBody: true,
       body: Stack(
@@ -169,21 +169,21 @@ class _FloatingTabBar extends StatelessWidget {
               width: kTabCapsuleHeight,
               height: kTabCapsuleHeight,
               decoration: BoxDecoration(
-                color: C.ink,
+                color: context.c.ink,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: C.ink.withValues(alpha: .22),
+                    color: context.c.ink.withValues(alpha: .22),
                     blurRadius: 14,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              child: const Center(
+              child: Center(
                 child: LineIcon(
                   Glyph.camera,
                   size: 23,
-                  color: C.card,
+                  color: context.c.card,
                   stroke: 1.7,
                 ),
               ),
@@ -211,7 +211,7 @@ class _Tab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? C.ink : C.muted;
+    final color = selected ? context.c.ink : context.c.muted;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -222,7 +222,7 @@ class _Tab extends StatelessWidget {
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
             color: selected
-                ? C.ink.withValues(alpha: .07)
+                ? context.c.ink.withValues(alpha: .07)
                 : const Color(0x00000000),
             borderRadius: BorderRadius.circular(16),
           ),

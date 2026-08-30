@@ -61,7 +61,14 @@ class LineChart extends StatelessWidget {
       height: height,
       width: double.infinity,
       child: CustomPaint(
-        painter: _LinePainter(series, marker, markerLabel, progress, guides),
+        painter: _LinePainter(
+          series,
+          marker,
+          markerLabel,
+          progress,
+          guides,
+          context.c,
+        ),
       ),
     );
   }
@@ -74,7 +81,11 @@ class _LinePainter extends CustomPainter {
     this.markerLabel,
     this.progress,
     this.guides,
+    this.colors,
   );
+
+  /// Boyacının context'i yok; ızgara ve işaret renkleri buradan geliyor.
+  final SepetColors colors;
 
   final List<ChartSeries> series;
   final int? marker;
@@ -85,7 +96,7 @@ class _LinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final grid = Paint()
-      ..color = C.line
+      ..color = colors.line
       ..strokeWidth = 1;
 
     if (guides) {
@@ -179,12 +190,12 @@ class _LinePainter extends CustomPainter {
       final v = series.first.values;
       if (marker! >= 0 && marker! < v.length) {
         final p = at(v, marker!);
-        canvas.drawCircle(p, 2.4, Paint()..color = C.card);
+        canvas.drawCircle(p, 2.4, Paint()..color = colors.card);
         canvas.drawCircle(
           p,
           2.4,
           Paint()
-            ..color = C.ink
+            ..color = colors.ink
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.4,
         );
@@ -192,11 +203,11 @@ class _LinePainter extends CustomPainter {
           final tp = TextPainter(
             text: TextSpan(
               text: markerLabel,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: F.mono,
                 fontFamilyFallback: F.monoFallback,
                 fontSize: 7,
-                color: C.muted,
+                color: colors.muted,
               ),
             ),
             textDirection: TextDirection.ltr,
@@ -241,6 +252,7 @@ class _LinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_LinePainter old) =>
+      old.colors != colors ||
       old.progress != progress ||
       old.series != series ||
       old.marker != marker ||

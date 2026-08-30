@@ -25,20 +25,24 @@ class LineIcon extends StatelessWidget {
     this.glyph, {
     super.key,
     this.size = 17,
-    this.color = C.ink,
+    this.color,
     this.stroke = 1.5,
   });
 
   final Glyph glyph;
   final double size;
-  final Color color;
+
+  /// Verilmezse mürekkep rengi.
+  final Color? color;
   final double stroke;
 
   @override
   Widget build(BuildContext context) => SizedBox(
     width: size,
     height: size,
-    child: CustomPaint(painter: _GlyphPainter(glyph, color, stroke)),
+    child: CustomPaint(
+      painter: _GlyphPainter(glyph, color ?? context.c.ink, stroke),
+    ),
   );
 }
 

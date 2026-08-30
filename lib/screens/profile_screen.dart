@@ -111,11 +111,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Resmî ölçüm senin sayının yanında duruyor. Uygulama onu '
                     'doğrulamıyor ya da yorumlamıyor — yalnızca referans '
                     'çizgisi.',
-                    style: TextStyle(fontSize: 11, height: 1.5, color: C.muted),
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.5,
+                      color: context.c.muted,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   _ActionRow(
@@ -130,18 +134,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   PaperCard(
                     child: Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 'Aylık kart',
-                                style: TextStyle(fontSize: 12.5, color: C.ink),
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: context.c.ink,
+                                ),
                               ),
                               SizedBox(height: 3),
                               Text(
                                 "Her ayın 3'ünde, resmî veri açıklandığında",
-                                style: TextStyle(fontSize: 11, color: C.muted),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: context.c.muted,
+                                ),
                               ),
                             ],
                           ),
@@ -149,8 +159,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Switch.adaptive(
                           key: const Key('monthly-reminder'),
                           value: _monthlyPush,
-                          activeThumbColor: C.card,
-                          activeTrackColor: C.ink,
+                          activeThumbColor: context.c.card,
+                          activeTrackColor: context.c.ink,
                           onChanged: _pushBusy ? null : _toggleReminder,
                         ),
                       ],
@@ -231,12 +241,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ..clearSnackBars()
       ..showSnackBar(
         SnackBar(
-          backgroundColor: C.ink,
+          backgroundColor: context.c.ink,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
           content: Text(
             msg,
-            style: const TextStyle(fontSize: 12.5, color: C.card),
+            style: TextStyle(fontSize: 12.5, color: context.c.card),
           ),
         ),
       );
@@ -246,7 +256,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: C.card,
+        backgroundColor: context.c.card,
         title: const Text('Fiş verisi', style: T.title),
         content: Text(
           signedIn
@@ -256,12 +266,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     've cihaz değişikliği bunun için gerekli.'
               : 'Giriş yapmadığın için her şey yalnızca bu cihazda duruyor. '
                     'Uygulamayı silersen geçmişin de gider.',
-          style: const TextStyle(fontSize: 12.5, height: 1.5, color: C.ink),
+          style: TextStyle(fontSize: 12.5, height: 1.5, color: context.c.ink),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Anladım', style: TextStyle(color: C.ink)),
+            child: Text('Anladım', style: TextStyle(color: context.c.ink)),
           ),
         ],
       ),
@@ -277,20 +287,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: C.card,
+        backgroundColor: context.c.card,
         title: Text(title, style: T.title),
         content: Text(
           body,
-          style: const TextStyle(fontSize: 12.5, height: 1.5, color: C.ink),
+          style: TextStyle(fontSize: 12.5, height: 1.5, color: context.c.ink),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Vazgeç', style: TextStyle(color: C.muted)),
+            child: Text('Vazgeç', style: TextStyle(color: context.c.muted)),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Sil', style: TextStyle(color: C.hot)),
+            child: Text('Sil', style: TextStyle(color: context.c.hot)),
           ),
         ],
       ),
@@ -350,9 +360,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   SnackBar _snack(String text) => SnackBar(
-    backgroundColor: C.ink,
+    backgroundColor: context.c.ink,
     behavior: SnackBarBehavior.floating,
-    content: Text(text, style: const TextStyle(fontSize: 12.5, color: C.card)),
+    content: Text(
+      text,
+      style: TextStyle(fontSize: 12.5, color: context.c.card),
+    ),
   );
 }
 
@@ -366,10 +379,10 @@ class _SignedOut extends StatelessWidget {
         const SizedBox(height: 4),
         const Text('Fişlerin\nsende kalsın', style: T.display),
         const SizedBox(height: 10),
-        const Text(
+        Text(
           'Giriş yaparsan fişlerin hesabına bağlanır: cihaz değişince '
           'geçmişin gitmez, endeksin geriye dönük olarak yeniden hesaplanabilir.',
-          style: TextStyle(fontSize: 12, height: 1.55, color: C.muted),
+          style: TextStyle(fontSize: 12, height: 1.55, color: context.c.muted),
         ),
         const SizedBox(height: 14),
         PrimaryButton(
@@ -396,13 +409,13 @@ class _Identity extends StatelessWidget {
               width: 46,
               height: 46,
               alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                color: C.ink,
+              decoration: BoxDecoration(
+                color: context.c.ink,
                 shape: BoxShape.circle,
               ),
               child: Text(
                 session.initials,
-                style: T.display.copyWith(fontSize: 20, color: C.card),
+                style: T.display.copyWith(fontSize: 20, color: context.c.card),
               ),
             ),
             const SizedBox(width: 12),
@@ -461,11 +474,11 @@ class _Metric extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: F.mono,
             fontFamilyFallback: F.monoFallback,
             fontSize: 16,
-            color: C.ink,
+            color: context.c.ink,
           ),
         ),
       ],
@@ -487,7 +500,7 @@ class _SourceRow extends StatelessWidget {
             width: 7,
             height: 7,
             decoration: BoxDecoration(
-              color: source.official ? C.ref : C.grey,
+              color: source.official ? context.c.ref : context.c.grey,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -500,7 +513,7 @@ class _SourceRow extends StatelessWidget {
                   children: [
                     Text(
                       '${source.publisher} ${source.name}',
-                      style: const TextStyle(fontSize: 12, color: C.ink),
+                      style: TextStyle(fontSize: 12, color: context.c.ink),
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -520,7 +533,7 @@ class _SourceRow extends StatelessWidget {
           Text(
             source.value == null ? '—' : Fmt.pct1(source.value!),
             style: T.num12.copyWith(
-              color: source.value == null ? C.muted : C.ink,
+              color: source.value == null ? context.c.muted : context.c.ink,
             ),
           ),
         ],
@@ -549,22 +562,29 @@ class _ActionRow extends StatelessWidget {
     scale: .99,
     child: Container(
       padding: const EdgeInsets.symmetric(vertical: 13),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: C.line)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.c.line)),
       ),
       child: Row(
         children: [
           Expanded(
             child: Text(
               label,
-              style: TextStyle(fontSize: 12.5, color: danger ? C.hot : C.ink),
+              style: TextStyle(
+                fontSize: 12.5,
+                color: danger ? context.c.hot : context.c.ink,
+              ),
             ),
           ),
           if (hint.isNotEmpty) ...[
             Text(hint, style: T.label.copyWith(fontSize: 9)),
             const SizedBox(width: 8),
           ],
-          LineIcon(Glyph.chevron, size: 13, color: danger ? C.hot : C.muted),
+          LineIcon(
+            Glyph.chevron,
+            size: 13,
+            color: danger ? context.c.hot : context.c.muted,
+          ),
         ],
       ),
     ),
