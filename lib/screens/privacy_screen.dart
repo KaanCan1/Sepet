@@ -23,9 +23,14 @@ class PrivacyScreen extends StatelessWidget {
       title: 'Aydınlatma metni',
       trailing: Pressable(
         onTap: () => Navigator.of(context).pop(),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(4),
-          child: LineIcon(Glyph.close, size: 17, color: C.muted, stroke: 1.6),
+          child: LineIcon(
+            Glyph.close,
+            size: 17,
+            color: context.c.muted,
+            stroke: 1.6,
+          ),
         ),
       ),
       slivers: [
@@ -115,7 +120,7 @@ class _Section extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           body,
-          style: const TextStyle(fontSize: 12, height: 1.6, color: C.ink),
+          style: TextStyle(fontSize: 12, height: 1.6, color: context.c.ink),
         ),
       ],
     ),

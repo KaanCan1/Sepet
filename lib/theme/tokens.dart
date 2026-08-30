@@ -64,6 +64,11 @@ class SepetColors extends ThemeExtension<SepetColors> {
   /// siyah zeminde daha çabuk kayboluyor.
   final double areaFade;
 
+  /// Cam ayarları derleme zamanı sabiti istiyor; kâğıt rengi orada
+  /// sabit duruyor. Cam zaten arkasındaki içeriği alıyor, zemin rengi
+  /// yalnızca ton veriyor.
+  static const lightPaper = Color(0xFFFBFBF9);
+
   /// Açık tema — esas olan bu.
   static const light = SepetColors(
     paper: Color(0xFFFBFBF9),
@@ -181,25 +186,6 @@ class SepetColors extends ThemeExtension<SepetColors> {
       areaFade: areaFade + (other.areaFade - areaFade) * t,
     );
   }
-}
-
-/// **Geçiş köprüsü.** Ekranlar hâlâ `C.ink` yazıyor; hepsini tek seferde
-/// çevirmek 300'den fazla noktaya dokunan, gözden geçirilemez bir yama
-/// olurdu. Bu sınıf açık temanın değerlerini veriyor ve ekranlar
-/// `context.c`'ye taşındıkça küçülüyor. Sıfırlanınca silinecek —
-/// o güne kadar koyu tema açılmıyor, çünkü buradaki değerler sabit.
-@Deprecated('context.c kullan; bu köprü geçiş bitince silinecek')
-abstract final class C {
-  static const paper = Color(0xFFFBFBF9);
-  static const card = Color(0xFFFFFFFF);
-  static const ink = Color(0xFF0F1214);
-  static const muted = Color(0xFF6B7276);
-  static const line = Color(0x170F1214);
-  static const hot = Color(0xFF9E4A44);
-  static const hotBg = Color(0xFFF3E7E6);
-  static const ref = Color(0xFF616F84);
-  static const refBg = Color(0xFFECEFF2);
-  static const grey = Color(0xFFB9B6AE);
 }
 
 /// `context.c.ink` — her widget'ta `Theme.of(context).extension<...>()!`

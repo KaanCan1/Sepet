@@ -404,7 +404,7 @@ class _BasketRow extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 '−${Fmt.money(item.saved)}',
-                style: T.num12.copyWith(color: C.ref),
+                style: T.num12.copyWith(color: context.c.ref),
               ),
             ],
           ),
@@ -437,7 +437,7 @@ class _CoverageNote extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(12, 10, 11, 11),
         decoration: BoxDecoration(
-          color: C.hotBg,
+          color: context.c.hotBg,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
@@ -448,17 +448,17 @@ class _CoverageNote extends StatelessWidget {
                 children: [
                   Text(
                     '$pending kalem endekse girmiyor',
-                    style: T.title.copyWith(color: C.hot),
+                    style: T.title.copyWith(color: context.c.hot),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     'Eşleşmesi çözülmeyen satırlar hesabın dışında kalıyor.',
-                    style: const TextStyle(fontSize: 11, color: C.hot),
+                    style: TextStyle(fontSize: 11, color: context.c.hot),
                   ),
                 ],
               ),
             ),
-            const LineIcon(Glyph.chevron, size: 15, color: C.hot),
+            LineIcon(Glyph.chevron, size: 15, color: context.c.hot),
           ],
         ),
       ),
@@ -486,14 +486,16 @@ class _SourcesCard extends StatelessWidget {
             children: [
               if (showOwn)
                 SeriesRow(
-                  color: C.ink,
+                  color: context.c.ink,
                   name: 'Senin sepetin',
                   value: Fmt.pct1(snapshot.changePct ?? 0),
                 ),
               for (var i = 0; i < snapshot.official.length; i++) ...[
                 if (showOwn || i > 0) const Hairline(),
                 SeriesRow(
-                  color: snapshot.official[i].official ? C.ref : C.grey,
+                  color: snapshot.official[i].official
+                      ? context.c.ref
+                      : context.c.grey,
                   name: snapshot.official[i].title,
                   // Girilmemiş ay uydurulmuyor.
                   value: snapshot.official[i].value == null
@@ -518,12 +520,12 @@ class _SourcesCard extends StatelessWidget {
                             'için dokun.'
                       : '${missing.map((s) => s.title).join(', ')} için ay '
                             'girilmedi — girmek için dokun.',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     height: 1.4,
-                    color: C.muted,
+                    color: context.c.muted,
                     decoration: TextDecoration.underline,
-                    decorationColor: C.line,
+                    decorationColor: context.c.line,
                   ),
                 ),
               ),
@@ -589,10 +591,10 @@ class _FirstRun extends StatelessWidget {
                             'FARKLI ayda fiş gerekiyor — bir fiyatın '
                             'değiştiğini görebilmek için onu iki kez görmek '
                             'lazım.',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     height: 1.55,
-                    color: C.muted,
+                    color: context.c.muted,
                   ),
                 ),
               ],
@@ -639,9 +641,13 @@ class _FirstRun extends StatelessWidget {
           const SizedBox(height: 14),
           const Lbl('KARŞILAŞTIRMA'),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Senin sayın çıkana kadar resmî ölçüm burada duruyor.',
-            style: TextStyle(fontSize: 11.5, height: 1.5, color: C.muted),
+            style: TextStyle(
+              fontSize: 11.5,
+              height: 1.5,
+              color: context.c.muted,
+            ),
           ),
           const SizedBox(height: 10),
           _SourcesCard(snapshot: snapshot, showOwn: false),

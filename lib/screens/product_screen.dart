@@ -35,9 +35,14 @@ class ProductScreen extends StatelessWidget {
     return ScreenFrame(
       leading: Pressable(
         onTap: () => Navigator.of(context).pop(),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(4),
-          child: LineIcon(Glyph.back, size: 17, color: C.ink, stroke: 1.6),
+          child: LineIcon(
+            Glyph.back,
+            size: 17,
+            color: context.c.ink,
+            stroke: 1.6,
+          ),
         ),
       ),
       slivers: [
@@ -95,8 +100,8 @@ class _Body extends StatelessWidget {
                     ? '—'
                     : Fmt.signedPct0(product.changePct!),
                 color: product.changePct == null
-                    ? C.muted
-                    : (product.changePct! >= 0 ? C.hot : C.ref),
+                    ? context.c.muted
+                    : (product.changePct! >= 0 ? context.c.hot : context.c.ref),
               ),
             ],
           ),
@@ -104,18 +109,20 @@ class _Body extends StatelessWidget {
           if (prices.length >= 2)
             LineChart(
               height: 110,
-              series: [ChartSeries(values: prices, color: C.ink, endDot: true)],
+              series: [
+                ChartSeries(values: prices, color: context.c.ink, endDot: true),
+              ],
               marker: janIndex >= 0 ? janIndex : null,
               markerLabel: janIndex >= 0
                   ? Fmt.monthShort(product.history[janIndex].date)
                   : null,
             )
           else
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 18),
               child: Text(
                 'Grafik için en az iki gözlem gerekiyor.',
-                style: TextStyle(fontSize: 11.5, color: C.muted),
+                style: TextStyle(fontSize: 11.5, color: context.c.muted),
               ),
             ),
           const SizedBox(height: 14),
@@ -130,7 +137,7 @@ class _Body extends StatelessWidget {
           Text(
             'Bu ürün endekste ${product.observations} gözlemle temsil '
             'ediliyor. Ağırlığı, senin harcamandaki payına göre.',
-            style: const TextStyle(fontSize: 11, height: 1.5, color: C.muted),
+            style: TextStyle(fontSize: 11, height: 1.5, color: context.c.muted),
           ),
         ],
       ),
@@ -139,10 +146,12 @@ class _Body extends StatelessWidget {
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat(this.label, this.value, {this.color = C.ink});
+  const _Stat(this.label, this.value, {this.color});
   final String label;
   final String value;
-  final Color color;
+
+  /// Verilmezse mürekkep rengi.
+  final Color? color;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -156,7 +165,7 @@ class _Stat extends StatelessWidget {
           fontFamily: F.mono,
           fontFamilyFallback: F.monoFallback,
           fontSize: 17,
-          color: color,
+          color: color ?? context.c.ink,
         ),
       ),
     ],
@@ -171,15 +180,15 @@ class _MarketRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(vertical: 9),
-    decoration: const BoxDecoration(
-      border: Border(bottom: BorderSide(color: C.line)),
+    decoration: BoxDecoration(
+      border: Border(bottom: BorderSide(color: context.c.line)),
     ),
     child: Row(
       children: [
         Expanded(
           child: Text(
             entry.market,
-            style: const TextStyle(fontSize: 11.5, color: C.ink),
+            style: TextStyle(fontSize: 11.5, color: context.c.ink),
           ),
         ),
         SizedBox(
@@ -188,10 +197,10 @@ class _MarketRow extends StatelessWidget {
             borderRadius: BorderRadius.circular(2),
             child: Stack(
               children: [
-                Container(height: 5, color: C.line),
+                Container(height: 5, color: context.c.line),
                 FractionallySizedBox(
                   widthFactor: fraction.clamp(0, 1),
-                  child: Container(height: 5, color: C.ink),
+                  child: Container(height: 5, color: context.c.ink),
                 ),
               ],
             ),

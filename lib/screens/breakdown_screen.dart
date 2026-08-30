@@ -154,7 +154,7 @@ class _List extends StatelessWidget {
             fontFamily: F.mono,
             fontFamilyFallback: F.monoFallback,
             fontSize: 17,
-            color: top.changePct >= 0 ? C.hot : C.ref,
+            color: top.changePct >= 0 ? context.c.hot : context.c.ref,
           ),
         ),
         const SizedBox(height: 14),
@@ -193,7 +193,7 @@ class _List extends StatelessWidget {
                     'artan ${bottom.name}.'
               : 'Tek bir ${axis.label.toLowerCase()} için seri var. '
                     'Karşılaştırma için birkaç ay daha fiş gerekiyor.',
-          style: const TextStyle(fontSize: 11, height: 1.5, color: C.muted),
+          style: TextStyle(fontSize: 11, height: 1.5, color: context.c.muted),
         ),
       ],
     );
@@ -251,9 +251,14 @@ class _DetailScreen extends StatelessWidget {
     return ScreenFrame(
       leading: Pressable(
         onTap: () => Navigator.of(context).pop(),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(4),
-          child: LineIcon(Glyph.back, size: 17, color: C.ink, stroke: 1.6),
+          child: LineIcon(
+            Glyph.back,
+            size: 17,
+            color: context.c.ink,
+            stroke: 1.6,
+          ),
         ),
       ),
       slivers: [
@@ -275,10 +280,10 @@ class _DetailScreen extends StatelessWidget {
                 Text(
                   'Taban ay 100 kabul edilerek, ${row.series.length} aylık '
                   'seri boyunca toplam değişim.',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     height: 1.5,
-                    color: C.muted,
+                    color: context.c.muted,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -288,17 +293,17 @@ class _DetailScreen extends StatelessWidget {
                     series: [
                       ChartSeries(
                         values: row.levels,
-                        color: C.ink,
+                        color: context.c.ink,
                         endDot: true,
                       ),
                     ],
                   )
                 else
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(vertical: 18),
                     child: Text(
                       'Grafik için en az iki ay gerekiyor.',
-                      style: TextStyle(fontSize: 11.5, color: C.muted),
+                      style: TextStyle(fontSize: 11.5, color: context.c.muted),
                     ),
                   ),
                 const SizedBox(height: 16),
@@ -319,19 +324,23 @@ class _DetailScreen extends StatelessWidget {
                     'Bu seri, son ayda harcamanın küçük bir bölümünü '
                     'kapsıyor. Az sayıda kalemin fiyat hareketi burada '
                     'olduğundan büyük görünebilir.',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       height: 1.5,
-                      color: C.hot,
+                      color: context.c.hot,
                     ),
                   )
                 else
-                  const Text(
+                  Text(
                     'Seviye, taban ayı 100 alan zincirlenmiş endekstir. '
                     'Genel endeksle aynı yöntem, yalnızca bu kümeye '
                     'kısıtlanmış ve ağırlıklar küme içinde yeniden '
                     'dağıtılmış hâli.',
-                    style: TextStyle(fontSize: 11, height: 1.5, color: C.muted),
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.5,
+                      color: context.c.muted,
+                    ),
                   ),
               ],
             ),

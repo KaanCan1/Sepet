@@ -57,10 +57,10 @@ class CupertinoLikeSpinner extends StatelessWidget {
   const CupertinoLikeSpinner({super.key});
 
   @override
-  Widget build(BuildContext context) => const SizedBox(
+  Widget build(BuildContext context) => SizedBox(
     width: 22,
     height: 22,
-    child: CircularProgressIndicator(strokeWidth: 2, color: C.muted),
+    child: CircularProgressIndicator(strokeWidth: 2, color: context.c.muted),
   );
 }
 
@@ -77,7 +77,7 @@ class _ErrorBody extends StatelessWidget {
       Text(
         message,
         textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 13, height: 1.5, color: C.muted),
+        style: TextStyle(fontSize: 13, height: 1.5, color: context.c.muted),
       ),
       const SizedBox(height: 16),
       SizedBox(
@@ -118,7 +118,7 @@ class EmptyState extends StatelessWidget {
       Text(
         body,
         textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 12.5, height: 1.55, color: C.muted),
+        style: TextStyle(fontSize: 12.5, height: 1.55, color: context.c.muted),
       ),
       if (action != null) ...[const SizedBox(height: 18), action!],
     ],

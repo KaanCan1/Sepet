@@ -53,9 +53,14 @@ class _SignInScreenState extends State<SignInScreen> {
       title: 'Giriş',
       trailing: Pressable(
         onTap: () => Navigator.of(context).pop(),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(4),
-          child: LineIcon(Glyph.close, size: 17, color: C.muted, stroke: 1.6),
+          child: LineIcon(
+            Glyph.close,
+            size: 17,
+            color: context.c.muted,
+            stroke: 1.6,
+          ),
         ),
       ),
       footer: PrimaryButton(label: 'Devam et', onTap: ok ? _submit : null),
@@ -67,16 +72,20 @@ class _SignInScreenState extends State<SignInScreen> {
               const SizedBox(height: 12),
               const Text('Fişlerini\nhesabına bağla', style: T.display),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 'Parola yok. E-postana tek kullanımlık bir bağlantı gönderiyoruz.',
-                style: TextStyle(fontSize: 12, height: 1.55, color: C.muted),
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.55,
+                  color: context.c.muted,
+                ),
               ),
               const SizedBox(height: 22),
               const Lbl('E-POSTA'),
               const SizedBox(height: 6),
               PaperCard(
                 padding: const EdgeInsets.symmetric(horizontal: 13),
-                borderColor: ok ? C.ink : C.line,
+                borderColor: ok ? context.c.ink : context.c.line,
                 child: CupertinoTextField(
                   controller: _controller,
                   placeholder: 'ad@ornek.com',
@@ -88,10 +97,10 @@ class _SignInScreenState extends State<SignInScreen> {
                   ],
                   decoration: const BoxDecoration(),
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  style: const TextStyle(fontSize: 14, color: C.ink),
-                  placeholderStyle: const TextStyle(
+                  style: TextStyle(fontSize: 14, color: context.c.ink),
+                  placeholderStyle: TextStyle(
                     fontSize: 14,
-                    color: C.muted,
+                    color: context.c.muted,
                   ),
                   onSubmitted: (_) => ok ? _submit() : null,
                 ),
@@ -104,11 +113,11 @@ class _SignInScreenState extends State<SignInScreen> {
                 curve: Curves.easeOut,
                 alignment: Alignment.topLeft,
                 child: _controller.text.isNotEmpty && !ok
-                    ? const Padding(
+                    ? Padding(
                         padding: EdgeInsets.only(top: 7),
                         child: Text(
                           'Geçerli bir e-posta adresi gir.',
-                          style: TextStyle(fontSize: 11, color: C.hot),
+                          style: TextStyle(fontSize: 11, color: context.c.hot),
                         ),
                       )
                     : const SizedBox(width: double.infinity),
@@ -132,18 +141,21 @@ class _SignInScreenState extends State<SignInScreen> {
                 onTap: () => Navigator.of(context).push(PrivacyScreen.route()),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: const BoxDecoration(
-                    border: Border(top: BorderSide(color: C.line)),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: context.c.line)),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
                       Expanded(
                         child: Text(
                           'Aydınlatma metni',
-                          style: TextStyle(fontSize: 12.5, color: C.ink),
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: context.c.ink,
+                          ),
                         ),
                       ),
-                      LineIcon(Glyph.chevron, size: 13, color: C.muted),
+                      LineIcon(Glyph.chevron, size: 13, color: context.c.muted),
                     ],
                   ),
                 ),
@@ -170,15 +182,19 @@ class _Bullet extends StatelessWidget {
           margin: const EdgeInsets.only(top: 6, right: 9),
           width: 4,
           height: 4,
-          decoration: const BoxDecoration(
-            color: C.muted,
+          decoration: BoxDecoration(
+            color: context.c.muted,
             shape: BoxShape.circle,
           ),
         ),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(fontSize: 11.5, height: 1.5, color: C.muted),
+            style: TextStyle(
+              fontSize: 11.5,
+              height: 1.5,
+              color: context.c.muted,
+            ),
           ),
         ),
       ],

@@ -325,7 +325,7 @@ class _MatchSheetState extends State<MatchSheet> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: C.line,
+                      color: context.c.line,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -380,7 +380,7 @@ class _MatchSheetState extends State<MatchSheet> {
           Expanded(
             child: Text(
               first.name,
-              style: const TextStyle(fontSize: 13.5, color: C.ink),
+              style: TextStyle(fontSize: 13.5, color: context.c.ink),
             ),
           ),
         ],
@@ -441,23 +441,23 @@ class _MatchSheetState extends State<MatchSheet> {
             _customSize = true;
             _customUnit = SizeLabel.unitsFor(first.unit ?? 'kilogram').first;
           }),
-          child: const Text(
+          child: Text(
             'Listede yok, gramajı kendim gireyim',
-            style: TextStyle(fontSize: 12.5, color: C.ref),
+            style: TextStyle(fontSize: 12.5, color: context.c.ref),
           ),
         ),
       const SizedBox(height: 10),
-      const Text(
+      Text(
         'Fiş gramajı basmıyor. Seçtiğin boy endeksin birim fiyatını '
         'belirliyor — yanlış seçim sessizce yanlış enflasyon üretir.',
-        style: TextStyle(fontSize: 11, height: 1.4, color: C.muted),
+        style: TextStyle(fontSize: 11, height: 1.4, color: context.c.muted),
       ),
       const SizedBox(height: 10),
       Pressable(
         onTap: () => setState(() => _searching = true),
-        child: const Text(
+        child: Text(
           'Bu ürün değil',
-          style: TextStyle(fontSize: 12, color: C.ref),
+          style: TextStyle(fontSize: 12, color: context.c.ref),
         ),
       ),
     ];
@@ -498,9 +498,9 @@ class _MatchSheetState extends State<MatchSheet> {
       // hesaba giremez. Karşılığında tanımlanan ürün kırılımda da doğru
       // yerde duruyor.
       if (_categories.isEmpty)
-        const Text(
+        Text(
           'Kategoriler yükleniyor…',
-          style: TextStyle(fontSize: 11.5, color: C.muted),
+          style: TextStyle(fontSize: 11.5, color: context.c.muted),
         )
       else
         Wrap(
@@ -530,18 +530,18 @@ class _MatchSheetState extends State<MatchSheet> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       border: InputBorder.none,
                       hintText: '150',
-                      hintStyle: TextStyle(fontSize: 15, color: C.grey),
+                      hintStyle: TextStyle(fontSize: 15, color: context.c.grey),
                       isDense: true,
                       contentPadding: EdgeInsets.symmetric(vertical: 6),
                     ),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: F.mono,
                       fontFamilyFallback: F.monoFallback,
                       fontSize: 15,
-                      color: C.ink,
+                      color: context.c.ink,
                     ),
                     onChanged: (_) => setState(() {}),
                   ),
@@ -575,7 +575,7 @@ class _MatchSheetState extends State<MatchSheet> {
       ),
       if (_error != null) ...[
         const SizedBox(height: 9),
-        Text(_error!, style: const TextStyle(fontSize: 12, color: C.hot)),
+        Text(_error!, style: TextStyle(fontSize: 12, color: context.c.hot)),
       ],
       const SizedBox(height: 10),
       Pressable(
@@ -585,23 +585,23 @@ class _MatchSheetState extends State<MatchSheet> {
           padding: const EdgeInsets.symmetric(vertical: 13),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: _defineReady ? C.ink : C.line,
+            color: _defineReady ? context.c.ink : context.c.line,
             borderRadius: BorderRadius.circular(9),
           ),
           child: Text(
             _saving ? 'Ekleniyor…' : 'Kataloğa ekle',
             style: TextStyle(
               fontSize: 13,
-              color: _defineReady ? C.card : C.muted,
+              color: _defineReady ? context.c.card : context.c.muted,
             ),
           ),
         ),
       ),
       const SizedBox(height: 10),
-      const Text(
+      Text(
         'Eklediğin ürün senin kataloğuna giriyor; aynı fiş satırı bir daha '
         'sorulmuyor.',
-        style: TextStyle(fontSize: 11, height: 1.4, color: C.muted),
+        style: TextStyle(fontSize: 11, height: 1.4, color: context.c.muted),
       ),
       const SizedBox(height: 8),
       Pressable(
@@ -609,9 +609,9 @@ class _MatchSheetState extends State<MatchSheet> {
           _defining = false;
           _error = null;
         }),
-        child: const Text(
+        child: Text(
           'Vazgeç, listeye dön',
-          style: TextStyle(fontSize: 12, color: C.ref),
+          style: TextStyle(fontSize: 12, color: context.c.ref),
         ),
       ),
     ];
@@ -645,14 +645,14 @@ class _MatchSheetState extends State<MatchSheet> {
         child: TextField(
           controller: _controller,
           autofocus: false,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             border: InputBorder.none,
             hintText: 'Katalogda ara',
-            hintStyle: TextStyle(fontSize: 13.5, color: C.muted),
+            hintStyle: TextStyle(fontSize: 13.5, color: context.c.muted),
             isDense: true,
             contentPadding: EdgeInsets.symmetric(vertical: 13),
           ),
-          style: const TextStyle(fontSize: 13.5, color: C.ink),
+          style: TextStyle(fontSize: 13.5, color: context.c.ink),
           onChanged: _search,
         ),
       ),
@@ -662,18 +662,18 @@ class _MatchSheetState extends State<MatchSheet> {
         child: _buildSearchBody(rows),
       ),
       const SizedBox(height: 10),
-      const Text(
+      Text(
         'Seçimin bu markete ait fiş formatı için kaydedilir.',
-        style: TextStyle(fontSize: 11, color: C.muted),
+        style: TextStyle(fontSize: 11, color: context.c.muted),
       ),
       const SizedBox(height: 10),
       // Arama boş dönmese de duruyor: doğru cevabın katalogda OLMADIĞINI
       // kullanıcı listeye bakınca anlıyor, arama sonucu boş dönünce değil.
       Pressable(
         onTap: _startDefine,
-        child: const Text(
+        child: Text(
           'Aradığım ürün katalogda yok',
-          style: TextStyle(fontSize: 12, color: C.ref),
+          style: TextStyle(fontSize: 12, color: context.c.ref),
         ),
       ),
     ];
@@ -681,13 +681,16 @@ class _MatchSheetState extends State<MatchSheet> {
 
   Widget _buildSearchBody(List<ProductRef> rows) {
     if (_loading && rows.isEmpty) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
         child: Center(
           child: SizedBox(
             width: 18,
             height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2, color: C.muted),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: context.c.muted,
+            ),
           ),
         ),
       );
@@ -697,7 +700,7 @@ class _MatchSheetState extends State<MatchSheet> {
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Text(
           _error!,
-          style: const TextStyle(fontSize: 12, color: C.hot),
+          style: TextStyle(fontSize: 12, color: context.c.hot),
         ),
       );
     }
@@ -708,16 +711,16 @@ class _MatchSheetState extends State<MatchSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Katalogda eşleşen ürün yok.',
-              style: TextStyle(fontSize: 12, color: C.muted),
+              style: TextStyle(fontSize: 12, color: context.c.muted),
             ),
             const SizedBox(height: 8),
             Pressable(
               onTap: _startDefine,
-              child: const Text(
+              child: Text(
                 'Bu ürünü kendim tanımlayayım',
-                style: TextStyle(fontSize: 12.5, color: C.ref),
+                style: TextStyle(fontSize: 12.5, color: context.c.ref),
               ),
             ),
           ],
@@ -760,19 +763,19 @@ class _SizeOption extends StatelessWidget {
       scale: .99,
       onTap: onTap,
       child: Container(
-        color: C.card,
+        color: context.c.card,
         padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
         child: Row(
           children: [
             Expanded(
               child: Text(
                 product.sizeLabel,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: F.ui,
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                   letterSpacing: -.2,
-                  color: C.ink,
+                  color: context.c.ink,
                 ),
               ),
             ),
@@ -785,7 +788,7 @@ class _SizeOption extends StatelessWidget {
               ],
             ),
             const SizedBox(width: 8),
-            const LineIcon(Glyph.chevron, size: 13, color: C.muted),
+            LineIcon(Glyph.chevron, size: 13, color: context.c.muted),
           ],
         ),
       ),
@@ -807,7 +810,7 @@ class _CandidateRow extends StatelessWidget {
       scale: .99,
       onTap: onTap,
       child: Container(
-        color: C.card,
+        color: context.c.card,
         padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
         child: Row(
           children: [
@@ -819,7 +822,7 @@ class _CandidateRow extends StatelessWidget {
                 children: [
                   Text(
                     product.name,
-                    style: const TextStyle(fontSize: 12.5, color: C.ink),
+                    style: TextStyle(fontSize: 12.5, color: context.c.ink),
                   ),
                   if (product.sizeLabel.isNotEmpty) ...[
                     const SizedBox(height: 2),
@@ -833,7 +836,7 @@ class _CandidateRow extends StatelessWidget {
               _ConfidenceBar(score),
             ],
             const SizedBox(width: 8),
-            const LineIcon(Glyph.chevron, size: 13, color: C.muted),
+            LineIcon(Glyph.chevron, size: 13, color: context.c.muted),
           ],
         ),
       ),
@@ -854,7 +857,7 @@ class _ConfidenceBar extends StatelessWidget {
       width: 34,
       height: 3,
       decoration: BoxDecoration(
-        color: C.line,
+        color: context.c.line,
         borderRadius: BorderRadius.circular(2),
       ),
       alignment: Alignment.centerLeft,
@@ -862,7 +865,7 @@ class _ConfidenceBar extends StatelessWidget {
         widthFactor: score.clamp(0, 1),
         child: Container(
           decoration: BoxDecoration(
-            color: C.ref,
+            color: context.c.ref,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -956,18 +959,21 @@ class _CustomSizeEditor extends StatelessWidget {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         border: InputBorder.none,
                         hintText: '400',
-                        hintStyle: TextStyle(fontSize: 15, color: C.grey),
+                        hintStyle: TextStyle(
+                          fontSize: 15,
+                          color: context.c.grey,
+                        ),
                         isDense: true,
                         contentPadding: EdgeInsets.symmetric(vertical: 6),
                       ),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: F.mono,
                         fontFamilyFallback: F.monoFallback,
                         fontSize: 15,
-                        color: C.ink,
+                        color: context.c.ink,
                       ),
                       onChanged: (_) => onChanged(),
                       onSubmitted: (_) => ready ? onSave() : null,
@@ -983,9 +989,11 @@ class _CustomSizeEditor extends StatelessWidget {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: u == unit ? C.ink : null,
+                          color: u == unit ? context.c.ink : null,
                           borderRadius: BorderRadius.circular(999),
-                          border: u == unit ? null : Border.all(color: C.line),
+                          border: u == unit
+                              ? null
+                              : Border.all(color: context.c.line),
                         ),
                         child: Text(
                           u,
@@ -993,7 +1001,7 @@ class _CustomSizeEditor extends StatelessWidget {
                             fontFamily: F.mono,
                             fontFamilyFallback: F.monoFallback,
                             fontSize: 11,
-                            color: u == unit ? C.card : C.muted,
+                            color: u == unit ? context.c.card : context.c.muted,
                           ),
                         ),
                       ),
@@ -1034,12 +1042,15 @@ class _CustomSizeEditor extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 13),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: ok ? C.ink : C.line,
+              color: ok ? context.c.ink : context.c.line,
               borderRadius: BorderRadius.circular(9),
             ),
             child: Text(
               saving ? 'Ekleniyor…' : _saveLabel(),
-              style: TextStyle(fontSize: 13, color: ok ? C.card : C.muted),
+              style: TextStyle(
+                fontSize: 13,
+                color: ok ? context.c.card : context.c.muted,
+              ),
             ),
           ),
         ),
@@ -1084,13 +1095,13 @@ class _GroupPicker extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(11, 9, 11, 10),
           decoration: BoxDecoration(
-            color: C.hotBg,
+            color: context.c.hotBg,
             borderRadius: BorderRadius.circular(9),
           ),
           child: Text(
             '${currentGroup.isEmpty ? 'Eşleşen grup' : currentGroup} '
             '$unitLabel ile ölçülmüyor. Bu kalem başka bir grupta — hangisi?',
-            style: const TextStyle(fontSize: 11.5, height: 1.4, color: C.hot),
+            style: TextStyle(fontSize: 11.5, height: 1.4, color: context.c.hot),
           ),
         ),
         const SizedBox(height: 8),
@@ -1098,20 +1109,20 @@ class _GroupPicker extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 13),
           child: TextField(
             controller: input,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               border: InputBorder.none,
               hintText: 'Grup ara — kaşar, peynir…',
-              hintStyle: TextStyle(fontSize: 13, color: C.muted),
+              hintStyle: TextStyle(fontSize: 13, color: context.c.muted),
               isDense: true,
               contentPadding: EdgeInsets.symmetric(vertical: 12),
             ),
-            style: const TextStyle(fontSize: 13, color: C.ink),
+            style: TextStyle(fontSize: 13, color: context.c.ink),
             onChanged: onQuery,
           ),
         ),
         const SizedBox(height: 8),
         if (loading && groups.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Center(
               child: SizedBox(
@@ -1119,15 +1130,15 @@ class _GroupPicker extends StatelessWidget {
                 height: 16,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: C.muted,
+                  color: context.c.muted,
                 ),
               ),
             ),
           )
         else if (groups.isEmpty)
-          const Text(
+          Text(
             'Bu birimde grup bulunamadı.',
-            style: TextStyle(fontSize: 11.5, color: C.muted),
+            style: TextStyle(fontSize: 11.5, color: context.c.muted),
           )
         else
           ConstrainedBox(
@@ -1146,7 +1157,7 @@ class _GroupPicker extends StatelessWidget {
                     scale: .99,
                     onTap: () => onPick(g),
                     child: Container(
-                      color: on ? C.refBg : C.card,
+                      color: on ? context.c.refBg : context.c.card,
                       padding: const EdgeInsets.fromLTRB(13, 11, 13, 11),
                       child: Row(
                         children: [
@@ -1155,12 +1166,16 @@ class _GroupPicker extends StatelessWidget {
                               g.name,
                               style: TextStyle(
                                 fontSize: 12.5,
-                                color: on ? C.ref : C.ink,
+                                color: on ? context.c.ref : context.c.ink,
                               ),
                             ),
                           ),
                           if (on)
-                            const LineIcon(Glyph.check, size: 13, color: C.ref),
+                            LineIcon(
+                              Glyph.check,
+                              size: 13,
+                              color: context.c.ref,
+                            ),
                         ],
                       ),
                     ),
@@ -1201,11 +1216,11 @@ class _Field extends StatelessWidget {
             decoration: InputDecoration(
               border: InputBorder.none,
               hintText: hint,
-              hintStyle: const TextStyle(fontSize: 13.5, color: C.grey),
+              hintStyle: TextStyle(fontSize: 13.5, color: context.c.grey),
               isDense: true,
               contentPadding: const EdgeInsets.only(top: 4),
             ),
-            style: const TextStyle(fontSize: 13.5, color: C.ink),
+            style: TextStyle(fontSize: 13.5, color: context.c.ink),
             onChanged: (_) => onChanged(),
           ),
         ],
@@ -1235,9 +1250,9 @@ class _Chip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: on ? C.ink : null,
+          color: on ? context.c.ink : null,
           borderRadius: BorderRadius.circular(999),
-          border: on ? null : Border.all(color: C.line),
+          border: on ? null : Border.all(color: context.c.line),
         ),
         child: Text(
           label,
@@ -1245,7 +1260,7 @@ class _Chip extends StatelessWidget {
             fontFamily: mono ? F.mono : null,
             fontFamilyFallback: mono ? F.monoFallback : null,
             fontSize: mono ? 11 : 11.5,
-            color: on ? C.card : C.muted,
+            color: on ? context.c.card : context.c.muted,
           ),
         ),
       ),

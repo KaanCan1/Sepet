@@ -21,8 +21,8 @@ void main() async {
       // Paket Material'a bağlı değil; parlaklığı bu köprüyle okuyor.
       brightnessResolver: Theme.maybeBrightnessOf,
       theme: GlassThemeData(
-        light: const GlassThemeVariant(settings: GlassSettings.theme),
-        dark: const GlassThemeVariant(settings: GlassSettings.theme),
+        light: GlassThemeVariant(settings: GlassSettings.theme),
+        dark: GlassThemeVariant(settings: GlassSettings.theme),
         brightness: Brightness.light,
       ),
       child: AppScope(child: const SepetApp()),
@@ -60,11 +60,9 @@ class SepetApp extends StatelessWidget {
     return MaterialApp(
       title: 'Sepet',
       debugShowCheckedModeBanner: false,
-      // Hedef ThemeMode.system — telefon karanlığa geçince uygulama da
-      // geçecek. Ekranlar C köprüsünden context.c'ye taşınana kadar açık
-      // temada kilitli: yarım çevrilmiş bir ekran koyu zeminde açık tema
-      // renkleriyle çizer, bu da hiç koyu tema olmamasından kötü.
-      themeMode: ThemeMode.light,
+      // Tema telefondan geliyor. Uygulama içi bir anahtar yok: sistem
+      // karanlığa geçince uygulama da geçiyor.
+      themeMode: ThemeMode.system,
       theme: _theme(SepetColors.light, Brightness.light),
       darkTheme: _theme(SepetColors.dark, Brightness.dark),
       // Tek yerel: Türkçe. Sayı/tarih biçimlendirmesi Fmt üzerinden.

@@ -160,9 +160,14 @@ class _DraftReceiptScreenState extends State<DraftReceiptScreen> {
       title: 'Okunan fiş',
       leading: Pressable(
         onTap: () => Navigator.of(context).pop(false),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(4),
-          child: LineIcon(Glyph.back, size: 17, color: C.ink, stroke: 1.6),
+          child: LineIcon(
+            Glyph.back,
+            size: 17,
+            color: context.c.ink,
+            stroke: 1.6,
+          ),
         ),
       ),
       footer: PrimaryButton(
@@ -219,10 +224,13 @@ class _DraftReceiptScreenState extends State<DraftReceiptScreen> {
               PaperCard(
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'Satırların toplamı',
-                        style: TextStyle(fontSize: 11.5, color: C.muted),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: context.c.muted,
+                        ),
                       ),
                     ),
                     Text(Fmt.money(_sum), style: T.num12),
@@ -244,11 +252,15 @@ class _DraftReceiptScreenState extends State<DraftReceiptScreen> {
                 _Warning(text: _error!),
               ],
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 'Satıra dokunarak adını ve tutarını düzeltebilir, yanlış '
                 'okunanı silebilirsin. Ürün eşleştirmesi kaydettikten sonra '
                 'soruluyor.',
-                style: TextStyle(fontSize: 11, height: 1.5, color: C.muted),
+                style: TextStyle(
+                  fontSize: 11,
+                  height: 1.5,
+                  color: context.c.muted,
+                ),
               ),
             ],
           ),
@@ -290,11 +302,11 @@ class _Field extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 13,
-                    color: muted ? C.muted : C.ink,
+                    color: muted ? context.c.muted : context.c.ink,
                   ),
                 ),
               ),
-              const LineIcon(Glyph.chevron, size: 13, color: C.muted),
+              LineIcon(Glyph.chevron, size: 13, color: context.c.muted),
             ],
           ),
         ],
@@ -316,7 +328,7 @@ class _DraftRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    color: C.card,
+    color: context.c.card,
     child: Row(
       children: [
         Expanded(
@@ -356,9 +368,9 @@ class _DraftRow extends StatelessWidget {
         ),
         Pressable(
           onTap: onRemove,
-          child: const Padding(
+          child: Padding(
             padding: EdgeInsets.fromLTRB(8, 12, 12, 12),
-            child: LineIcon(Glyph.close, size: 14, color: C.muted),
+            child: LineIcon(Glyph.close, size: 14, color: context.c.muted),
           ),
         ),
       ],
@@ -374,12 +386,12 @@ class _Warning extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.fromLTRB(13, 11, 13, 12),
     decoration: BoxDecoration(
-      color: C.hotBg,
+      color: context.c.hotBg,
       borderRadius: BorderRadius.circular(10),
     ),
     child: Text(
       text,
-      style: const TextStyle(fontSize: 11.5, height: 1.5, color: C.hot),
+      style: TextStyle(fontSize: 11.5, height: 1.5, color: context.c.hot),
     ),
   );
 }
@@ -475,7 +487,7 @@ class _MerchantSheetState extends State<_MerchantSheet> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: C.line,
+                      color: context.c.line,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -487,14 +499,17 @@ class _MerchantSheetState extends State<_MerchantSheet> {
                   padding: const EdgeInsets.symmetric(horizontal: 13),
                   child: TextField(
                     controller: _query,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       border: InputBorder.none,
                       hintText: 'Ara ya da yeni market yaz',
-                      hintStyle: TextStyle(fontSize: 13.5, color: C.muted),
+                      hintStyle: TextStyle(
+                        fontSize: 13.5,
+                        color: context.c.muted,
+                      ),
                       isDense: true,
                       contentPadding: EdgeInsets.symmetric(vertical: 13),
                     ),
-                    style: const TextStyle(fontSize: 13.5, color: C.ink),
+                    style: TextStyle(fontSize: 13.5, color: context.c.ink),
                     onChanged: (_) => setState(() {}),
                   ),
                 ),
@@ -507,14 +522,14 @@ class _MerchantSheetState extends State<_MerchantSheet> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: _saving ? C.line : C.ink,
+                        color: _saving ? context.c.line : context.c.ink,
                         borderRadius: BorderRadius.circular(9),
                       ),
                       child: Text(
                         _saving ? 'Ekleniyor…' : '"$_typed" olarak ekle',
                         style: TextStyle(
                           fontSize: 13,
-                          color: _saving ? C.muted : C.card,
+                          color: _saving ? context.c.muted : context.c.card,
                         ),
                       ),
                     ),
@@ -524,16 +539,16 @@ class _MerchantSheetState extends State<_MerchantSheet> {
                   const SizedBox(height: 8),
                   Text(
                     _error!,
-                    style: const TextStyle(fontSize: 12, color: C.hot),
+                    style: TextStyle(fontSize: 12, color: context.c.hot),
                   ),
                 ],
                 const SizedBox(height: 10),
                 if (rows.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(vertical: 14),
                     child: Text(
                       'Listede eşleşen market yok.',
-                      style: TextStyle(fontSize: 12, color: C.muted),
+                      style: TextStyle(fontSize: 12, color: context.c.muted),
                     ),
                   )
                 else
@@ -547,7 +562,7 @@ class _MerchantSheetState extends State<_MerchantSheet> {
                             scale: .99,
                             onTap: () => Navigator.of(context).pop(rows[i]),
                             child: Container(
-                              color: C.card,
+                              color: context.c.card,
                               width: double.infinity,
                               padding: const EdgeInsets.fromLTRB(
                                 13,
@@ -557,9 +572,9 @@ class _MerchantSheetState extends State<_MerchantSheet> {
                               ),
                               child: Text(
                                 rows[i].name,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12.5,
-                                  color: C.ink,
+                                  color: context.c.ink,
                                 ),
                               ),
                             ),
@@ -635,7 +650,7 @@ class _LineSheetState extends State<_LineSheet> {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: C.line,
+                    color: context.c.line,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),

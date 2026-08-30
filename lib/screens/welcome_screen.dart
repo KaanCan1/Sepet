@@ -39,6 +39,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     setState(() => _busy = true);
     final auth = context.read<AuthCubit>();
     final messenger = ScaffoldMessenger.of(context);
+    // Renkler await'ten ÖNCE yakalanıyor: sonrasında context ölmüş olabilir.
+    final c = context.c;
     final navigator = Navigator.of(context);
     try {
       await auth.signIn(
@@ -62,11 +64,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     } on ApiException catch (e) {
       messenger.showSnackBar(
         SnackBar(
-          backgroundColor: C.ink,
+          backgroundColor: c.ink,
           behavior: SnackBarBehavior.floating,
           content: Text(
             e.message,
-            style: const TextStyle(fontSize: 12.5, color: C.card),
+            style: TextStyle(fontSize: 12.5, color: c.card),
           ),
         ),
       );
@@ -87,7 +89,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     final pad = MediaQuery.paddingOf(context);
 
     return Scaffold(
-      backgroundColor: C.paper,
+      backgroundColor: context.c.paper,
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.fromLTRB(24, 0, 24, pad.bottom > 0 ? 0 : 12),
@@ -97,7 +99,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               const Spacer(flex: 2),
               const _Wordmark(),
               const Spacer(),
-              const Text(
+              Text(
                 'Kendi enflasyonunu\nkendi fişinden ölç',
                 style: TextStyle(
                   fontFamily: F.ui,
@@ -105,13 +107,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   fontSize: 31,
                   height: 1.18,
                   letterSpacing: -1.1,
-                  color: C.ink,
+                  color: context.c.ink,
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 'TÜİK herkes için tek bir sepet varsayar.\nSeninki o değil.',
-                style: TextStyle(fontSize: 13, height: 1.55, color: C.muted),
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.55,
+                  color: context.c.muted,
+                ),
               ),
               const Spacer(flex: 3),
               _ProviderButton(
@@ -139,16 +145,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               const SizedBox(height: 18),
               Pressable(
                 onTap: () => Navigator.of(context).push(PrivacyScreen.route()),
-                child: const Padding(
+                child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
                   child: Text(
                     'Aydınlatma Metni',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 11,
-                      color: C.muted,
+                      color: context.c.muted,
                       decoration: TextDecoration.underline,
-                      decorationColor: C.line,
+                      decorationColor: context.c.line,
                     ),
                   ),
                 ),
@@ -175,7 +181,11 @@ class _Wordmark extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14),
         child: Text(
           'SEPET',
-          style: T.label.copyWith(fontSize: 12, letterSpacing: 4, color: C.ink),
+          style: T.label.copyWith(
+            fontSize: 12,
+            letterSpacing: 4,
+            color: context.c.ink,
+          ),
         ),
       ),
       const SizedBox(width: 56, child: TearEdge()),
@@ -224,15 +234,15 @@ class _ProviderButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onTap != null;
     final fg = filled
-        ? C.card.withValues(alpha: enabled ? 1 : .6)
-        : C.ink.withValues(alpha: enabled ? 1 : .4);
+        ? context.c.card.withValues(alpha: enabled ? 1 : .6)
+        : context.c.ink.withValues(alpha: enabled ? 1 : .4);
     return Pressable(
       onTap: onTap,
       child: Container(
         height: 52,
         decoration: BoxDecoration(
-          color: filled ? C.ink : C.card,
-          border: Border.all(color: filled ? C.ink : C.line),
+          color: filled ? context.c.ink : context.c.card,
+          border: Border.all(color: filled ? context.c.ink : context.c.line),
           borderRadius: BorderRadius.circular(10),
         ),
         // Simge solda sabit, metin ortada. Grup birlikte ortalanırsa metin
