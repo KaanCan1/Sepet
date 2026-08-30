@@ -238,6 +238,9 @@ class FakeApi extends Api {
         },
       ],
     },
+    // Listedeki geçmiş ayrıntıdakiyle birebir aynı: sunucuda ikisi tek
+    // sorgudan geliyor, sahte istemci de aynı sözleşmeyi taklit ediyor.
+    // Satırın sağındaki kıvılcım bu diziden çiziliyor.
     'GET /products': [
       {
         'id': 'p1',
@@ -247,6 +250,11 @@ class FakeApi extends Api {
         'merchantCount': 4,
         'monthSpan': 11,
         'changePct': 57.2,
+        'history': [
+          {'date': '2025-09-12', 'unitPrice': 49.6, 'packPrice': 248.0},
+          {'date': '2026-01-15', 'unitPrice': 58.76, 'packPrice': 293.8},
+          {'date': '2026-08-14', 'unitPrice': 77.98, 'packPrice': 389.9},
+        ],
       },
     ],
     'GET /products/p1': {
