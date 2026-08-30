@@ -165,6 +165,101 @@ void main() {
     });
   });
 
+  // TÜİK her zaman YILLIK açıklıyor. Kullanıcının penceresi 12 ay dolmadan
+  // daha kısa ve ekran bir süre ikisini doğrudan çıkarıyordu: bir ayda %17
+  // artan sepet için "TÜİK'in 17,1 puan altında" yazıyordu. Rakam doğru
+  // çıkarma işlemiydi ama cümle yanlıştı — o sepet resmî ölçümün kat kat
+  // üstünde artıyor.
+  group('Pencere kıyası', () {
+    Widget appWith({required int windowMonths, double? yoyPct = 34.1}) =>
+        AppScope(
+          api: FakeApi(
+            routes: {
+              ...FakeApi.defaultRoutes,
+              'GET /index': {
+                'headline': {
+                  'changePct': 17.0,
+                  'windowMonths': windowMonths,
+                  'monthDeltaPoints': null,
+                  'coveredWeight': 1,
+                },
+                'series': [
+                  {'month': '2026-07-01', 'level': 100, 'momPct': 0},
+                  {'month': '2026-08-01', 'level': 117, 'momPct': 17},
+                ],
+                'official': [
+                  {
+                    'code': 'TUIK_TUFE',
+                    'publisher': 'TÜİK',
+                    'name': 'TÜFE',
+                    'isOfficial': true,
+                    'yoyPct': yoyPct,
+                  },
+                ],
+              },
+            },
+          ),
+          authStore: MemoryAuthStore('test-token'),
+          reminder: MemoryMonthlyReminder(),
+          child: MaterialApp(
+            locale: const Locale('tr', 'TR'),
+            home: const RootGate(),
+          ),
+        );
+
+    testWidgets('12 ay dolmadan fark yazılmıyor', (tester) async {
+      await tester.pumpWidget(appWith(windowMonths: 1));
+      await tester.pumpAndSettle();
+
+      // TÜİK sayısı duruyor — saklamıyoruz.
+      expect(find.text('34,1%'), findsOneWidget);
+      // Ama çıkarma işlemi yok.
+      expect(find.textContaining('PUAN ALTINDA'), findsNothing);
+      expect(find.textContaining('PUAN ÜSTÜNDE'), findsNothing);
+      // Yerine neyin neyle kıyaslanamadığı yazıyor.
+      expect(find.text('YILLIK'), findsOneWidget);
+      expect(find.textContaining('kıyaslamak için 12 ay'), findsOneWidget);
+    });
+
+    testWidgets('12 ay dolunca fark yazılıyor', (tester) async {
+      await tester.pumpWidget(appWith(windowMonths: 12));
+      await tester.pumpAndSettle();
+
+      // 34,1 − 17,0 = 17,1
+      expect(find.text('17,1 PUAN ALTINDA'), findsOneWidget);
+      expect(find.textContaining('kıyaslamak için 12 ay'), findsNothing);
+    });
+
+    // Aynı kök hata kartta da vardı ve orası daha ağır basıyor: kart
+    // paylaşılmak için var, yani yanlış eşleştirilmiş iki sayı kullanıcının
+    // adına başkasına gösteriliyor demek.
+    testWidgets('kart 12 ay dolmadan "aynı dönem" demiyor', (tester) async {
+      await tester.pumpWidget(appWith(windowMonths: 1));
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -320));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('kartı'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Aynı dönemde'), findsNothing);
+      expect(find.textContaining('Seninki 1 aylık'), findsOneWidget);
+      expect(find.textContaining('TÜİK yıllık 34,1%'), findsOneWidget);
+    });
+
+    testWidgets('kart 12 ay dolunca aynı dönem diyor', (tester) async {
+      await tester.pumpWidget(appWith(windowMonths: 12));
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -320));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('kartı'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Aynı dönemde TÜİK 34,1%'), findsOneWidget);
+    });
+  });
+
   group('Fiş detayı', () {
     testWidgets('eşleşmemiş satır işaretli, eşleşen değil', (tester) async {
       await tester.pumpWidget(bootstrap(token: 'test-token'));

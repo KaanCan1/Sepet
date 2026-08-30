@@ -225,6 +225,11 @@ class _ShareCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final known = snapshot.official.where((s) => s.value != null).toList();
+    // "Aynı dönemde" ancak gerçekten aynı dönemse yazılabilir. TÜİK yıllık
+    // açıklıyor; kullanıcının penceresi 12 ay dolmadan daha kısa. Kart
+    // paylaşılmak için var — yanlış eşleştirilmiş iki sayı kullanıcının
+    // adına başkasına gösteriliyor demek.
+    final ayniDonem = snapshot.windowMonths >= 12;
 
     return PaperCard(
       radius: 12,
@@ -245,8 +250,14 @@ class _ShareCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             '$receiptCount fiş üzerinden hesaplandı.'
-            '${known.isEmpty ? '' : ' Aynı dönemde '
+            '${known.isEmpty
+                ? ''
+                : ayniDonem
+                ? ' Aynı dönemde '
                       '${known.map((s) => '${s.publisher} ${Fmt.pct1(s.value!)}').join(', ')} '
+                      'açıkladı.'
+                : ' Seninki ${snapshot.windowMonths} aylık; '
+                      '${known.map((s) => '${s.publisher} yıllık ${Fmt.pct1(s.value!)}').join(', ')} '
                       'açıkladı.'}',
             style: TextStyle(
               fontSize: 11.5,
