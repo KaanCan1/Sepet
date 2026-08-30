@@ -90,6 +90,13 @@ class _Body extends StatelessWidget {
     // söylemek, satırı hiç çizmemekten iyi. Uydurmuyoruz ama saklamıyoruz da.
     final tuik = snapshot.official.firstOrNull;
     final own = snapshot.changePct ?? 0;
+    // TÜİK her zaman YILLIK değişim açıklıyor. Seninki 12 ay dolmadıysa
+    // daha kısa bir pencere — manşetin üstündeki "SON 1 AY" bunu zaten
+    // söylüyor. İkisini çıkarmak "17,1 puan altında" gibi bir cümle
+    // üretiyordu; oysa bir ayda %17 artan sepet, yılda %34 artan resmî
+    // ölçümün altında değil kat kat üstünde. Pencere dolmadan fark
+    // yazılmıyor: sayı duruyor, çıkarma işlemi durmuyor.
+    final kiyaslanabilir = snapshot.windowMonths >= 12;
     final top = movers.take(3).toList();
     final peak = top.isEmpty ? 1.0 : top.first.pct.abs();
     final c = context.c;
@@ -126,8 +133,19 @@ class _Body extends StatelessWidget {
                     value: tuik.value == null ? '—' : Fmt.pct1(tuik.value!),
                     difference: tuik.value == null
                         ? null
-                        : _gap(own, tuik.value!),
+                        : kiyaslanabilir
+                        ? _gap(own, tuik.value!)
+                        : 'YILLIK',
                   ),
+                  if (tuik.value != null && !kiyaslanabilir)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Seninki ${snapshot.windowMonths} aylık, '
+                        'TÜİK\'inki yıllık — kıyaslamak için 12 ay gerekiyor.',
+                        style: T.body.copyWith(fontSize: 11.5, color: c.muted),
+                      ),
+                    ),
                   if (tuik.value == null)
                     Pressable(
                       onTap: () =>
@@ -265,6 +283,8 @@ class _Body extends StatelessWidget {
   }
 
   /// "TÜİK'ten 3,6 puan altında" — kullanıcının asıl sorusunun cevabı.
+  ///
+  /// Yalnızca iki taraf da 12 aylık pencereye baktığında çağrılıyor.
   String _gap(double own, double official) {
     final d = official - own;
     if (d.abs() < 0.05) return 'AYNI SEVİYEDE';
