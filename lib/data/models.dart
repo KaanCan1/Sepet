@@ -421,7 +421,13 @@ class DataSource {
     required this.name,
     required this.official,
     required this.value,
+    this.levels = const {},
   });
+
+  /// Ay anahtarı: "2026-08". Gün taşımıyor, çünkü kıyas ay bazında ve iki
+  /// taraf farklı günlerde damgalanmış olabilir.
+  static String monthKey(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}';
 
   final String code;
   final String publisher;
@@ -433,6 +439,15 @@ class DataSource {
   /// Son 12 aylık değişim. Veri henüz çekilmediyse null — uydurmuyoruz.
   final double? value;
 
+  /// Ay ay endeks seviyesi, "2026-08" anahtarlı. Grafikteki kesikli çizgi
+  /// bundan çiziliyor; [value] çizilemiyor çünkü yıllık değişim serisinden
+  /// aylık bir yol geri türetilemez.
+  ///
+  /// Seviye mutlak olarak hiç gösterilmiyor — ekranda iki seri ortak bir aya
+  /// 100'leniyor, böylece TÜİK'in taban yılı görünmüyor. Elle girilen aylarda
+  /// yüzde var ama seviye yok; o aylar burada eksik kalıyor.
+  final Map<String, double> levels;
+
   String get title => '$publisher $name';
 
   static DataSource fromJson(Map<String, dynamic> j) => DataSource(
@@ -441,6 +456,11 @@ class DataSource {
     name: j['name'] as String,
     official: j['isOfficial'] as bool? ?? false,
     value: (j['yoyPct'] as num?)?.toDouble(),
+    levels: {
+      for (final e in (j['levels'] as List? ?? const []))
+        DataSource.monthKey(Fmt.day((e as Map)['month'] as String)):
+            (e['level'] as num).toDouble(),
+    },
   );
 }
 

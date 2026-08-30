@@ -15,7 +15,12 @@ class ChartSeries {
     this.fill,
   });
 
-  final List<double> values;
+  /// Boş bırakılabilir: null olan ay çizilmiyor, çizgi orada kesiliyor.
+  ///
+  /// Eksik bir ayı komşularına bağlamak "o ay da böyleydi" demek olurdu.
+  /// Resmî seri kullanıcının son ayını henüz açıklamamış olabiliyor; çizgi
+  /// orada bitiyor, uzatılmıyor.
+  final List<double?> values;
   final Color color;
   final double width;
   final bool dashed;
@@ -112,13 +117,18 @@ class _LinePainter extends CustomPainter {
       );
     }
 
+    // Ölçek bütün serilerde ORTAK. Her seriyi kendi en küçük-en büyüğüne
+    // yaymak iki farklı eğriyi üst üste bindirir ve "aynı seviyedeler" gibi
+    // okutur; oysa yan yana konmalarının tek sebebi farkları.
     var lo = double.infinity, hi = -double.infinity;
     for (final s in series) {
       for (final v in s.values) {
+        if (v == null) continue;
         if (v < lo) lo = v;
         if (v > hi) hi = v;
       }
     }
+    if (lo == double.infinity) return;
     if (hi - lo < 1e-9) hi = lo + 1;
     // Üstte ve altta nefes payı bırak — az, yoksa eğim düzleşiyor.
     final pad = (hi - lo) * .06;
@@ -129,16 +139,27 @@ class _LinePainter extends CustomPainter {
     final top = 8.0;
     final bottom = size.height - 8;
 
-    Offset at(List<double> v, int i) {
-      final x = v.length == 1
+    // x, serinin kendi uzunluğuna değil ORTAK zaman eksenine göre: iki seri
+    // aynı ayda aynı yerde duruyor. Eskiden her seri tüm genişliğe kendi
+    // nokta sayısıyla yayılıyordu; farklı uzunlukta iki seri zamanda kayardı.
+    final span = series.fold<int>(
+      0,
+      (a, s) => s.values.length > a ? s.values.length : a,
+    );
+
+    Offset at(List<double?> v, int i) {
+      final x = span == 1
           ? size.width / 2
-          : inset + (size.width - inset * 2) * (i / (v.length - 1));
-      final t = (v[i] - lo) / (hi - lo);
+          : inset + (size.width - inset * 2) * (i / (span - 1));
+      final t = (v[i]! - lo) / (hi - lo);
       return Offset(x, bottom - (bottom - top) * t);
     }
 
     for (final s in series) {
-      final pts = [for (var i = 0; i < s.values.length; i++) at(s.values, i)];
+      final pts = [
+        for (var i = 0; i < s.values.length; i++)
+          s.values[i] == null ? null : at(s.values, i),
+      ];
       final paint = Paint()
         ..color = s.color
         ..strokeWidth = s.width
@@ -146,49 +167,49 @@ class _LinePainter extends CustomPainter {
         ..strokeJoin = StrokeJoin.round
         ..style = PaintingStyle.stroke;
 
-      final drawn = _trim(pts, progress);
-      if (drawn.length < 2) continue;
+      for (final drawn in _runs(pts, progress, span)) {
+        if (s.fill != null) {
+          final base = size.height;
+          final area = Path()..moveTo(drawn.first.dx, base);
+          for (final p in drawn) {
+            area.lineTo(p.dx, p.dy);
+          }
+          area
+            ..lineTo(drawn.last.dx, base)
+            ..close();
+          canvas.drawPath(
+            area,
+            Paint()
+              ..shader = LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [s.fill!, s.fill!.withValues(alpha: 0)],
+              ).createShader(Rect.fromLTWH(0, top, size.width, base - top)),
+          );
+        }
 
-      if (s.fill != null) {
-        final base = size.height;
-        final area = Path()..moveTo(drawn.first.dx, base);
-        for (final p in drawn) {
-          area.lineTo(p.dx, p.dy);
+        if (s.dashed) {
+          for (var i = 0; i < drawn.length - 1; i++) {
+            _dash(canvas, drawn[i], drawn[i + 1], paint, on: 3, off: 3);
+          }
+        } else {
+          final path = Path()..moveTo(drawn.first.dx, drawn.first.dy);
+          for (final p in drawn.skip(1)) {
+            path.lineTo(p.dx, p.dy);
+          }
+          canvas.drawPath(path, paint);
         }
-        area
-          ..lineTo(drawn.last.dx, base)
-          ..close();
-        canvas.drawPath(
-          area,
-          Paint()
-            ..shader = LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [s.fill!, s.fill!.withValues(alpha: 0)],
-            ).createShader(Rect.fromLTWH(0, top, size.width, base - top)),
-        );
-      }
-
-      if (s.dashed) {
-        for (var i = 0; i < drawn.length - 1; i++) {
-          _dash(canvas, drawn[i], drawn[i + 1], paint, on: 3, off: 3);
-        }
-      } else {
-        final path = Path()..moveTo(drawn.first.dx, drawn.first.dy);
-        for (final p in drawn.skip(1)) {
-          path.lineTo(p.dx, p.dy);
-        }
-        canvas.drawPath(path, paint);
       }
 
       if (s.endDot && progress > .98) {
-        canvas.drawCircle(pts.last, 2.8, Paint()..color = s.color);
+        final son = pts.lastWhere((p) => p != null, orElse: () => null);
+        if (son != null) canvas.drawCircle(son, 2.8, Paint()..color = s.color);
       }
     }
 
     if (marker != null && series.isNotEmpty && progress > .98) {
       final v = series.first.values;
-      if (marker! >= 0 && marker! < v.length) {
+      if (marker! >= 0 && marker! < v.length && v[marker!] != null) {
         final p = at(v, marker!);
         canvas.drawCircle(p, 2.4, Paint()..color = colors.card);
         canvas.drawCircle(
@@ -218,16 +239,41 @@ class _LinePainter extends CustomPainter {
     }
   }
 
-  /// Çizim animasyonu için noktaları kısalt.
-  List<Offset> _trim(List<Offset> pts, double t) {
-    if (t >= 1 || pts.length < 2) return pts;
-    final total = (pts.length - 1) * t;
-    final full = total.floor();
-    final out = pts.sublist(0, (full + 1).clamp(1, pts.length));
-    final frac = total - full;
-    if (frac > 0 && full + 1 < pts.length) {
-      out.add(Offset.lerp(pts[full], pts[full + 1], frac)!);
+  /// Çizim animasyonu için kesintisiz parçalar.
+  ///
+  /// Boşluklu bir seri tek bir yol değil: eksik ay, çizginin oradan geçtiği
+  /// anlamına gelmez. Her kesintisiz koşu ayrı çiziliyor.
+  ///
+  /// İlerleme ORTAK zaman ekseni ([span]) üzerinden ölçülüyor, serinin kendi
+  /// uzunluğundan değil — iki çizgi aynı anda aynı aya varıyor.
+  List<List<Offset>> _runs(List<Offset?> pts, double t, int span) {
+    final cut = (span - 1) * t.clamp(0.0, 1.0);
+    final out = <List<Offset>>[];
+    var run = <Offset>[];
+
+    void flush() {
+      if (run.length >= 2) out.add(run);
+      run = <Offset>[];
     }
+
+    for (var i = 0; i < pts.length; i++) {
+      final p = pts[i];
+      if (p == null) {
+        flush();
+        continue;
+      }
+      if (i <= cut) {
+        run.add(p);
+        continue;
+      }
+      // Sınır bu koşunun içine düştü: son parçayı tam orada kes.
+      // run doluysa bir önceki nokta da dolu demektir (boşlukta boşaltılıyor).
+      if (run.isNotEmpty) {
+        run.add(Offset.lerp(pts[i - 1]!, p, cut - (i - 1))!);
+      }
+      break;
+    }
+    flush();
     return out;
   }
 

@@ -1,4 +1,5 @@
 import 'api.dart';
+import 'fmt.dart';
 import 'models.dart';
 import 'session.dart';
 
@@ -9,6 +10,7 @@ class IndexSnapshot {
     required this.windowMonths,
     required this.monthDeltaPoints,
     required this.levels,
+    required this.months,
     required this.official,
   });
 
@@ -24,20 +26,27 @@ class IndexSnapshot {
   /// Zincirlenmiş endeks seviyeleri, kronolojik.
   final List<double> levels;
 
+  /// [levels] ile aynı sırada, aynı uzunlukta: her seviyenin ayı.
+  ///
+  /// Eskiden atılıyordu ve ay ekseni "bugünden geriye say" ile tahmin
+  /// ediliyordu. Resmî seriyi aynı grafiğe koymak için tahmin yetmiyor:
+  /// TÜİK'in hangi ayının kullanıcının hangi ayıyla eşleştiği bilinmeli,
+  /// yoksa çizgi zamanda kayar.
+  final List<DateTime> months;
+
   final List<DataSource> official;
 
   bool get isEmpty => changePct == null || levels.length < 2;
 
   static IndexSnapshot fromJson(Map<String, dynamic> json) {
     final head = json['headline'] as Map<String, dynamic>?;
-    final series = (json['series'] as List? ?? const [])
-        .map((e) => ((e as Map)['level'] as num).toDouble())
-        .toList();
+    final series = (json['series'] as List? ?? const []).cast<Map>();
     return IndexSnapshot(
       changePct: (head?['changePct'] as num?)?.toDouble(),
       windowMonths: (head?['windowMonths'] as num?)?.toInt() ?? 0,
       monthDeltaPoints: (head?['monthDeltaPoints'] as num?)?.toDouble(),
-      levels: series,
+      levels: [for (final e in series) (e['level'] as num).toDouble()],
+      months: [for (final e in series) Fmt.day(e['month'] as String)],
       official: (json['official'] as List? ?? const [])
           .map((e) => DataSource.fromJson(e as Map<String, dynamic>))
           .toList(),
