@@ -274,6 +274,17 @@ describe('API', () => {
       .expect(200);
     expect(detail.body.history).toHaveLength(2);
     expect(detail.body.byMerchant[0].merchant).toBe('BİM');
+
+    // Listedeki kıvılcım ile ayrıntı grafiği aynı gözlemleri çiziyor.
+    // Ayrı sorgulardan beslenselerdi biri diğerinden sapabilir ve aynı ürün
+    // iki ekranda iki farklı eğri gösterebilirdi.
+    expect(sut.history).toEqual(detail.body.history);
+
+    // Kıvılcımın son noktası ile yüzdenin aynı sayıdan gelmesi şart:
+    // grafik yukarı giderken rozetin aşağı yazması saçma olurdu.
+    const ilk = sut.history[0].unitPrice;
+    const son = sut.history[sut.history.length - 1].unitPrice;
+    expect((son / ilk - 1) * 100).toBeCloseTo(sut.changePct, 5);
   });
 
   it('bilinmeyen ürün 404', async () => {

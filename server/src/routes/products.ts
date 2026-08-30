@@ -6,15 +6,37 @@ import { matchCatalog } from '../catalog-match.js';
 export const productsRouter = Router();
 productsRouter.use(requireAuth);
 
-/** Ürünler sekmesi: sepetteki kalemler, 12 aylık değişime göre. */
+/**
+ * Ürünler sekmesi: sepetteki kalemler, 12 aylık değişime göre.
+ *
+ * Geçmiş listede de dönüyor, çünkü her satırın sağında o ürünün kendi
+ * kıvılcım grafiği var. Ayrı bir "özet seri" uydurmak yerine ayrıntı
+ * ekranıyla AYNI sorgu kullanılıyor — aynı tablo, aynı süzgeç, aynı sıra.
+ * İki farklı gösterim aynı ürün için farklı bir eğri çizerse hangisinin
+ * doğru olduğunu kullanıcı bilemez; o yüzden ikisi tek kaynaktan besleniyor.
+ */
 productsRouter.get('/', async (req: AuthedRequest, res) => {
   const rows = await query(
-    `SELECT canonical_product_id, name, size_label, observations,
-            merchant_count, month_span,
-            first_unit_price, last_unit_price
-       FROM v_product_summary
-      WHERE user_id = $1
-      ORDER BY (last_unit_price / nullif(first_unit_price, 0)) DESC NULLS LAST`,
+    `SELECT s.canonical_product_id, s.name, s.size_label, s.observations,
+            s.merchant_count, s.month_span,
+            s.first_unit_price, s.last_unit_price,
+            coalesce(h.history, '[]'::json) AS history
+       FROM v_product_summary s
+       LEFT JOIN LATERAL (
+         SELECT json_agg(
+                  json_build_object(
+                    'date', to_char(o.observed_on, 'YYYY-MM-DD'),
+                    'unitPrice', o.unit_price,
+                    'packPrice', o.pack_price
+                  ) ORDER BY o.observed_on
+                ) AS history
+           FROM price_observations o
+          WHERE o.user_id = s.user_id
+            AND o.canonical_product_id = s.canonical_product_id
+            AND NOT o.is_outlier
+       ) h ON true
+      WHERE s.user_id = $1
+      ORDER BY (s.last_unit_price / nullif(s.first_unit_price, 0)) DESC NULLS LAST`,
     [req.userId],
   );
   res.json(
@@ -34,6 +56,7 @@ productsRouter.get('/', async (req: AuthedRequest, res) => {
               ).toFixed(1),
             )
           : null,
+      history: r.history,
     })),
   );
 });

@@ -10,6 +10,7 @@ import 'package:sepet/screens/root_gate.dart';
 import 'package:sepet/screens/shell.dart';
 import 'package:sepet/screens/welcome_screen.dart';
 import 'package:sepet/widgets/atoms.dart';
+import 'package:sepet/widgets/chart.dart';
 
 import 'fake_api.dart';
 
@@ -687,6 +688,74 @@ void main() {
       expect(find.text('SEPETİNDEKİ ÜRÜN'), findsOneWidget);
       expect(find.text('248,00'), findsOneWidget);
       expect(find.text('389,90'), findsWidgets);
+    });
+
+    // Satırın sağındaki kıvılcım listedeki geçmişten çiziliyor. Sunucu
+    // önceden yalnızca ayrıntı ucunda geçmiş dönüyordu; liste boş gelince
+    // kıvılcım hiç çizilmiyor, tasarımdaki yer boş kalıyordu.
+    //
+    // Tek gözlemli üründe çizilmemesi de kasıtlı: iki nokta olmadan eğim
+    // yok. Tek noktadan çizilen düz çizgi "fiyat sabit kaldı" der, oysa
+    // söylenebilecek tek şey "henüz ikinci kez görmedik".
+    testWidgets('kıvılcım yalnızca iki gözlemden sonra çiziliyor', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        bootstrap(
+          token: 'test-token',
+          api: FakeApi(
+            routes: {
+              ...FakeApi.defaultRoutes,
+              'GET /products': [
+                {
+                  'id': 'p1',
+                  'name': 'Ayçiçek yağı',
+                  'sizeLabel': '5 litre',
+                  'observations': 14,
+                  'merchantCount': 4,
+                  'monthSpan': 11,
+                  'changePct': 57.2,
+                  'history': [
+                    {
+                      'date': '2025-09-12',
+                      'unitPrice': 49.6,
+                      'packPrice': 248.0,
+                    },
+                    {
+                      'date': '2026-08-14',
+                      'unitPrice': 77.98,
+                      'packPrice': 389.9,
+                    },
+                  ],
+                },
+                {
+                  'id': 'p2',
+                  'name': 'Tuz',
+                  'sizeLabel': '750 g',
+                  'observations': 1,
+                  'merchantCount': 1,
+                  'monthSpan': 0,
+                  'changePct': null,
+                  'history': [
+                    {'date': '2026-08-14', 'unitPrice': 12.0, 'packPrice': 9.0},
+                  ],
+                },
+              ],
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-2')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ayçiçek yağı, 5 litre'), findsOneWidget);
+      expect(find.text('Tuz, 750 g'), findsOneWidget);
+      // İki satır var, kıvılcım tek.
+      expect(find.byType(LineChart), findsOneWidget);
+      // Tek gözlemli satırda yüzde yerine tire duruyor.
+      expect(find.text('—'), findsOneWidget);
     });
   });
 
