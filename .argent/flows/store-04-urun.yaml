@@ -1,0 +1,24 @@
+steps:
+  - echo: >-
+      SEÇİCİ NOTU — bu akışlar metin değil koordinat kullanıyor. argent akış
+      adımlarını DYLD_INSERT_LIBRARIES ile enjekte ettiği native köprü
+      üzerinden çalıştırıyor; Flutter her şeyi tek bir FlutterView tuvaline
+      çizdiği için o köprüde eşleşecek UIKit metni yok. "argent run describe"
+      ax-service kullandığı için metinleri görüyor, akış çalıştırıcısı
+      görmüyor. Aşağıdaki oranlar o describe çıktısından, iPhone 17 Pro Max
+      üzerinde ölçüldü.
+  - launch: com.kaancankurt.sepet
+  - echo: Soğuk açılış + ağ üzerinden dev-login + üç paralel istek.
+  - wait: 9000
+  - await:
+      idle: true
+  - echo: Alt sekme çubuğu — Ürünler (0.518, 0.935).
+  - tap: { x: 0.518, y: 0.935 }
+  - wait: 2000
+  - echo: >-
+      "Ekmek, tam buğday, 500 g" — 24 gözlem, 4 market; sayfanın alt yarısını
+      dolduran tek ürün. Satır merkezi (0.5, 0.5225).
+  - tap: { x: 0.5, y: 0.5225 }
+  - wait: 2000
+  - await:
+      idle: true

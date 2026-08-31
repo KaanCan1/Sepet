@@ -1,0 +1,19 @@
+steps:
+  - echo: >-
+      SEÇİCİ NOTU — bu akışlar metin değil koordinat kullanıyor. argent akış
+      adımlarını DYLD_INSERT_LIBRARIES ile enjekte ettiği native köprü
+      üzerinden çalıştırıyor; Flutter her şeyi tek bir FlutterView tuvaline
+      çizdiği için o köprüde eşleşecek UIKit metni yok. "argent run describe"
+      ax-service kullandığı için metinleri görüyor, akış çalıştırıcısı
+      görmüyor. Aşağıdaki oranlar o describe çıktısından, iPhone 17 Pro Max
+      üzerinde ölçüldü.
+  - launch: com.kaancankurt.sepet
+  - echo: Soğuk açılış + ağ üzerinden dev-login + üç paralel istek.
+  - wait: 9000
+  - await:
+      idle: true
+  - echo: '"EN ÇOK ARTAN" başlığının sağındaki "Tümü →" (0.908, 0.576).'
+  - tap: { x: 0.908, y: 0.576 }
+  - wait: 2500
+  - await:
+      idle: true
