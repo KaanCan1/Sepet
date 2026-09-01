@@ -7,7 +7,7 @@ import '../theme/tokens.dart';
 import '../widgets/data_view.dart';
 import '../widgets/atoms.dart';
 import '../widgets/glass.dart';
-import '../widgets/icons.dart';
+import '../widgets/motion.dart';
 import '../widgets/screen_frame.dart';
 import 'receipt_detail_screen.dart';
 
@@ -27,19 +27,7 @@ class MatchQueueScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenFrame(
-      title: 'Eşleşmeler',
-      trailing: Pressable(
-        onTap: () => Navigator.of(context).pop(),
-        child: Padding(
-          padding: EdgeInsets.all(4),
-          child: LineIcon(
-            Glyph.close,
-            size: 17,
-            color: context.c.muted,
-            stroke: 1.6,
-          ),
-        ),
-      ),
+      showTopBar: false,
       slivers: [
         SliverToBoxAdapter(
           // Fiş listesini paylaşıyor, yalnızca bekleyeni süzüyor: ayrı bir
@@ -55,25 +43,31 @@ class MatchQueueScreen extends StatelessWidget {
             ),
             builder: (context, all) {
               final receipts = all.where((r) => r.pendingCount > 0).toList();
+              final satir = receipts.fold<int>(0, (a, r) => a + r.pendingCount);
               return Padding(
                 padding: kGutter,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 8),
-                    Lbl(
-                      '${receipts.fold<int>(0, (a, r) => a + r.pendingCount)} '
-                      'SATIR ONAY BEKLİYOR',
+                    Printed(
+                      step: 0,
+                      child: LargeTitle(
+                        'Eşleşmeler',
+                        trailing: '$satir SATIR',
+                        onClose: () => Navigator.of(context).pop(),
+                      ),
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Bu satırların hangi kanonik ürüne denk geldiğinden emin '
-                      'olunamadı. Onayladığın eşleşme kaydedilir ve aynı fiş '
-                      'formatı bir daha sorulmaz.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.5,
-                        color: context.c.muted,
+                    Printed(
+                      step: 1,
+                      child: Text(
+                        'Bu satırların hangi kanonik ürüne denk geldiğinden '
+                        'emin olunamadı. Onayladığın eşleşme kaydedilir ve '
+                        'aynı fiş formatı bir daha sorulmaz.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.5,
+                          color: context.c.muted,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),

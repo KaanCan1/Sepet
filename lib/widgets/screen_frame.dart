@@ -7,7 +7,7 @@ import 'glass.dart';
 import 'pull_refresh.dart';
 
 /// Her ekranın ortak kabuğu: içerik akar, üstteki bar camdan onu bulanıklaştırır.
-class ScreenFrame extends StatelessWidget {
+class ScreenFrame extends StatefulWidget {
   const ScreenFrame({
     super.key,
     this.title,
@@ -39,9 +39,49 @@ class ScreenFrame extends StatelessWidget {
   final Future<void> Function()? onRefresh;
 
   @override
+  State<ScreenFrame> createState() => _ScreenFrameState();
+}
+
+class _ScreenFrameState extends State<ScreenFrame> {
+  final _footerKey = GlobalKey();
+
+  /// Alt çubuğun ölçülen yüksekliği; içeriğin altına o kadar pay bırakılıyor.
+  ///
+  /// Eskiden hiç bırakılmıyordu ve alt çubuk son satırların üstüne biniyordu:
+  /// taslak fiş ekranında kaydırma sonuna gelindiğinde "Satırların toplamı"
+  /// camın altında kalıyordu — üstelik o satır fişteki TOPLAM ile
+  /// karşılaştırılan sayı, yani ekranın var oluş sebebi.
+  ///
+  /// Sabit bir tahmin yerine ölçüm: çubuğun içine ne konduğu ekrandan
+  /// ekrana değişiyor ve tahmin sessizce eskir.
+  double _footer = 0;
+
+  void _measure() {
+    final box = _footerKey.currentContext?.findRenderObject() as RenderBox?;
+    final h = box?.size.height ?? 0;
+    if (mounted && h != _footer) setState(() => _footer = h);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final ScreenFrame(
+      :title,
+      :leading,
+      :trailing,
+      :slivers,
+      :footer,
+      :reserveTabBar,
+      :showTopBar,
+      :onRefresh,
+    ) = widget;
+
+    if (footer != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+    }
+
     final pad = MediaQuery.paddingOf(context);
-    final bottomReserve = (reserveTabBar ? kTabBarHeight + pad.bottom : 0.0);
+    final bottomReserve =
+        (reserveTabBar ? kTabBarHeight + pad.bottom : 0.0) + _footer;
 
     return Scaffold(
       backgroundColor: context.c.paper,
@@ -127,9 +167,10 @@ class ScreenFrame extends StatelessWidget {
               right: 0,
               bottom: 0,
               child: GlassBar(
+                key: _footerKey,
                 borderSide: GlassEdge.top,
                 padding: EdgeInsets.fromLTRB(18, 12, 18, 12 + pad.bottom),
-                child: footer!,
+                child: footer,
               ),
             ),
         ],
