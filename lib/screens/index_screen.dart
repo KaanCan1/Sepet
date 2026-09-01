@@ -181,16 +181,23 @@ class _Body extends StatelessWidget {
             height: 116,
             series: [
               ChartSeries(
-                values: snapshot.levels,
+                values: _rebase(snapshot.levels),
                 color: c.ink,
                 width: 2.4,
                 endDot: true,
                 fill: c.ink.withValues(alpha: c.areaFade),
               ),
+              if (_tuikLine(tuik) case final line?)
+                ChartSeries(
+                  values: line,
+                  color: c.ref,
+                  width: 1.6,
+                  dashed: true,
+                ),
             ],
           ),
           const SizedBox(height: 6),
-          Printed(step: 3, child: _MonthAxis(count: snapshot.levels.length)),
+          Printed(step: 3, child: _MonthAxis(months: snapshot.months)),
           if (top.isNotEmpty) ...[
             const SizedBox(height: 30),
             Printed(
@@ -282,6 +289,56 @@ class _Body extends StatelessWidget {
     );
   }
 
+  /// İlk ayı 100 kabul eden seri.
+  ///
+  /// Tek seri için görüntüyü değiştirmiyor (doğrusal dönüşüm eğimi korur);
+  /// gerekçesi ikinci seri: TÜİK'in tabanı 2025=100, kullanıcınınki kendi ilk
+  /// ayı. Ham seviyeler yan yana konsa grafik iki farklı ölçeği tek eksene
+  /// bindirirdi. Ortak aya 100'lenince ikisi de aynı soruyu cevaplıyor:
+  /// "başladığın aydan bugüne ne kadar arttı."
+  List<double> _rebase(List<double> v) {
+    if (v.isEmpty) return v;
+    final base = v[_ortakBaslangic(v)];
+    if (base == 0) return v;
+    return [for (final x in v) x / base * 100];
+  }
+
+  /// Kullanıcının serisinde, TÜİK'in de seviyesi olan ilk ayın indeksi.
+  /// TÜİK yoksa 0 — o zaman tek çizgi var, taban da ilk ay.
+  int _ortakBaslangic(List<double> own) {
+    final t = snapshot.official.firstOrNull;
+    if (t == null || t.levels.isEmpty) return 0;
+    for (var i = 0; i < snapshot.months.length && i < own.length; i++) {
+      if (t.levels.containsKey(DataSource.monthKey(snapshot.months[i]))) {
+        return i;
+      }
+    }
+    return 0;
+  }
+
+  /// TÜİK serisi, kullanıcının aylarına hizalanmış ve aynı aya 100'lenmiş.
+  ///
+  /// Eksik ay null kalıyor: TÜİK genelde içinde bulunulan ayı henüz
+  /// açıklamamış olur ve çizgi orada biter. Komşusuna bağlamak "o ay da
+  /// böyleydi" demek olurdu.
+  ///
+  /// İki noktadan az kalıyorsa hiç çizilmiyor — tek nokta eğim göstermez.
+  List<double?>? _tuikLine(DataSource? t) {
+    if (t == null || t.levels.isEmpty || snapshot.months.isEmpty) return null;
+    final i0 = _ortakBaslangic(snapshot.levels);
+    final base = t.levels[DataSource.monthKey(snapshot.months[i0])];
+    if (base == null || base == 0) return null;
+
+    final out = <double?>[
+      for (final m in snapshot.months)
+        switch (t.levels[DataSource.monthKey(m)]) {
+          final double v => v / base * 100,
+          _ => null,
+        },
+    ];
+    return out.whereType<double>().length < 2 ? null : out;
+  }
+
   /// "TÜİK'ten 3,6 puan altında" — kullanıcının asıl sorusunun cevabı.
   ///
   /// Yalnızca iki taraf da 12 aylık pencereye baktığında çağrılıyor.
@@ -294,21 +351,24 @@ class _Body extends StatelessWidget {
 
 /// Grafiğin altındaki ay ekseni. Beş etiket: ikisi uç, üçü arada.
 class _MonthAxis extends StatelessWidget {
-  const _MonthAxis({required this.count});
+  const _MonthAxis({required this.months});
 
-  final int count;
+  /// Serinin gerçek ayları. Eskiden yalnızca nokta sayısı geliyordu ve
+  /// etiketler "bugünden geriye say" ile tahmin ediliyordu — seri bu ayda
+  /// bitmiyorsa eksen sessizce kayıyordu.
+  final List<DateTime> months;
 
   @override
   Widget build(BuildContext context) {
+    final count = months.length;
     if (count < 2) return const SizedBox.shrink();
-    final now = DateTime.now();
     final picks = {0, count ~/ 4, count ~/ 2, count * 3 ~/ 4, count - 1};
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         for (final i in picks)
           Text(
-            Fmt.monthShort(DateTime(now.year, now.month - (count - 1 - i))),
+            Fmt.monthShort(months[i]),
             style: T.label.copyWith(fontSize: 8, color: context.c.faint),
           ),
       ],

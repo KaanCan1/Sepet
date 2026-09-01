@@ -260,6 +260,116 @@ void main() {
     });
   });
 
+  // Manşetteki yıllık yüzde grafiğe çizilemiyor: yıllık değişim serisinden
+  // aylık bir yol geri türetilemez. Kesikli TÜİK çizgisi ay ay seviyeden
+  // çiziliyor ve iki seri ortak aya 100'leniyor — TÜİK'in taban yılı
+  // (2025=100) ekranda hiç görünmüyor.
+  group('TÜİK çizgisi', () {
+    Widget appWith({required Map<String, double> levels}) => AppScope(
+      api: FakeApi(
+        routes: {
+          ...FakeApi.defaultRoutes,
+          'GET /index': {
+            'headline': {
+              'changePct': 17.0,
+              'windowMonths': 3,
+              'monthDeltaPoints': null,
+              'coveredWeight': 1,
+            },
+            'series': [
+              {'month': '2026-05-01', 'level': 100, 'momPct': 0},
+              {'month': '2026-06-01', 'level': 108, 'momPct': 8},
+              {'month': '2026-07-01', 'level': 113, 'momPct': 4.6},
+              {'month': '2026-08-01', 'level': 117, 'momPct': 3.5},
+            ],
+            'official': [
+              {
+                'code': 'TUIK_TUFE',
+                'publisher': 'TÜİK',
+                'name': 'TÜFE',
+                'isOfficial': true,
+                'yoyPct': 34.1,
+                'levels': [
+                  for (final e in levels.entries)
+                    {'month': e.key, 'level': e.value},
+                ],
+              },
+            ],
+          },
+        },
+      ),
+      authStore: MemoryAuthStore('test-token'),
+      reminder: MemoryMonthlyReminder(),
+      child: MaterialApp(
+        locale: const Locale('tr', 'TR'),
+        home: const RootGate(),
+      ),
+    );
+
+    List<ChartSeries> serilerinden(WidgetTester tester) =>
+        tester.widget<LineChart>(find.byType(LineChart).first).series;
+
+    testWidgets('seviye varsa ikinci çizgi kesikli çiziliyor', (tester) async {
+      await tester.pumpWidget(
+        appWith(
+          levels: {
+            '2026-05-01': 120.0,
+            '2026-06-01': 124.0,
+            '2026-07-01': 128.0,
+            '2026-08-01': 132.0,
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final seriler = serilerinden(tester);
+      expect(seriler, hasLength(2));
+      expect(seriler[1].dashed, isTrue);
+
+      // İkisi de ortak ilk aya 100'lenmiş: TÜİK'in ham 120'si ekranda yok.
+      expect(seriler[0].values.first, closeTo(100, 0.001));
+      expect(seriler[1].values.first, closeTo(100, 0.001));
+      // 132 / 120 = 1,10
+      expect(seriler[1].values.last, closeTo(110, 0.001));
+    });
+
+    // TÜİK içinde bulunulan ayı genelde henüz açıklamamış olur.
+    testWidgets('açıklanmamış ay boş kalıyor, uzatılmıyor', (tester) async {
+      await tester.pumpWidget(
+        appWith(
+          levels: {
+            '2026-05-01': 120.0,
+            '2026-06-01': 124.0,
+            '2026-07-01': 128.0,
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final seriler = serilerinden(tester);
+      expect(seriler, hasLength(2));
+      // Kullanıcının serisiyle aynı uzunlukta — hizalama bozulmuyor.
+      expect(seriler[1].values, hasLength(4));
+      // Son ay boş: komşusuna bağlanmadı.
+      expect(seriler[1].values.last, isNull);
+    });
+
+    testWidgets('tek seviye varsa çizgi hiç çizilmiyor', (tester) async {
+      await tester.pumpWidget(appWith(levels: {'2026-05-01': 120.0}));
+      await tester.pumpAndSettle();
+
+      // Tek nokta eğim göstermez.
+      expect(serilerinden(tester), hasLength(1));
+    });
+
+    testWidgets('seviye yoksa tek çizgi kalıyor', (tester) async {
+      await tester.pumpWidget(appWith(levels: const {}));
+      await tester.pumpAndSettle();
+
+      expect(serilerinden(tester), hasLength(1));
+    });
+  });
+
   group('Fiş detayı', () {
     testWidgets('eşleşmemiş satır işaretli, eşleşen değil', (tester) async {
       await tester.pumpWidget(bootstrap(token: 'test-token'));
