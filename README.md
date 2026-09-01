@@ -19,8 +19,8 @@
   <img src="docs/screenshots/store/01-endeks.png" width="172" alt="Endeks ekranı">
   <img src="docs/screenshots/store/02-fis.png" width="172" alt="Fiş ekranı">
   <img src="docs/screenshots/store/03-kirilim.png" width="172" alt="Kategori ve marka kırılımı">
-  <img src="docs/screenshots/store/04-urun-gecmisi.png" width="172" alt="Ürün geçmişi ekranı">
-  <img src="docs/screenshots/store/05-aylik-kart.png" width="172" alt="Aylık kart ekranı">
+  <img src="docs/screenshots/store/04-urun.png" width="172" alt="Ürün geçmişi ekranı">
+  <img src="docs/screenshots/store/05-kart.png" width="172" alt="Aylık kart ekranı">
 </p>
 
 <p align="center">

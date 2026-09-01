@@ -12,8 +12,14 @@ steps:
   - wait: 9000
   - await:
       idle: true
-  - echo: '"EN ÇOK ARTAN" başlığının sağındaki "Tümü →" (0.908, 0.576).'
-  - tap: { x: 0.908, y: 0.576 }
+  - echo: >-
+      "EN ÇOK ARTAN" başlığının sağındaki "Tümü →" (0.908, 0.4785). Bu oran
+      0.576'ydı: endeks ekranının tepesindeki kırmızı "N kalem endekse
+      girmiyor" şeridi vitrin hesabıyla birlikte kalkınca altındaki her şey
+      yukarı kaydı ve eski oran "Selpak Kağıt havlu" satırına düşüp kırılım
+      yerine ürün ekranı yakalıyordu. Endeks ekranındaki her oran o şeridin
+      varlığına bağlı — hesap değişirse hepsi yeniden ölçülmeli.
+  - tap: { x: 0.908, y: 0.4785 }
   - wait: 2500
   - await:
       idle: true
