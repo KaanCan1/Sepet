@@ -1,0 +1,33 @@
+steps:
+  - echo: >-
+      SEÇİCİ NOTU — bu akışlar metin değil koordinat kullanıyor. argent akış
+      adımlarını DYLD_INSERT_LIBRARIES ile enjekte ettiği native köprü
+      üzerinden çalıştırıyor; Flutter her şeyi tek bir FlutterView tuvaline
+      çizdiği için o köprüde eşleşecek UIKit metni yok. "argent run describe"
+      ax-service kullandığı için metinleri görüyor, akış çalıştırıcısı
+      görmüyor. Aşağıdaki oranlar o describe çıktısından, iPhone 17 Pro Max
+      üzerinde ölçüldü.
+  - launch: com.kaancankurt.sepet
+  - echo: Soğuk açılış + ağ üzerinden dev-login + üç paralel istek.
+  - wait: 9000
+  - await:
+      idle: true
+  - echo: >-
+      DİBE KADAR kaydırılıyor, tek kaydırmayla değil. Tek kaydırmada momentum
+      nerede durduğunu belirsiz bırakıyor ve kart satırı ıskalanıyordu — ilk
+      koşuda bu yüzden aylık kart yerine kaydırılmış endeks ekranı yakalandı.
+      Dip sabit bir çapa; satırın yeri orada değişmiyor.
+  - tool: gesture-swipe
+    args: { fromX: 0.5, fromY: 0.80, toX: 0.5, toY: 0.28, durationMs: 600 }
+  - tool: gesture-swipe
+    args: { fromX: 0.5, fromY: 0.80, toX: 0.5, toY: 0.28, durationMs: 600 }
+  - tool: gesture-swipe
+    args: { fromX: 0.5, fromY: 0.80, toX: 0.5, toY: 0.28, durationMs: 600 }
+  - wait: 2500
+  - await:
+      idle: true
+  - echo: '"Ağustos kartı · PAYLAŞ" satırı, dipteyken (0.5, 0.601).'
+  - tap: { x: 0.5, y: 0.601 }
+  - wait: 2500
+  - await:
+      idle: true

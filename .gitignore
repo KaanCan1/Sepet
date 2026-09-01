@@ -72,3 +72,6 @@ android/key.properties
 
 # ASO çalışma çıktıları (aso-appstore-screenshots skill) — final görseller docs/screenshots/store/ altında
 /screenshots/
+
+# goldie çıktısı — üretilebilir
+goldie/out/
