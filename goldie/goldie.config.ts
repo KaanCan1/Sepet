@@ -10,13 +10,20 @@ import type { GoldieConfig } from "goldie/dist/config.d.ts";
  *
  *  1. Yerel sunucu ayakta olmalı (`cd server && npm start`). Uygulama
  *     varsayılan olarak http://localhost:4000 adresine bakıyor ve ekranların
- *     tamamı gerçek veriyle doluyor — demo hesabında 25 fiş, 12 ay var.
+ *     tamamı gerçek veriyle doluyor — vitrin hesabında 22 fiş, 11 ay var:
+ *       cd server && npm run seed -- vitrin@sepet.app --vitrin
  *  2. Derleme SEPET_DEMO_EMAIL bayrağıyla yapılmalı:
  *     fvm flutter build ios --simulator --debug \
- *       --dart-define=SEPET_DEMO_EMAIL=demo@sepet.app
+ *       --dart-define=SEPET_DEMO_EMAIL=vitrin@sepet.app
  *     goldie her akıştan önce uygulamayı verisi silinmiş kuruyor; bu bayrak
  *     olmadan her akış giriş ekranında kalıyor. Bayrak yalnızca hata ayıklama
  *     derlemesinde çalışıyor, yayın derlemesinde ölü.
+ *
+ * NEDEN demo@sepet.app DEĞİL: inceleme hesabı eşleşme akışını göstermek için
+ * bilerek bekleyen satır taşıyor, üstüne bir de elle taranmış gerçek bir
+ * Migros fişi var. İkisi endeks ekranının tepesine kırmızı "10 kalem endekse
+ * girmiyor" şeridi bastırıyordu — uyarı doğru ama vitrinde ilk okunan üçüncü
+ * satır oluyordu. Vitrin hesabı aynı sepeti bekleyen satır olmadan kuruyor.
  *
  * goldie yayın (Release) derlemesi istiyor; gerekçesi React Native'in LogBox
  * şeritleri. Flutter'da o şerit yok ve uygulama zaten debugShowCheckedModeBanner

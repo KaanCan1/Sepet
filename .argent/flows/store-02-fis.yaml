@@ -16,8 +16,11 @@ steps:
   - tap: { x: 0.328, y: 0.935 }
   - wait: 2000
   - echo: >-
-      6 Ağustos A101 fişi, 30 kalem — kâğıt fişi baştan sona dolduran tek
-      kayıt. Satır merkezi (0.5, 0.306); liste tarihe göre sabit sırada.
+      19 Temmuz BİM fişi, 16 kalem. Daha kalabalık fişler var (6 Ağustos
+      Migros, 29 kalem) ama onlar ekranın altından taşıyor; bu fiş başlıktan
+      barkoda kadar tamamen sığıyor — TOPLAM, "TEŞEKKÜR EDERİZ" ve koparma
+      kenarı dahil. Mağaza karesinde kesilmemiş fiş, kalabalık fişten iyi.
+      Satır merkezi (0.5, 0.306); liste tarihe göre sabit sırada.
   - tap: { x: 0.5, y: 0.306 }
   - wait: 2000
   - await:

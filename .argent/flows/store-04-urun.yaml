@@ -16,9 +16,13 @@ steps:
   - tap: { x: 0.518, y: 0.935 }
   - wait: 2000
   - echo: >-
-      "Ekmek, tam buğday, 500 g" — 24 gözlem, 4 market; sayfanın alt yarısını
-      dolduran tek ürün. Satır merkezi (0.5, 0.5225).
-  - tap: { x: 0.5, y: 0.5225 }
+      "Ekmek, tam buğday, 500 g" — 22 gözlem, 4 market; "EN SON GÖRDÜĞÜN
+      FİYATLAR" listesini dört satırla dolduran iki üründen biri, diğeri
+      yumurta. Satır merkezi (0.5, 0.5805). Liste birim fiyat değişimine göre
+      sıralı, yani sıra hesabın verisine bağlı: 0.5225 demo hesabında ekmeğe
+      denk geliyordu, vitrin hesabında Sütaş Tereyağı'na düştü — o da 2
+      marketli, sayfanın altını boş bırakıyor.
+  - tap: { x: 0.5, y: 0.5805 }
   - wait: 2000
   - await:
       idle: true
