@@ -4,8 +4,6 @@ import 'package:flutter/services.dart';
 import '../data/session.dart';
 import '../theme/tokens.dart';
 import '../widgets/atoms.dart';
-import '../widgets/glass.dart';
-import '../widgets/icons.dart';
 import '../widgets/screen_frame.dart';
 import 'privacy_screen.dart';
 
@@ -50,28 +48,20 @@ class _SignInScreenState extends State<SignInScreen> {
     final ok = isValidEmail(_controller.text);
 
     return ScreenFrame(
-      title: 'Giriş',
-      trailing: Pressable(
-        onTap: () => Navigator.of(context).pop(),
-        child: Padding(
-          padding: EdgeInsets.all(4),
-          child: LineIcon(
-            Glyph.close,
-            size: 17,
-            color: context.c.muted,
-            stroke: 1.6,
-          ),
-        ),
-      ),
+      showTopBar: false,
       footer: PrimaryButton(label: 'Devam et', onTap: ok ? _submit : null),
       slivers: [
         SliverPadding(
           padding: kGutter,
           sliver: SliverList.list(
             children: [
-              const SizedBox(height: 12),
-              const Text('Fişlerini\nhesabına bağla', style: T.display),
-              const SizedBox(height: 10),
+              // Üst barda "Giriş", altında "Fişlerini hesabına bağla"
+              // yazıyordu. İkincisi ekranın ne işe yaradığını söylüyor,
+              // birincisi yalnızca adını; kalan o.
+              LargeTitle(
+                'Fişlerini\nhesabına bağla',
+                onClose: () => Navigator.of(context).pop(),
+              ),
               Text(
                 'Parola yok. E-postana tek kullanımlık bir bağlantı gönderiyoruz.',
                 style: TextStyle(
@@ -83,9 +73,16 @@ class _SignInScreenState extends State<SignInScreen> {
               const SizedBox(height: 22),
               const Lbl('E-POSTA'),
               const SizedBox(height: 6),
-              PaperCard(
-                padding: const EdgeInsets.symmetric(horizontal: 13),
-                borderColor: ok ? context.c.ink : context.c.line,
+              // Kutu yerine alt çizgi. Çizgi geçerli e-postada koyulaşıyor —
+              // kutunun kenar rengiyle yaptığı işin aynısı, daha az mürekkeple.
+              Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: ok ? context.c.ink : context.c.line,
+                    ),
+                  ),
+                ),
                 child: CupertinoTextField(
                   controller: _controller,
                   placeholder: 'ad@ornek.com',
@@ -96,7 +93,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     FilteringTextInputFormatter.deny(RegExp(r'\s')),
                   ],
                   decoration: const BoxDecoration(),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.only(bottom: 10),
                   style: TextStyle(fontSize: 14, color: context.c.ink),
                   placeholderStyle: TextStyle(
                     fontSize: 14,
@@ -122,9 +119,10 @@ class _SignInScreenState extends State<SignInScreen> {
                       )
                     : const SizedBox(width: double.infinity),
               ),
-              const SizedBox(height: 20),
-              const Hairline(),
-              const SizedBox(height: 14),
+              // Ayraç çizgisi kalktı: alanın kendi alt çizgisi zaten hemen
+              // üstünde duruyordu ve ikisi çift çizgi gibi okunuyordu.
+              // Formu maddelerden ayırma işini boşluk yapıyor.
+              const SizedBox(height: 26),
               const _Bullet(
                 'Fişin fotoğrafı cihazdan çıkmaz. Metin cihaz üstünde okunur.',
               ),
@@ -137,28 +135,10 @@ class _SignInScreenState extends State<SignInScreen> {
                 'için gerekli.',
               ),
               const SizedBox(height: 4),
-              Pressable(
+              ActionRow(
+                label: 'Aydınlatma metni',
+                hint: 'KVKK',
                 onTap: () => Navigator.of(context).push(PrivacyScreen.route()),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    border: Border(top: BorderSide(color: context.c.line)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Aydınlatma metni',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: context.c.ink,
-                          ),
-                        ),
-                      ),
-                      LineIcon(Glyph.chevron, size: 13, color: context.c.muted),
-                    ],
-                  ),
-                ),
               ),
             ],
           ),
