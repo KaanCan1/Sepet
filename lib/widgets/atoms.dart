@@ -502,11 +502,20 @@ class _StatRowState extends State<StatRow> {
 /// Chevron yok — ipucu zaten "burada ne var" diyor ve bir ayarlar
 /// menüsünden ayırıyor.
 class ActionRow extends StatelessWidget {
-  const ActionRow({super.key, required this.label, this.hint, this.onTap});
+  const ActionRow({
+    super.key,
+    required this.label,
+    this.hint,
+    this.onTap,
+    this.danger = false,
+  });
 
   final String label;
   final String? hint;
   final VoidCallback? onTap;
+
+  /// Geri alınamayan eylem — satır zam kırmızısında yazılıyor.
+  final bool danger;
 
   @override
   Widget build(BuildContext context) {
@@ -522,9 +531,12 @@ class ActionRow extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(label, style: T.rowName.copyWith(color: c.ink)),
+              child: Text(
+                label,
+                style: T.rowName.copyWith(color: danger ? c.hot : c.ink),
+              ),
             ),
-            if (hint != null)
+            if (hint != null && hint!.isNotEmpty)
               Text(hint!, style: T.label.copyWith(fontSize: 9, color: c.faint)),
           ],
         ),

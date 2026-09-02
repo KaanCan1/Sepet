@@ -890,7 +890,11 @@ void main() {
 
       await tester.tap(find.text('Ayçiçek yağı, 5 litre'));
       await tester.pumpAndSettle();
-      expect(find.text('SEPETİNDEKİ ÜRÜN'), findsOneWidget);
+      // Ayrıntı ekranına geçildiğinin işareti "SEPETİNDEKİ ÜRÜN" etiketiydi;
+      // o etiket sade yerleşimde kalktı. Yerine ekranın kendi istatistik
+      // başlığı bakılıyor — hem listede yok, hem de testin asıl derdi olan
+      // geçmiş verisinin geldiğini söylüyor.
+      expect(find.text('İLK GÖRDÜĞÜN'), findsOneWidget);
       expect(find.text('248,00'), findsOneWidget);
       expect(find.text('389,90'), findsWidgets);
     });
