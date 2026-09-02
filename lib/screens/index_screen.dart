@@ -561,31 +561,31 @@ class _SourcesCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        PaperCard(
-          child: Column(
-            children: [
-              if (showOwn)
-                SeriesRow(
-                  color: context.c.ink,
-                  name: 'Senin sepetin',
-                  value: Fmt.pct1(snapshot.changePct ?? 0),
-                ),
-              for (var i = 0; i < snapshot.official.length; i++) ...[
-                if (showOwn || i > 0) const Hairline(),
-                SeriesRow(
-                  color: snapshot.official[i].official
-                      ? context.c.ref
-                      : context.c.grey,
-                  name: snapshot.official[i].title,
-                  // Girilmemiş ay uydurulmuyor.
-                  value: snapshot.official[i].value == null
-                      ? '—'
-                      : Fmt.pct1(snapshot.official[i].value!),
-                ),
-              ],
-            ],
+        // Kutu yok — ayırma işini ince çizgi yapıyor. #59'da endeks ekranının
+        // dolu hâli sadeleşirken bu dal atlanmıştı: ilk açılışta, henüz hiç
+        // fiş yokken ekrandaki tek kutu buydu ve uygulamanın geri kalanıyla
+        // konuşmuyordu.
+        const Hairline(),
+        if (showOwn)
+          SeriesRow(
+            color: context.c.ink,
+            name: 'Senin sepetin',
+            value: Fmt.pct1(snapshot.changePct ?? 0),
           ),
-        ),
+        for (var i = 0; i < snapshot.official.length; i++) ...[
+          if (showOwn || i > 0) const Hairline(),
+          SeriesRow(
+            color: snapshot.official[i].official
+                ? context.c.ref
+                : context.c.grey,
+            name: snapshot.official[i].title,
+            // Girilmemiş ay uydurulmuyor.
+            value: snapshot.official[i].value == null
+                ? '—'
+                : Fmt.pct1(snapshot.official[i].value!),
+          ),
+        ],
+        const Hairline(),
         // Eksik seriyi adıyla söyleyip girişe götürüyor.
         if (missing.isNotEmpty)
           Padding(
