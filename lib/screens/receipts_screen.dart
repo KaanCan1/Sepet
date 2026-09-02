@@ -11,7 +11,7 @@ import '../theme/tokens.dart';
 import '../widgets/data_view.dart';
 import '../widgets/atoms.dart';
 import '../widgets/glass.dart';
-import '../widgets/icons.dart';
+import '../widgets/motion.dart';
 import '../widgets/screen_frame.dart';
 import 'match_queue_screen.dart';
 import 'receipt_detail_screen.dart';
@@ -30,20 +30,8 @@ class ReceiptsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenFrame(
-      title: 'Fişler',
+      showTopBar: false,
       reserveTabBar: true,
-      trailing: Pressable(
-        onTap: () => Navigator.of(context).push(MatchQueueScreen.route()),
-        child: Padding(
-          padding: EdgeInsets.all(4),
-          child: LineIcon(
-            Glyph.check,
-            size: 18,
-            color: context.c.ink,
-            stroke: 1.6,
-          ),
-        ),
-      ),
       slivers: [
         SliverToBoxAdapter(
           child: DataView<ReceiptsCubit, List<Receipt>>(
@@ -54,17 +42,55 @@ class ReceiptsScreen extends StatelessWidget {
             ),
             builder: (context, receipts) {
               final total = receipts.fold<double>(0, (a, r) => a + r.total);
+              final bekleyen = receipts.fold<int>(
+                0,
+                (a, r) => a + r.pendingCount,
+              );
               return Padding(
                 padding: kGutter,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 8),
-                    Lbl('${receipts.length} FİŞ · TOPLAM'),
-                    const SizedBox(height: 6),
-                    Text(Fmt.money(total), style: T.display),
+                    Printed(
+                      step: 0,
+                      child: LargeTitle(
+                        'Fişler',
+                        trailing: '${receipts.length} FİŞ',
+                      ),
+                    ),
+                    Printed(
+                      step: 1,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Lbl('TOPLAM'),
+                          const SizedBox(height: 6),
+                          Text(Fmt.money(total), style: T.display),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 16),
-                    const Hairline(),
+                    // Eşleşme kuyruğu üst bardaki tik simgesindeydi. Simge
+                    // ne olduğunu söylemiyordu ve kaç satırın beklediğini
+                    // hiç söylemiyordu; bar kalkınca da tutunacak yeri
+                    // kalmadı. Satır olarak ikisini de söylüyor.
+                    //
+                    // Listeyi başlıktan ayıran çizgiyi de bu satır taşıyor:
+                    // ActionRow alt kenarını kendi çiziyor, üstüne bir
+                    // Hairline daha koymak çift çizgi yapıyordu.
+                    if (bekleyen > 0)
+                      Printed(
+                        step: 2,
+                        child: ActionRow(
+                          label: 'Eşleşme kuyruğu',
+                          hint: '$bekleyen SATIR',
+                          onTap: () =>
+                              Navigator.of(context)
+                                  .push(MatchQueueScreen.route()),
+                        ),
+                      )
+                    else
+                      const Hairline(),
                     const SizedBox(height: 4),
                     for (final r in receipts)
                       // Anahtar fişin kimliğinden: bir satır silinince

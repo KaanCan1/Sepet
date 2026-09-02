@@ -4,8 +4,6 @@ import 'package:image_picker/image_picker.dart';
 import '../data/ocr.dart';
 import '../theme/tokens.dart';
 import '../widgets/atoms.dart';
-import '../widgets/glass.dart';
-import '../widgets/icons.dart';
 import '../widgets/screen_frame.dart';
 import 'draft_receipt_screen.dart';
 
@@ -80,27 +78,18 @@ class _CaptureScreenState extends State<CaptureScreen> {
   @override
   Widget build(BuildContext context) {
     return ScreenFrame(
-      title: 'Fiş ekle',
-      trailing: Pressable(
-        onTap: () => Navigator.of(context).pop(false),
-        child: Padding(
-          padding: EdgeInsets.all(4),
-          child: LineIcon(
-            Glyph.close,
-            size: 17,
-            color: context.c.muted,
-            stroke: 1.6,
-          ),
-        ),
-      ),
+      showTopBar: false,
       slivers: [
         SliverPadding(
           padding: kGutter,
           sliver: SliverList.list(
             children: [
-              const SizedBox(height: 8),
-              const Text('Fişi okut', style: T.display),
-              const SizedBox(height: 10),
+              // Üst barda "Fiş ekle", hemen altında "Fişi okut" yazıyordu.
+              // Aynı şeyi iki kez söylüyorlardı; büyük başlık kalıyor.
+              LargeTitle(
+                'Fişi okut',
+                onClose: () => Navigator.of(context).pop(false),
+              ),
               Text(
                 'Fişin fotoğrafı cihazdan çıkmaz. Metin cihaz üstünde okunur; '
                 'sunucuya yalnızca eşleşmiş satırlar gider.',
@@ -153,42 +142,43 @@ class _Guide extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) => PaperCard(
-    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Lbl('İYİ OKUMA İÇİN'),
-        const SizedBox(height: 8),
-        for (final tip in _tips)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 7),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(top: 6, right: 9),
-                  width: 4,
-                  height: 4,
-                  decoration: BoxDecoration(
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // Kutu kalktı: üstteki ince çizgi ipuçlarını gövde metninden
+      // ayırmaya yetiyor.
+      const Hairline(),
+      const SizedBox(height: 12),
+      const Lbl('İYİ OKUMA İÇİN'),
+      const SizedBox(height: 8),
+      for (final tip in _tips)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 7),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 6, right: 9),
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.c.muted,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  tip,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.5,
                     color: context.c.muted,
-                    shape: BoxShape.circle,
                   ),
                 ),
-                Expanded(
-                  child: Text(
-                    tip,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      height: 1.5,
-                      color: context.c.muted,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-      ],
-    ),
+        ),
+    ],
   );
 }
