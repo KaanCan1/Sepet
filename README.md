@@ -28,9 +28,9 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/09-ilk-acilis.png" width="196" alt="İlk açılış ekranı">
-  <img src="docs/screenshots/00-karsilama.png" width="196" alt="Karşılama ekranı">
-  <img src="docs/screenshots/08-profil.png" width="196" alt="Profil ekranı">
+  <img src="docs/screenshots/ilk-acilis.png" width="196" alt="İlk açılış ekranı">
+  <img src="docs/screenshots/karsilama.png" width="196" alt="Karşılama ekranı">
+  <img src="docs/screenshots/profil.png" width="196" alt="Profil ekranı">
 </p>
 
 <p align="center">
@@ -114,7 +114,7 @@ ile sabitlendi.
 
 ## Projenin kalbi: `eşleşme?`
 
-<img src="docs/screenshots/05-eslesme.png" width="230" align="right" alt="Eşleşme onayı alt sayfası">
+<img src="docs/screenshots/eslesme.png" width="230" align="right" alt="Eşleşme onayı alt sayfası">
 
 Fişteki `MIGROS T.YAGLI YOGU.` satırı hangi kanonik ürüne gidiyor? Marka ve
 ürünü sunucu bulanık eşleştirmeyle kendi çözüyor — ama **1 kg mı 3 kg mı**
