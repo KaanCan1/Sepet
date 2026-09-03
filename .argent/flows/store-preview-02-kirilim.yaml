@@ -1,0 +1,16 @@
+steps:
+  - echo: >-
+      2/4 — "Ne kadar zamlandım"ın ardından gelen soru "neyden". Endeks
+      ekranındaki "Tümü →" (0.908, 0.4785) kırılıma götürüyor; orada
+      Kategori/Marka anahtarı (Marka: 0.726, 0.150) aynı sepeti iki farklı
+      eksende gösteriyor. Sonda geri okuna (0.056, 0.0895) basılıp Endeks
+      sekmesinin tepesine dönülüyor — sonraki segment oradan başlıyor.
+  - tool: gesture-tap
+    args: { x: 0.908, y: 0.4785 }
+  - wait: 2200
+  - tool: gesture-tap
+    args: { x: 0.726, y: 0.150 }
+  - wait: 2200
+  - tool: gesture-tap
+    args: { x: 0.056, y: 0.0895 }
+  - wait: 900

@@ -1,0 +1,8 @@
+steps:
+  - echo: >-
+      5/5 — Videonun kapanışı: paylaşılabilir aylık kart ekranda duruyor.
+      Dokunma yok; bu segmentin tek işi kartı okunacak kadar tutmak. Ayrı
+      segment olmasının sebebi durum çubuğu: modal açılırken sabitlenmiş
+      çubuk düşüyor, kayıt öncesi yeniden sabitlenip oturması için araya bir
+      segment sınırı gerekiyor.
+  - wait: 2600
