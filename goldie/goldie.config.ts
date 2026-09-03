@@ -19,6 +19,12 @@ import type { GoldieConfig } from "goldie/dist/config.d.ts";
  *     olmadan her akış giriş ekranında kalıyor. Bayrak yalnızca hata ayıklama
  *     derlemesinde çalışıyor, yayın derlemesinde ölü.
  *
+ * README'deki boş ilk açılış ekranı (docs/screenshots/09-ilk-acilis.png)
+ * üçüncü bir hesap istiyor: hiç fişi olmayan biri. Bayrağı
+ * vitrin-bos@sepet.app'e çevirip derlemek yetiyor — dev-login hesabı
+ * yoksa açıyor. Keychain'deki eski jeton bunu es geçirir; uygulama içinden
+ * "Çıkış yap" deyip yeniden açmak jetonu temizlemenin en kolay yolu.
+ *
  * NEDEN demo@sepet.app DEĞİL: inceleme hesabı eşleşme akışını göstermek için
  * bilerek bekleyen satır taşıyor, üstüne bir de elle taranmış gerçek bir
  * Migros fişi var. İkisi endeks ekranının tepesine kırmızı "10 kalem endekse

@@ -20,8 +20,10 @@ steps:
       Migros, 29 kalem) ama onlar ekranın altından taşıyor; bu fiş başlıktan
       barkoda kadar tamamen sığıyor — TOPLAM, "TEŞEKKÜR EDERİZ" ve koparma
       kenarı dahil. Mağaza karesinde kesilmemiş fiş, kalabalık fişten iyi.
-      Satır merkezi (0.5, 0.306); liste tarihe göre sabit sırada.
-  - tap: { x: 0.5, y: 0.306 }
+      Satır merkezi (0.5, 0.3115); liste tarihe göre sabit sırada. Sade
+      yerleşimde cam bar kalkıp yerine kayan büyük başlık geldi ve liste
+      biraz aşağı indi — oran 0.306'ydı.
+  - tap: { x: 0.5, y: 0.3115 }
   - wait: 2000
   - await:
       idle: true
