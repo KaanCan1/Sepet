@@ -5,13 +5,24 @@ import 'package:flutter/widgets.dart';
 import '../theme/tokens.dart';
 import 'motion.dart';
 
+/// Serinin son noktasındaki işaret.
+///
+/// [dot] senin çizgin: dolu nokta "seri burada bitiyor" der.
+/// [ring] referans çizgisi: içi boş halka "BİLİNEN son değer bu" der.
+///
+/// Ayrım süs değil. Resmî seri kullanıcınınkinden erken bitebiliyor — TÜİK
+/// içinde bulunulan ayı henüz açıklamamış olur — ve işaretsiz kesilen bir
+/// çizgi ekranda çizim hatası gibi okunuyordu: kesikli çizgi grafiğin
+/// ortasında boşlukta duruyordu.
+enum EndCap { none, dot, ring }
+
 class ChartSeries {
   const ChartSeries({
     required this.values,
     required this.color,
     this.width = 1.8,
     this.dashed = false,
-    this.endDot = false,
+    this.end = EndCap.none,
     this.fill,
   });
 
@@ -24,7 +35,7 @@ class ChartSeries {
   final Color color;
   final double width;
   final bool dashed;
-  final bool endDot;
+  final EndCap end;
 
   /// Çizginin altını dolduran renk. Verilirse tepede bu renk, tabanda
   /// saydam bir geçiş çiziliyor — çizginin taşıdığı yönü zeminde de
@@ -201,9 +212,28 @@ class _LinePainter extends CustomPainter {
         }
       }
 
-      if (s.endDot && progress > .98) {
+      if (s.end != EndCap.none && progress > .98) {
         final son = pts.lastWhere((p) => p != null, orElse: () => null);
-        if (son != null) canvas.drawCircle(son, 2.8, Paint()..color = s.color);
+        if (son != null) {
+          switch (s.end) {
+            case EndCap.none:
+              break;
+            case EndCap.dot:
+              canvas.drawCircle(son, 2.8, Paint()..color = s.color);
+            case EndCap.ring:
+              // İçi zeminle doldurulup üstü çiziliyor: altından geçen alan
+              // dolgusu halkanın içini kirletmesin.
+              canvas.drawCircle(son, 2.6, Paint()..color = colors.card);
+              canvas.drawCircle(
+                son,
+                2.6,
+                Paint()
+                  ..color = s.color
+                  ..style = PaintingStyle.stroke
+                  ..strokeWidth = 1.4,
+              );
+          }
+        }
       }
     }
 

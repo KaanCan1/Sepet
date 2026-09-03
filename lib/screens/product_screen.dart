@@ -98,7 +98,11 @@ class _Body extends StatelessWidget {
             LineChart(
               height: 110,
               series: [
-                ChartSeries(values: prices, color: context.c.ink, endDot: true),
+                ChartSeries(
+                  values: prices,
+                  color: context.c.ink,
+                  end: EndCap.dot,
+                ),
               ],
               marker: janIndex >= 0 ? janIndex : null,
               markerLabel: janIndex >= 0

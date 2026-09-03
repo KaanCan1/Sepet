@@ -89,6 +89,9 @@ class _Body extends StatelessWidget {
     // Değeri olmayan seri de gösteriliyor: tire koyup elle girilebileceğini
     // söylemek, satırı hiç çizmemekten iyi. Uydurmuyoruz ama saklamıyoruz da.
     final tuik = snapshot.official.firstOrNull;
+    // Bir kez hesaplanıyor: hem çizgi hem altındaki not aynı seriye bakıyor.
+    final tuikLine = _tuikLine(tuik);
+    final tuikSonAy = _tuikSonAy(tuikLine);
     final own = snapshot.changePct ?? 0;
     // TÜİK her zaman YILLIK değişim açıklıyor. Seninki 12 ay dolmadıysa
     // daha kısa bir pencere — manşetin üstündeki "SON 1 AY" bunu zaten
@@ -184,20 +187,44 @@ class _Body extends StatelessWidget {
                 values: _rebase(snapshot.levels),
                 color: c.ink,
                 width: 2.4,
-                endDot: true,
+                end: EndCap.dot,
                 fill: c.ink.withValues(alpha: c.areaFade),
               ),
-              if (_tuikLine(tuik) case final line?)
+              if (tuikLine case final line?)
                 ChartSeries(
                   values: line,
                   color: c.ref,
                   width: 1.6,
                   dashed: true,
+                  // İçi boş halka: resmî çizgi kullanıcınınkinden erken
+                  // bitiyor ve işaretsiz kesilme çizim hatası gibi
+                  // okunuyordu.
+                  end: EndCap.ring,
                 ),
             ],
           ),
           const SizedBox(height: 6),
           Printed(step: 3, child: _MonthAxis(months: snapshot.months)),
+          // Kesikli çizgi neden erken bitiyor. Çizgiyi son bilinen değerden
+          // öteye uzatmak "o ay da böyleydi" demek olurdu; uzatmıyoruz ama
+          // sustuğumuzda da grafik eksik çizilmiş gibi duruyordu.
+          //
+          // Ay adı iki noktadan sonra, ek almadan yazılıyor: Türkçe'de
+          // "temmuzda / ağustosta / aralıkta" bulunma eki ünlü uyumuna ve
+          // ünsüz benzeşmesine göre değişiyor ve cümle içine gömülen bir ay
+          // adı bu ekleri doğru üretmeyi gerektirirdi.
+          if (tuikSonAy != null && tuikSonAy.isBefore(snapshot.months.last))
+            Printed(
+              step: 3,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  'Kesikli çizgi ${tuik!.publisher}\'in açıkladığı son ayda '
+                  'bitiyor: ${Fmt.monthLong(tuikSonAy)} ${tuikSonAy.year}.',
+                  style: T.body.copyWith(fontSize: 11, color: c.muted),
+                ),
+              ),
+            ),
           if (top.isNotEmpty) ...[
             const SizedBox(height: 30),
             Printed(
@@ -337,6 +364,20 @@ class _Body extends StatelessWidget {
         },
     ];
     return out.whereType<double>().length < 2 ? null : out;
+  }
+
+  /// Resmî serinin kullanıcının ekseni üzerindeki SON dolu ayı.
+  ///
+  /// Kullanıcının son ayından geriyse kesikli çizgi grafiğin ortasında
+  /// bitiyor demektir ve bunun ekranda bir karşılığı olmalı.
+  DateTime? _tuikSonAy(List<double?>? line) {
+    if (line == null) return null;
+    for (var i = line.length - 1; i >= 0; i--) {
+      if (line[i] != null && i < snapshot.months.length) {
+        return snapshot.months[i];
+      }
+    }
+    return null;
   }
 
   /// "TÜİK'ten 3,6 puan altında" — kullanıcının asıl sorusunun cevabı.
