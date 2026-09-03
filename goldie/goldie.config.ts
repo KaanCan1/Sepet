@@ -19,7 +19,7 @@ import type { GoldieConfig } from "goldie/dist/config.d.ts";
  *     olmadan her akış giriş ekranında kalıyor. Bayrak yalnızca hata ayıklama
  *     derlemesinde çalışıyor, yayın derlemesinde ölü.
  *
- * README'deki boş ilk açılış ekranı (docs/screenshots/09-ilk-acilis.png)
+ * README'deki boş ilk açılış ekranı (docs/screenshots/ilk-acilis.png)
  * üçüncü bir hesap istiyor: hiç fişi olmayan biri. Bayrağı
  * vitrin-bos@sepet.app'e çevirip derlemek yetiyor — dev-login hesabı
  * yoksa açıyor. Keychain'deki eski jeton bunu es geçirir; uygulama içinden
