@@ -4,10 +4,10 @@ steps:
       momentum nerede durduğunu belirsiz bırakıyor ve satır ıskalanıyor. Dip
       sabit bir çapa. "Eylül kartı · PAYLAŞ" satırı dipteyken (0.5, 0.601).
 
-      Kartın kendisi AYRI bir segmentte duruyor, çünkü tam ekran modalin
-      açılması iOS'a durum çubuğunu yeniden çizdiriyor ve sabitlenmiş çubuk
-      orada düşüyor. Bu klip modal açılır açılmaz bitiyor; bir sonraki
-      segment kaydı başlamadan önce çubuk yeniden sabitlenip oturuyor.
+      Kartın kendisi AYRI bir segmentte duruyor. Sebebi durum çubuğu:
+      argent her akış bitiminde `simctl status_bar clear` çağırıyor, yani
+      kayıt akışı aşarsa temizleme klibin içine düşüyor. Bu klip akışın
+      bittiği yerde bitiyor; kartın ekranda beklemesi sonraki segmentte.
   - tool: gesture-swipe
     args: { fromX: 0.5, fromY: 0.80, toX: 0.5, toY: 0.28, durationMs: 600 }
   - tool: gesture-swipe

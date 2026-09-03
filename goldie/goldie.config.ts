@@ -142,11 +142,12 @@ const config: GoldieConfig = {
     // Toplam ~25 sn ölçüldü; Apple 15-30 sn istiyor. Süre büyürse ilk
     // bakılacak yer akışlardaki sabit wait değerleri.
     //
-    // Kart iki segmente bölündü. Tam ekran modalin açılması iOS'a durum
-    // çubuğunu yeniden çizdiriyor ve sabitlenmiş çubuk (9:41, dolu sinyal)
-    // orada düşüp gerçek saate ve sinyalsiz gri noktalara dönüyor. Segment
-    // sınırı, çubuğun modal açıldıktan SONRA yeniden sabitlenip oturmasına
-    // yer açıyor — bkz. tool/onizleme-kaydet.sh.
+    // Kart iki segmente bölündü ve holdSeconds kalktı. Sebebi durum çubuğu:
+    // argent her akıştan sonra `simctl status_bar clear` çağırıyor, yani
+    // kayıt akışın bitişini AŞARSA temizleme klibin içine düşüyor ve çubuk
+    // gerçek saate, sinyalsiz gri noktalara dönüyor. holdSeconds tam olarak
+    // bunu yapıyordu. Bekleme artık kendi segmentinde, kendi akışının içinde
+    // — bkz. tool/onizleme-kaydet.sh.
     {
       kind: "preview",
       id: "onizleme",

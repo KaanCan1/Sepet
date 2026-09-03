@@ -2,13 +2,20 @@
 #
 # App Preview kliplerini kaydeder ve goldie'nin çekim bildirimine yazar.
 #
-# NEDEN AYRI BİR BETİK. goldie'nin kendi segment kaydı durum çubuğunu
-# `simctl status_bar override` ile sabitleyip HEMEN kayda başlıyor. Taze
-# uygulanmış geçersiz kılma kayıt oturumu açılırken düşüyor: klip doğru
-# başlıyor, birkaç saniye sonra iOS çubuğu yeniden çiziyor ve gerçek saat ile
-# sinyalsiz gri noktalar geliyor. Ölçüldü — pin'den sonra birkaç saniye
-# beklenirse çubuk 10 saniyelik kayıt boyunca sabit kalıyor. Aradaki tek fark
-# oturma payı; o yüzden burada pin ile kayıt arasına ORTURMA PAYI konuyor.
+# NEDEN AYRI BİR BETİK. Durum çubuğunu asıl yöneten argent: flow-execute her
+# akıştan önce KOŞULSUZ kendi çubuğunu sabitliyor (`--time 9:37`, yalnızca
+# --wifiBars ve --cellularBars) ve akış bitince finally içinde
+# `simctl status_bar clear` çağırıyor. Kapatma bayrağı yok.
+#
+# İlk denemede video 09:37'de başlayıp 13:42'de bitiyordu ve sinyal gri
+# noktalara dönüyordu; sebebi buydu — goldie segmentin holdSeconds'ını KAYIT
+# İÇİNDE bekletiyor, yani argent'ın temizlemesi klibin son saniyelerine
+# düşüyordu. Çözüm zamanlama: klip akışın bittiği yerde bitiyor, bekleme
+# kendi segmentine alınıyor (bkz. store-preview-05-paylas).
+#
+# Buradaki pin argent'ınkini engellemiyor; argent yalnızca adını verdiği
+# alanları eziyor, dolayısıyla --wifiMode/--cellularMode/--dataNetwork
+# buradan geliyor ve çubuk sinyalli görünüyor. Saat argent'ın 9:37'si oluyor.
 #
 # Klipler yine goldie'nin akışlarıyla (.argent/flows/store-preview-*.yaml) ve
 # argent'ın kendi kaydediciyle alınıyor; değişen tek şey zamanlama. Sonra
@@ -24,12 +31,16 @@ BUNDLE="com.kaancankurt.sepet"
 KOK="$(cd "$(dirname "$0")/.." && pwd)"
 HAM="$KOK/goldie/out/raw/iphone-6.9"
 
-# Çubuğun oturması için beklenen saniye. 6 sn ölçülerek seçildi: 2 sn'de
-# tutmuyordu, 6 sn'de dört segmentin dördünde de tuttu.
+# Pin'in oturması için beklenen saniye. Saati bu belirlemiyor (argent
+# akış başında 9:37'ye çeviriyor); buradaki payın işi, argent'ın DOKUNMADIĞI
+# alanların — wifiMode, cellularMode, dataNetwork — kayıt başlamadan yerine
+# oturması. Onlar olmadan çubuk sinyalsiz görünüyor.
 OTURMA=6
 
-# goldie'nin pinStatusBar'ıyla birebir aynı bayraklar — video ile kareler
-# arasında çubuk farkı olmasın.
+# goldie'nin pinStatusBar'ıyla birebir aynı bayraklar. Saat yine de 9:41
+# çıkmıyor: goldie karelerde pin'i AKIŞTAN SONRA uyguladığı için ekran
+# görüntüleri 09:41, video ise argent'ın 09:37'si oluyor. Aradaki dört
+# dakikalık fark dışarıdan kapatılamıyor — argent'ın pin'i koşulsuz.
 pinle() {
   xcrun simctl status_bar "$UDID" override \
     --time "9:41" \
