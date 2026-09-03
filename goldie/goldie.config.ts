@@ -129,6 +129,35 @@ const config: GoldieConfig = {
         "tr-TR": "Her ayın 3'ünde, resmî veri açıklandığında hatırlatılır.",
       },
     },
+
+    // App Preview videosu. Apple çerçeve, başlık ve altyazı istemiyor —
+    // klipler kaydedildiği gibi arka arkaya ekleniyor, yani hikâyeyi
+    // akışların kendisi anlatmak zorunda. Sıra kareler ile aynı: önce
+    // "ne kadar", sonra "neyden", sonra tek ürün, en sonda paylaşılan kart.
+    //
+    // goldie döngüden önce bir kez restart-app yapıp bekliyor; segmentler
+    // arasında yeniden kurulum YOK. Bu yüzden akışlarda launch adımı yok ve
+    // her segment bir öncekinin bıraktığı ekrandan devam ediyor.
+    //
+    // Toplam ~25 sn ölçüldü; Apple 15-30 sn istiyor. Süre büyürse ilk
+    // bakılacak yer akışlardaki sabit wait değerleri.
+    //
+    // Kart iki segmente bölündü. Tam ekran modalin açılması iOS'a durum
+    // çubuğunu yeniden çizdiriyor ve sabitlenmiş çubuk (9:41, dolu sinyal)
+    // orada düşüp gerçek saate ve sinyalsiz gri noktalara dönüyor. Segment
+    // sınırı, çubuğun modal açıldıktan SONRA yeniden sabitlenip oturmasına
+    // yer açıyor — bkz. tool/onizleme-kaydet.sh.
+    {
+      kind: "preview",
+      id: "onizleme",
+      segments: [
+        { id: "endeks", flow: "store-preview-01-endeks" },
+        { id: "kirilim", flow: "store-preview-02-kirilim" },
+        { id: "urun", flow: "store-preview-03-urun" },
+        { id: "kart", flow: "store-preview-04-kart" },
+        { id: "paylas", flow: "store-preview-05-paylas" },
+      ],
+    },
   ],
 };
 

@@ -1,0 +1,23 @@
+steps:
+  - echo: >-
+      ÖNİZLEME NOTU — bu dört akış tek bir videonun ardışık parçaları.
+      goldie döngüden ÖNCE bir kez "restart-app" yapıp ekranın durulmasını
+      bekliyor, sonra her segmenti ayrı klip olarak kaydediyor. Yani burada
+      launch YOK (soğuk açılış kayda girmesin) ve her segment bir öncekinin
+      bıraktığı yerden başlıyor. Her segment ekranı Endeks sekmesinin
+      tepesine geri bırakıyor; bu sözleşme bozulursa sonraki segment yanlış
+      ekranı kaydeder.
+
+      Süre Apple'ın 15-30 sn aralığına sığmak zorunda, o yüzden bekleme
+      süreleri sabit tutuldu; "await idle" belirsiz süre eklerdi.
+
+      Oranlar "argent run describe" çıktısından, iPhone 17 Pro Max ve vitrin
+      hesabıyla ölçüldü.
+  - echo: 1/4 — Manşet okunuyor, sonra ekran bir kez aşağı ve geri yukarı.
+  - wait: 1400
+  - tool: gesture-swipe
+    args: { fromX: 0.5, fromY: 0.78, toX: 0.5, toY: 0.42, durationMs: 900 }
+  - wait: 1800
+  - tool: gesture-swipe
+    args: { fromX: 0.5, fromY: 0.42, toX: 0.5, toY: 0.86, durationMs: 900 }
+  - wait: 700

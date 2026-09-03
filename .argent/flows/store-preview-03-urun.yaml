@@ -1,0 +1,19 @@
+steps:
+  - echo: >-
+      3/4 — Tek ürünün hikâyesi. Ürünler sekmesi (0.518, 0.935), ardından
+      "Ekmek, tam buğday 500 g" satırı (0.5, 0.5805): 22 gözlem, 4 market —
+      alt yarıyı dört fiyat satırıyla dolduran iki üründen biri. Liste birim
+      fiyat değişimine göre sıralı, yani sıra hesabın verisine bağlı.
+      Sonda geri (0.056, 0.0895) ve Endeks sekmesi (0.138, 0.935).
+  - tool: gesture-tap
+    args: { x: 0.518, y: 0.935 }
+  - wait: 1600
+  - tool: gesture-tap
+    args: { x: 0.5, y: 0.5805 }
+  - wait: 2600
+  - tool: gesture-tap
+    args: { x: 0.056, y: 0.0895 }
+  - wait: 900
+  - tool: gesture-tap
+    args: { x: 0.138, y: 0.935 }
+  - wait: 700
