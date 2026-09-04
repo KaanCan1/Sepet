@@ -230,6 +230,79 @@ void main() {
       expect(find.textContaining('kıyaslamak için 12 ay'), findsNothing);
     });
 
+    // Resmî seri kullanıcınınkinden ERKEN bitebiliyor: TÜİK içinde
+    // bulunulan ayı henüz açıklamamış olur. Çizgiyi uzatmıyoruz — eksik ayı
+    // komşusuna bağlamak "o ay da böyleydi" demek olurdu — ama sustuğumuzda
+    // grafik eksik çizilmiş gibi duruyordu: kesikli çizgi grafiğin
+    // ortasında, işaretsiz, boşlukta kesiliyordu.
+    Widget appWithLevels(List<Map<String, Object>> levels) => AppScope(
+      api: FakeApi(
+        routes: {
+          ...FakeApi.defaultRoutes,
+          'GET /index': {
+            'headline': {
+              'changePct': 17.0,
+              'windowMonths': 12,
+              'monthDeltaPoints': null,
+              'coveredWeight': 1,
+            },
+            'series': [
+              {'month': '2026-06-01', 'level': 100, 'momPct': 0},
+              {'month': '2026-07-01', 'level': 110, 'momPct': 10},
+              {'month': '2026-08-01', 'level': 117, 'momPct': 6.4},
+            ],
+            'official': [
+              {
+                'code': 'TUIK_TUFE',
+                'publisher': 'TÜİK',
+                'name': 'TÜFE',
+                'isOfficial': true,
+                'yoyPct': 34.1,
+                'levels': levels,
+              },
+            ],
+          },
+        },
+      ),
+      authStore: MemoryAuthStore('test-token'),
+      reminder: MemoryMonthlyReminder(),
+      child: MaterialApp(
+        locale: const Locale('tr', 'TR'),
+        home: const RootGate(),
+      ),
+    );
+
+    testWidgets('resmî seri erken bitince nerede bittiği yazıyor', (
+      tester,
+    ) async {
+      // TÜİK ağustosu açıklamamış; kullanıcının serisi ağustosa kadar var.
+      await tester.pumpWidget(
+        appWithLevels([
+          {'month': '2026-06-01', 'level': 130.0},
+          {'month': '2026-07-01', 'level': 132.3},
+        ]),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('son ayda bitiyor: Temmuz 2026'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('resmî seri sona kadar doluysa not çıkmıyor', (tester) async {
+      await tester.pumpWidget(
+        appWithLevels([
+          {'month': '2026-06-01', 'level': 130.0},
+          {'month': '2026-07-01', 'level': 132.3},
+          {'month': '2026-08-01', 'level': 134.6},
+        ]),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('son ayda bitiyor'), findsNothing);
+    });
+
     // Aynı kök hata kartta da vardı ve orası daha ağır basıyor: kart
     // paylaşılmak için var, yani yanlış eşleştirilmiş iki sayı kullanıcının
     // adına başkasına gösteriliyor demek.
