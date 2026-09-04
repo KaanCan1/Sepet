@@ -65,6 +65,7 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> restore() async {
     final token = await _store.read();
     if (token == null) {
+      if (await _demoSignIn()) return;
       emit(const AuthSignedOut());
       return;
     }
@@ -84,6 +85,31 @@ class AuthCubit extends Cubit<AuthState> {
       if (isClosed) return;
       // Ağ hatası jetonu geçersiz kılmaz — oturumu koru.
       if (e.isUnauthorized) await signOut();
+    }
+  }
+
+  /// Mağaza görselleri için otomatik giriş. Derleme zamanı bayrağı boşsa
+  /// hiçbir şey yapmıyor, yani normal derlemelerde bu kod ölü.
+  ///
+  /// Gerekçesi araç zinciri: goldie her akıştan önce uygulamayı verisi
+  /// silinmiş hâlde kuruyor, dolayısıyla ekran görüntüsü alınacak her akış
+  /// giriş ekranından başlıyor. E-postayı akış içinde yazdırmak da
+  /// çalışmıyor — simülatör Türkçe klavye düzenini kullanıyor ve "@" karakteri
+  /// "'" olarak giriyor.
+  ///
+  /// İki kilit birden: bayrak dolu OLACAK ve derleme hata ayıklama modunda
+  /// OLACAK. Yayın derlemesinde bayrak verilse bile çalışmıyor.
+  static const _demoEmail = String.fromEnvironment('SEPET_DEMO_EMAIL');
+
+  Future<bool> _demoSignIn() async {
+    if (!kDebugMode || _demoEmail.isEmpty) return false;
+    try {
+      await signIn(email: _demoEmail, provider: AuthProvider.email);
+      return true;
+    } on ApiException {
+      // Sunucu yoksa ya da e-posta izinli listede değilse sessizce normal
+      // akışa dön: karşılama ekranı görünür, kimse kilitlenmez.
+      return false;
     }
   }
 

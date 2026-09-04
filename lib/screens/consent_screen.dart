@@ -4,8 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../state/auth_cubit.dart';
 import '../theme/tokens.dart';
-import '../widgets/glass.dart';
-import '../widgets/icons.dart';
+import '../widgets/atoms.dart';
 import '../widgets/screen_frame.dart';
 import 'privacy_screen.dart';
 
@@ -36,21 +35,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
           _ => null,
         };
         return ScreenFrame(
-          title: 'İzinler',
-          leading: widget.firstRun
-              ? null
-              : Pressable(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Padding(
-                    padding: EdgeInsets.all(4),
-                    child: LineIcon(
-                      Glyph.back,
-                      size: 17,
-                      color: context.c.ink,
-                      stroke: 1.6,
-                    ),
-                  ),
-                ),
+          showTopBar: false,
           footer: widget.firstRun
               ? PrimaryButton(
                   label: 'Devam et',
@@ -62,9 +47,15 @@ class _ConsentScreenState extends State<ConsentScreen> {
               padding: kGutter,
               sliver: SliverList.list(
                 children: [
-                  const SizedBox(height: 6),
-                  const Text('İsteğe bağlı\nizinler', style: T.display),
-                  const SizedBox(height: 10),
+                  // İlk kurulumda geri dönülecek bir yer yok; sonradan
+                  // profilden açıldığında var. Başlık o yüzden geri okunu
+                  // koşullu taşıyor.
+                  LargeTitle(
+                    'İsteğe bağlı\nizinler',
+                    onBack: widget.firstRun
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                  ),
                   Text(
                     'Endeksin hesaplanması için bunlara ihtiyaç yok. İkisi de '
                     'kapalıyken uygulama aynen çalışır.',
@@ -93,37 +84,15 @@ class _ConsentScreenState extends State<ConsentScreen> {
                     onChanged: (v) =>
                         context.read<AuthCubit>().setConsents(marketing: v),
                   ),
-                  const SizedBox(height: 18),
-                  Pressable(
+                  const SizedBox(height: 6),
+                  // Eskiden kendi üst VE alt çizgisini çiziyordu; üstteki
+                  // izin satırının alt çizgisiyle üst üste binip çift çizgi
+                  // yapıyordu. ActionRow yalnızca altını çiziyor.
+                  ActionRow(
+                    label: 'Aydınlatma metni',
+                    hint: 'KVKK',
                     onTap: () =>
                         Navigator.of(context).push(PrivacyScreen.route()),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: context.c.line),
-                          bottom: BorderSide(color: context.c.line),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Aydınlatma metni',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: context.c.ink,
-                              ),
-                            ),
-                          ),
-                          LineIcon(
-                            Glyph.chevron,
-                            size: 13,
-                            color: context.c.muted,
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -158,10 +127,17 @@ class _ConsentTile extends StatelessWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
 
+  // Kutu yerine alt çizgi; çizgi izin açıkken koyulaşıyor — kutunun kenar
+  // rengiyle yaptığı işin aynısı. Açık iznin görünür işareti zaten
+  // anahtarın kendisi, kutu onu ikinci kez söylüyordu.
   @override
-  Widget build(BuildContext context) => PaperCard(
-    padding: const EdgeInsets.fromLTRB(13, 12, 8, 12),
-    borderColor: value ? context.c.ink : context.c.line,
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.only(top: 2, bottom: 12),
+    decoration: BoxDecoration(
+      border: Border(
+        bottom: BorderSide(color: value ? context.c.ink : context.c.line),
+      ),
+    ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

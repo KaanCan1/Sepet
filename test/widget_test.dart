@@ -230,6 +230,79 @@ void main() {
       expect(find.textContaining('kıyaslamak için 12 ay'), findsNothing);
     });
 
+    // Resmî seri kullanıcınınkinden ERKEN bitebiliyor: TÜİK içinde
+    // bulunulan ayı henüz açıklamamış olur. Çizgiyi uzatmıyoruz — eksik ayı
+    // komşusuna bağlamak "o ay da böyleydi" demek olurdu — ama sustuğumuzda
+    // grafik eksik çizilmiş gibi duruyordu: kesikli çizgi grafiğin
+    // ortasında, işaretsiz, boşlukta kesiliyordu.
+    Widget appWithLevels(List<Map<String, Object>> levels) => AppScope(
+      api: FakeApi(
+        routes: {
+          ...FakeApi.defaultRoutes,
+          'GET /index': {
+            'headline': {
+              'changePct': 17.0,
+              'windowMonths': 12,
+              'monthDeltaPoints': null,
+              'coveredWeight': 1,
+            },
+            'series': [
+              {'month': '2026-06-01', 'level': 100, 'momPct': 0},
+              {'month': '2026-07-01', 'level': 110, 'momPct': 10},
+              {'month': '2026-08-01', 'level': 117, 'momPct': 6.4},
+            ],
+            'official': [
+              {
+                'code': 'TUIK_TUFE',
+                'publisher': 'TÜİK',
+                'name': 'TÜFE',
+                'isOfficial': true,
+                'yoyPct': 34.1,
+                'levels': levels,
+              },
+            ],
+          },
+        },
+      ),
+      authStore: MemoryAuthStore('test-token'),
+      reminder: MemoryMonthlyReminder(),
+      child: MaterialApp(
+        locale: const Locale('tr', 'TR'),
+        home: const RootGate(),
+      ),
+    );
+
+    testWidgets('resmî seri erken bitince nerede bittiği yazıyor', (
+      tester,
+    ) async {
+      // TÜİK ağustosu açıklamamış; kullanıcının serisi ağustosa kadar var.
+      await tester.pumpWidget(
+        appWithLevels([
+          {'month': '2026-06-01', 'level': 130.0},
+          {'month': '2026-07-01', 'level': 132.3},
+        ]),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('son ayda bitiyor: Temmuz 2026'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('resmî seri sona kadar doluysa not çıkmıyor', (tester) async {
+      await tester.pumpWidget(
+        appWithLevels([
+          {'month': '2026-06-01', 'level': 130.0},
+          {'month': '2026-07-01', 'level': 132.3},
+          {'month': '2026-08-01', 'level': 134.6},
+        ]),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('son ayda bitiyor'), findsNothing);
+    });
+
     // Aynı kök hata kartta da vardı ve orası daha ağır basıyor: kart
     // paylaşılmak için var, yani yanlış eşleştirilmiş iki sayı kullanıcının
     // adına başkasına gösteriliyor demek.
@@ -257,6 +330,116 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Aynı dönemde TÜİK 34,1%'), findsOneWidget);
+    });
+  });
+
+  // Manşetteki yıllık yüzde grafiğe çizilemiyor: yıllık değişim serisinden
+  // aylık bir yol geri türetilemez. Kesikli TÜİK çizgisi ay ay seviyeden
+  // çiziliyor ve iki seri ortak aya 100'leniyor — TÜİK'in taban yılı
+  // (2025=100) ekranda hiç görünmüyor.
+  group('TÜİK çizgisi', () {
+    Widget appWith({required Map<String, double> levels}) => AppScope(
+      api: FakeApi(
+        routes: {
+          ...FakeApi.defaultRoutes,
+          'GET /index': {
+            'headline': {
+              'changePct': 17.0,
+              'windowMonths': 3,
+              'monthDeltaPoints': null,
+              'coveredWeight': 1,
+            },
+            'series': [
+              {'month': '2026-05-01', 'level': 100, 'momPct': 0},
+              {'month': '2026-06-01', 'level': 108, 'momPct': 8},
+              {'month': '2026-07-01', 'level': 113, 'momPct': 4.6},
+              {'month': '2026-08-01', 'level': 117, 'momPct': 3.5},
+            ],
+            'official': [
+              {
+                'code': 'TUIK_TUFE',
+                'publisher': 'TÜİK',
+                'name': 'TÜFE',
+                'isOfficial': true,
+                'yoyPct': 34.1,
+                'levels': [
+                  for (final e in levels.entries)
+                    {'month': e.key, 'level': e.value},
+                ],
+              },
+            ],
+          },
+        },
+      ),
+      authStore: MemoryAuthStore('test-token'),
+      reminder: MemoryMonthlyReminder(),
+      child: MaterialApp(
+        locale: const Locale('tr', 'TR'),
+        home: const RootGate(),
+      ),
+    );
+
+    List<ChartSeries> serilerinden(WidgetTester tester) =>
+        tester.widget<LineChart>(find.byType(LineChart).first).series;
+
+    testWidgets('seviye varsa ikinci çizgi kesikli çiziliyor', (tester) async {
+      await tester.pumpWidget(
+        appWith(
+          levels: {
+            '2026-05-01': 120.0,
+            '2026-06-01': 124.0,
+            '2026-07-01': 128.0,
+            '2026-08-01': 132.0,
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final seriler = serilerinden(tester);
+      expect(seriler, hasLength(2));
+      expect(seriler[1].dashed, isTrue);
+
+      // İkisi de ortak ilk aya 100'lenmiş: TÜİK'in ham 120'si ekranda yok.
+      expect(seriler[0].values.first, closeTo(100, 0.001));
+      expect(seriler[1].values.first, closeTo(100, 0.001));
+      // 132 / 120 = 1,10
+      expect(seriler[1].values.last, closeTo(110, 0.001));
+    });
+
+    // TÜİK içinde bulunulan ayı genelde henüz açıklamamış olur.
+    testWidgets('açıklanmamış ay boş kalıyor, uzatılmıyor', (tester) async {
+      await tester.pumpWidget(
+        appWith(
+          levels: {
+            '2026-05-01': 120.0,
+            '2026-06-01': 124.0,
+            '2026-07-01': 128.0,
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final seriler = serilerinden(tester);
+      expect(seriler, hasLength(2));
+      // Kullanıcının serisiyle aynı uzunlukta — hizalama bozulmuyor.
+      expect(seriler[1].values, hasLength(4));
+      // Son ay boş: komşusuna bağlanmadı.
+      expect(seriler[1].values.last, isNull);
+    });
+
+    testWidgets('tek seviye varsa çizgi hiç çizilmiyor', (tester) async {
+      await tester.pumpWidget(appWith(levels: {'2026-05-01': 120.0}));
+      await tester.pumpAndSettle();
+
+      // Tek nokta eğim göstermez.
+      expect(serilerinden(tester), hasLength(1));
+    });
+
+    testWidgets('seviye yoksa tek çizgi kalıyor', (tester) async {
+      await tester.pumpWidget(appWith(levels: const {}));
+      await tester.pumpAndSettle();
+
+      expect(serilerinden(tester), hasLength(1));
     });
   });
 
@@ -780,7 +963,11 @@ void main() {
 
       await tester.tap(find.text('Ayçiçek yağı, 5 litre'));
       await tester.pumpAndSettle();
-      expect(find.text('SEPETİNDEKİ ÜRÜN'), findsOneWidget);
+      // Ayrıntı ekranına geçildiğinin işareti "SEPETİNDEKİ ÜRÜN" etiketiydi;
+      // o etiket sade yerleşimde kalktı. Yerine ekranın kendi istatistik
+      // başlığı bakılıyor — hem listede yok, hem de testin asıl derdi olan
+      // geçmiş verisinin geldiğini söylüyor.
+      expect(find.text('İLK GÖRDÜĞÜN'), findsOneWidget);
       expect(find.text('248,00'), findsOneWidget);
       expect(find.text('389,90'), findsWidgets);
     });

@@ -16,7 +16,6 @@ import '../theme/tokens.dart';
 import '../widgets/data_view.dart';
 import '../widgets/atoms.dart';
 import '../widgets/glass.dart';
-import '../widgets/icons.dart';
 import '../widgets/screen_frame.dart';
 import 'product_screen.dart';
 
@@ -105,19 +104,7 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
     final month = Fmt.monthLong(DateTime.now());
 
     return ScreenFrame(
-      title: '$month özeti',
-      trailing: Pressable(
-        onTap: () => Navigator.of(context).pop(),
-        child: Padding(
-          padding: EdgeInsets.all(4),
-          child: LineIcon(
-            Glyph.close,
-            size: 17,
-            color: context.c.muted,
-            stroke: 1.6,
-          ),
-        ),
-      ),
+      showTopBar: false,
       slivers: [
         SliverToBoxAdapter(
           child: DataView<MonthlyCardCubit, MonthlyCard>(
@@ -133,7 +120,12 @@ class _MonthlyCardScreenState extends State<MonthlyCardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 6),
+                    // Başlık RepaintBoundary'nin DIŞINDA: paylaşılan görsel
+                    // yalnızca kartın kendisi, ekranın başlığı değil.
+                    LargeTitle(
+                      '$month özeti',
+                      onClose: () => Navigator.of(context).pop(),
+                    ),
                     RepaintBoundary(
                       key: _cardKey,
                       child: _ShareCard(

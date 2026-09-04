@@ -14,8 +14,6 @@ import '../data/notifications.dart';
 import '../data/session.dart';
 import '../theme/tokens.dart';
 import '../widgets/atoms.dart';
-import '../widgets/glass.dart';
-import '../widgets/icons.dart';
 import '../widgets/screen_frame.dart';
 import 'consent_screen.dart';
 import 'official_screen.dart';
@@ -81,33 +79,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _ => null,
         };
         return ScreenFrame(
-          title: 'Profil',
+          showTopBar: false,
           reserveTabBar: true,
           slivers: [
             SliverPadding(
               padding: kGutter,
               sliver: SliverList.list(
                 children: [
-                  const SizedBox(height: 8),
+                  const LargeTitle('Profil'),
                   if (s == null) _SignedOut() else _Identity(session: s),
                   const SizedBox(height: 22),
                   const Lbl('KARŞILAŞTIRMA KAYNAKLARI'),
                   const SizedBox(height: 8),
                   DataView<IndexCubit, IndexHome>(
-                    builder: (context, home) => PaperCard(
-                      padding: EdgeInsets.zero,
-                      child: Column(
-                        children: [
-                          for (
-                            var i = 0;
-                            i < home.snapshot.official.length;
-                            i++
-                          ) ...[
-                            if (i > 0) const Hairline(),
-                            _SourceRow(source: home.snapshot.official[i]),
-                          ],
+                    builder: (context, home) => Column(
+                      children: [
+                        for (
+                          var i = 0;
+                          i < home.snapshot.official.length;
+                          i++
+                        ) ...[
+                          if (i > 0) const Hairline(),
+                          _SourceRow(source: home.snapshot.official[i]),
                         ],
-                      ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -122,7 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _ActionRow(
+                  ActionRow(
                     label: 'Resmî verileri gir',
                     hint: 'Elle',
                     onTap: () =>
@@ -131,7 +126,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 22),
                   const Lbl('BİLDİRİM'),
                   const SizedBox(height: 8),
-                  PaperCard(
+                  Container(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: context.c.line)),
+                    ),
                     child: Row(
                       children: [
                         Expanded(
@@ -170,37 +169,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const Lbl('VERİLERİN'),
                   const SizedBox(height: 4),
                   if (s != null)
-                    _ActionRow(
+                    ActionRow(
                       label: 'İzinler',
                       hint: _consentHint(s),
                       onTap: () =>
                           Navigator.of(context).push(ConsentScreen.route()),
                     ),
-                  _ActionRow(
+                  ActionRow(
                     label: 'Aydınlatma metni',
                     hint: 'KVKK',
                     onTap: () =>
                         Navigator.of(context).push(PrivacyScreen.route()),
                   ),
-                  _ActionRow(
+                  ActionRow(
                     label: 'Fişleri dışa aktar',
                     hint: 'CSV',
                     onTap: () => _toast(context, 'Dışa aktarma hazırlanıyor'),
                   ),
-                  _ActionRow(
+                  ActionRow(
                     label: 'Fiş verisi nerede duruyor?',
                     hint: s == null ? 'Cihazda' : 'Cihaz + hesap',
                     onTap: () => _explainStorage(context, s != null),
                   ),
                   if (s != null) ...[
-                    _ActionRow(
+                    ActionRow(
                       key: const Key('clear-receipts'),
                       label: 'Fişleri sil',
                       hint: 'Hesap kalır',
                       danger: true,
                       onTap: () => _confirmClearReceipts(context),
                     ),
-                    _ActionRow(
+                    ActionRow(
                       key: const Key('delete-account'),
                       label: 'Hesabı sil',
                       hint: '',
@@ -438,21 +437,30 @@ class _Identity extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
+        // Üç sayı kutuda değil, iki çizgi arasında: kutu onları sayfadan
+        // kopuk bir rozete çeviriyordu, oysa kimliğin devamıdırlar.
         DataView<ReceiptsCubit, List<Receipt>>(
-          builder: (context, receipts) => PaperCard(
-            child: Row(
-              children: [
-                _Metric('FİŞ', '${receipts.length}'),
-                _Metric(
-                  'ÜRÜN',
-                  '${receipts.fold<int>(0, (a, r) => a + r.itemCount)}',
+          builder: (context, receipts) => Column(
+            children: [
+              const Hairline(),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                child: Row(
+                  children: [
+                    _Metric('FİŞ', '${receipts.length}'),
+                    _Metric(
+                      'ÜRÜN',
+                      '${receipts.fold<int>(0, (a, r) => a + r.itemCount)}',
+                    ),
+                    _Metric(
+                      'EŞLEŞME',
+                      '${receipts.fold<int>(0, (a, r) => a + r.pendingCount)}',
+                    ),
+                  ],
                 ),
-                _Metric(
-                  'EŞLEŞME',
-                  '${receipts.fold<int>(0, (a, r) => a + r.pendingCount)}',
-                ),
-              ],
-            ),
+              ),
+              const Hairline(),
+            ],
           ),
         ),
       ],
@@ -492,8 +500,10 @@ class _SourceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Oluğa dayanıyor: yatay 13 px pay kutunun içindeyken vardı, kutu
+    // kalkınca satırı sayfadaki her şeyden içeri kaydırıyordu.
     return Padding(
-      padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
           Container(
@@ -540,53 +550,4 @@ class _SourceRow extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ActionRow extends StatelessWidget {
-  const _ActionRow({
-    super.key,
-    required this.label,
-    required this.hint,
-    required this.onTap,
-    this.danger = false,
-  });
-
-  final String label;
-  final String hint;
-  final VoidCallback onTap;
-  final bool danger;
-
-  @override
-  Widget build(BuildContext context) => Pressable(
-    onTap: onTap,
-    scale: .99,
-    child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 13),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: context.c.line)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 12.5,
-                color: danger ? context.c.hot : context.c.ink,
-              ),
-            ),
-          ),
-          if (hint.isNotEmpty) ...[
-            Text(hint, style: T.label.copyWith(fontSize: 9)),
-            const SizedBox(width: 8),
-          ],
-          LineIcon(
-            Glyph.chevron,
-            size: 13,
-            color: danger ? context.c.hot : context.c.muted,
-          ),
-        ],
-      ),
-    ),
-  );
 }

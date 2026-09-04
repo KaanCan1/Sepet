@@ -19,8 +19,8 @@
   <img src="docs/screenshots/store/01-endeks.png" width="172" alt="Endeks ekranı">
   <img src="docs/screenshots/store/02-fis.png" width="172" alt="Fiş ekranı">
   <img src="docs/screenshots/store/03-kirilim.png" width="172" alt="Kategori ve marka kırılımı">
-  <img src="docs/screenshots/store/04-urun-gecmisi.png" width="172" alt="Ürün geçmişi ekranı">
-  <img src="docs/screenshots/store/05-aylik-kart.png" width="172" alt="Aylık kart ekranı">
+  <img src="docs/screenshots/store/04-urun.png" width="172" alt="Ürün geçmişi ekranı">
+  <img src="docs/screenshots/store/05-kart.png" width="172" alt="Aylık kart ekranı">
 </p>
 
 <p align="center">
@@ -28,9 +28,9 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/09-ilk-acilis.png" width="196" alt="İlk açılış ekranı">
-  <img src="docs/screenshots/00-karsilama.png" width="196" alt="Karşılama ekranı">
-  <img src="docs/screenshots/08-profil.png" width="196" alt="Profil ekranı">
+  <img src="docs/screenshots/ilk-acilis.png" width="196" alt="İlk açılış ekranı">
+  <img src="docs/screenshots/karsilama.png" width="196" alt="Karşılama ekranı">
+  <img src="docs/screenshots/profil.png" width="196" alt="Profil ekranı">
 </p>
 
 <p align="center">
@@ -56,14 +56,22 @@ doğrulamıyor ya da yorumlamıyor — sadece referans çizgisi olarak duruyorla
 | | Ekran | İş |
 |---|---|---|
 | **00** | Karşılama | Apple, Google ya da e-posta ile giriş. Sağlayıcı akışı henüz sahte; jetonu üreten uç değişecek, saklayan katman aynı kalacak. |
-| **01** | Endeks | Tek sayı: son 12 ayda senin sepetin. Altında TÜİK karşılaştırması, seri grafiği ve son fişler. |
+| **01** | Endeks | Tek sayı: son 12 ayda senin sepetin. Grafikte kendi serinin yanında TÜİK TÜFE kesikli çizgi olarak duruyor — iki seri ortak bir aya 100'leniyor, yani TÜİK'in taban yılı ekranda görünmüyor ve ikisi aynı soruyu cevaplıyor. TÜİK'in henüz açıklamadığı ay boş bırakılıyor, çizgi orada bitiyor. |
 | **02** | Fiş ekleme ve fiş | Fotoğraf → cihaz üstünde OCR → düzeltilebilir taslak → kayıt. Fişin kâğıt hâli ve altında yorumlanmış satırlar; emin olunamayan satır zam kırmızısı şeritle işaretlenir ve tek akışta sırayla çözülür. |
-| **03** | Ürün geçmişi | Tek ürünün gözlem geçmişi, marketler arası son fiyatlar, 12 aylık değişim. |
+| **03** | Ürün geçmişi | Tek ürünün gözlem geçmişi, marketler arası son fiyatlar, 12 aylık değişim. Listede her satırın sağında aynı gözlemlerden çizilen kıvılcım grafiği var; tek gözlemli üründe çizilmiyor, çünkü iki nokta olmadan eğim yok. |
 | **04** | Aylık kart | Paylaşılabilir özet kart (PNG olarak dışa aktarılır) ve ayın en çok zamlanan kalemleri. |
 | **05** | Kırılım | Hangi kategori, hangi marka. Her seri kendi kümesinde yeniden ağırlıklandırılıyor — yüzdeler birbirine eklenmez. |
 
 Fiş yokken ekran boş kalmıyor: yapılacak tek iş, tek bir birincil eylem ve
 zaten bağımsız olan resmî karşılaştırma çizgisi gösteriliyor.
+
+Manşetteki iki sayı ancak aynı pencereye baktıklarında çıkarılıyor. TÜİK her
+zaman yıllık açıklıyor; kullanıcının serisi 12 ay dolmadan daha kısa bir
+pencere. İkisini doğrudan çıkarmak bir ayda %17 artan sepet için "TÜİK'in
+17,1 puan altında" yazıyordu — çıkarma işlemi doğru, cümle yanlış. Pencere
+dolmadan fark yazılmıyor; TÜİK sayısı duruyor, yanında ne olduğu yazıyor.
+Grafikteki iki çizgide bu sorun yok: ikisi aynı ayda başlayıp aynı ayda
+bitiyor.
 
 Yanlarında: fiş ve ürün listeleri, fiş detayı, profil ve oturum, KVKK aydınlatma
 ve açık rıza ekranları.
@@ -106,7 +114,7 @@ ile sabitlendi.
 
 ## Projenin kalbi: `eşleşme?`
 
-<img src="docs/screenshots/05-eslesme.png" width="230" align="right" alt="Eşleşme onayı alt sayfası">
+<img src="docs/screenshots/eslesme.png" width="230" align="right" alt="Eşleşme onayı alt sayfası">
 
 Fişteki `MIGROS T.YAGLI YOGU.` satırı hangi kanonik ürüne gidiyor? Marka ve
 ürünü sunucu bulanık eşleştirmeyle kendi çözüyor — ama **1 kg mı 3 kg mı**

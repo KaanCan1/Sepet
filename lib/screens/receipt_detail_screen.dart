@@ -11,8 +11,8 @@ import '../theme/tokens.dart';
 import '../widgets/data_view.dart';
 import '../widgets/atoms.dart';
 import '../widgets/glass.dart';
-import '../widgets/icons.dart';
 import '../widgets/match_sheet.dart';
+import '../widgets/motion.dart';
 import '../widgets/receipt_paper.dart';
 import '../widgets/screen_frame.dart';
 
@@ -85,19 +85,7 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return ScreenFrame(
-      title: 'Fiş',
-      leading: Pressable(
-        onTap: () => Navigator.of(context).pop(),
-        child: Padding(
-          padding: EdgeInsets.all(4),
-          child: LineIcon(
-            Glyph.back,
-            size: 17,
-            color: context.c.ink,
-            stroke: 1.6,
-          ),
-        ),
-      ),
+      showTopBar: false,
       slivers: [
         SliverToBoxAdapter(
           child: DataView<ReceiptDetailCubit, Receipt>(
@@ -109,17 +97,23 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 4),
-                    Lbl(
-                      '${Fmt.dayMonth(receipt.date)} ${receipt.date.year} · '
-                      '${receipt.itemCount} ÜRÜN',
+                    // Başlık marketin adı. Üst barda "Fiş" yazıyordu; hangi
+                    // fiş olduğunu zaten altındaki satır söylüyordu, bar da
+                    // ekranın en üstünde o bilgiyi tekrarlamak için yer
+                    // kaplıyordu.
+                    Printed(
+                      step: 0,
+                      child: LargeTitle(
+                        receipt.merchant,
+                        trailing:
+                            '${Fmt.dayMonth(receipt.date)} '
+                            '${receipt.date.year}',
+                        onBack: () => Navigator.of(context).pop(),
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(receipt.merchant, style: T.display),
-                    const SizedBox(height: 20),
                     // Önce kâğıt hâli, sonra yorumlanmış hâli. İkisinin yan
                     // yana durması eşleşmenin ne demek olduğunu anlatıyor.
-                    ReceiptPaper(receipt: receipt),
+                    Printed(step: 1, child: ReceiptPaper(receipt: receipt)),
                     const SizedBox(height: 26),
                     Lbl('${receipt.lines.length} SATIR'),
                     const SizedBox(height: 8),
@@ -128,24 +122,20 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
                         count: pending,
                         onTap: () => _resolveAll(waiting),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 4),
                     ],
-                    PaperCard(
-                      padding: EdgeInsets.zero,
-                      child: Column(
-                        children: [
-                          for (var i = 0; i < receipt.lines.length; i++) ...[
-                            if (i > 0) const Hairline(),
-                            _LineRow(
-                              line: receipt.lines[i],
-                              onTap: receipt.lines[i].needsMatch
-                                  ? () => _resolve(receipt.lines[i])
-                                  : null,
-                            ),
-                          ],
-                        ],
+                    // Kutu kalktı: satırları çerçeve değil ince çizgi
+                    // ayırıyor. Çerçeve fişin kendi kâğıdıyla yarışıyordu —
+                    // ekranda zaten bir kutu var ve o gerçek fiş.
+                    for (var i = 0; i < receipt.lines.length; i++) ...[
+                      if (i > 0) const Hairline(),
+                      _LineRow(
+                        line: receipt.lines[i],
+                        onTap: receipt.lines[i].needsMatch
+                            ? () => _resolve(receipt.lines[i])
+                            : null,
                       ),
-                    ),
+                    ],
                     if (pending > 0) ...[
                       const SizedBox(height: 12),
                       Text(
@@ -184,10 +174,12 @@ class _PendingBanner extends StatelessWidget {
       scale: .99,
       child: Container(
         padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
+        // Endeks ekranındaki kapsam uyarısıyla aynı: zeminli, çerçevesiz.
+        // Çerçeve sabit bir kırmızı alfa değeriydi ve koyu temada zeminden
+        // kopuyordu; zaten uyarıyı zemin veriyor, çerçeve tekrar ediyordu.
         decoration: BoxDecoration(
           color: context.c.hotBg,
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: const Color(0x389F2F2D)),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           children: [
@@ -201,7 +193,7 @@ class _PendingBanner extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: const Color(0x669F2F2D)),
+                border: Border.all(color: context.c.hot.withValues(alpha: .4)),
               ),
               child: Text(
                 'SIRAYLA ÇÖZ',
@@ -233,13 +225,17 @@ class _LineRow extends StatelessWidget {
       onTap: onTap,
       scale: .99,
       child: Container(
+        // Çözülmüş satırın zemini yok. Kutunun içindeyken kart rengiyle
+        // boyanıyordu; kutu kalkınca o renk kâğıdın üstünde satır boyu bir
+        // levhaya dönüşüyordu — koyu temada iki ton belirgin ayrı.
+        // Dikkat isteyen satır hâlâ zeminli: ayrım orada anlam taşıyor.
         decoration: BoxDecoration(
-          color: waiting ? context.c.hotBg : context.c.card,
+          color: waiting ? context.c.hotBg : null,
           border: waiting
               ? Border(left: BorderSide(color: context.c.hot, width: 2))
               : null,
         ),
-        padding: EdgeInsets.fromLTRB(waiting ? 9 : 11, 10, 11, 10),
+        padding: EdgeInsets.fromLTRB(waiting ? 9 : 0, 10, waiting ? 11 : 0, 10),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

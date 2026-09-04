@@ -157,19 +157,7 @@ class _DraftReceiptScreenState extends State<DraftReceiptScreen> {
     final ready = _merchant != null && _lines.isNotEmpty && !_saving;
 
     return ScreenFrame(
-      title: 'Okunan fiş',
-      leading: Pressable(
-        onTap: () => Navigator.of(context).pop(false),
-        child: Padding(
-          padding: EdgeInsets.all(4),
-          child: LineIcon(
-            Glyph.back,
-            size: 17,
-            color: context.c.ink,
-            stroke: 1.6,
-          ),
-        ),
-      ),
+      showTopBar: false,
       footer: PrimaryButton(
         label: _saving
             ? 'Kaydediliyor…'
@@ -181,7 +169,11 @@ class _DraftReceiptScreenState extends State<DraftReceiptScreen> {
           padding: kGutter,
           sliver: SliverList.list(
             children: [
-              const SizedBox(height: 6),
+              LargeTitle(
+                'Okunan fiş',
+                trailing: '${_lines.length} SATIR',
+                onBack: () => Navigator.of(context).pop(false),
+              ),
               Row(
                 children: [
                   Expanded(
@@ -202,26 +194,22 @@ class _DraftReceiptScreenState extends State<DraftReceiptScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Lbl('${_lines.length} SATIR OKUNDU'),
-              const SizedBox(height: 8),
-              PaperCard(
-                padding: EdgeInsets.zero,
-                child: Column(
-                  children: [
-                    for (var i = 0; i < _lines.length; i++) ...[
-                      if (i > 0) const Hairline(),
-                      _DraftRow(
-                        line: _lines[i],
-                        onTap: () => _editLine(i),
-                        onRemove: () => setState(() => _lines.removeAt(i)),
-                      ),
-                    ],
-                  ],
+              const SizedBox(height: 22),
+              const Lbl('OKUNAN SATIRLAR'),
+              const SizedBox(height: 4),
+              for (var i = 0; i < _lines.length; i++) ...[
+                if (i > 0) const Hairline(),
+                _DraftRow(
+                  line: _lines[i],
+                  onTap: () => _editLine(i),
+                  onRemove: () => setState(() => _lines.removeAt(i)),
                 ),
-              ),
-              const SizedBox(height: 12),
-              PaperCard(
+              ],
+              // Toplam kutuda değil, listenin altında: fişin kendi
+              // TOPLAM satırı da orada duruyor ve okuma sırası aynı.
+              const Hairline(),
+              Padding(
+                padding: const EdgeInsets.only(top: 11),
                 child: Row(
                   children: [
                     Expanded(
@@ -286,31 +274,26 @@ class _Field extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Pressable(
     onTap: onTap,
-    child: PaperCard(
-      padding: const EdgeInsets.fromLTRB(13, 10, 11, 11),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Lbl(label),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: muted ? context.c.muted : context.c.ink,
-                  ),
-                ),
-              ),
-              LineIcon(Glyph.chevron, size: 13, color: context.c.muted),
-            ],
+    // Kutu ve chevron yerine alt çizgi. Çizgi hem alanı sınırlıyor hem
+    // dokunulabilir olduğunu söylüyor — chevron'un tek işi oydu ve
+    // ekrandaki diğer satırlarda zaten kaldırılmıştı.
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Lbl(label),
+        const SizedBox(height: 5),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 13,
+            color: muted ? context.c.muted : context.c.ink,
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 9),
+        Hairline(color: muted ? context.c.muted : context.c.ink),
+      ],
     ),
   );
 }
@@ -327,54 +310,55 @@ class _DraftRow extends StatelessWidget {
   final VoidCallback onRemove;
 
   @override
-  Widget build(BuildContext context) => Container(
-    color: context.c.card,
-    child: Row(
-      children: [
-        Expanded(
-          child: Pressable(
-            scale: .99,
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(11, 11, 8, 11),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+  // Zemin yok ve satır oluğa dayanıyor: kutunun içindeyken kart rengiyle
+  // boyanıp içeriden 11 px pay alıyordu, kutu kalkınca o pay listeyi
+  // ekrandaki diğer her şeyden içeri kaydırıyordu.
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: Pressable(
+          scale: .99,
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(0, 11, 8, 11),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        line.displayName,
+                        style: T.num11.copyWith(fontSize: 11),
+                      ),
+                      if (line.quantity != 1) ...[
+                        const SizedBox(height: 2),
                         Text(
-                          line.displayName,
-                          style: T.num11.copyWith(fontSize: 11),
+                          '${Fmt.quantity(line.quantity)} \u00d7 '
+                          '${Fmt.money(line.amount / line.quantity)}',
+                          style: T.raw,
                         ),
-                        if (line.quantity != 1) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            '${Fmt.quantity(line.quantity)} × '
-                            '${Fmt.money(line.amount / line.quantity)}',
-                            style: T.raw,
-                          ),
-                        ],
                       ],
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Text(Fmt.money(line.amount), style: T.num11),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                Text(Fmt.money(line.amount), style: T.num11),
+              ],
             ),
           ),
         ),
-        Pressable(
-          onTap: onRemove,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(8, 12, 12, 12),
-            child: LineIcon(Glyph.close, size: 14, color: context.c.muted),
-          ),
+      ),
+      Pressable(
+        onTap: onRemove,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 12, 0, 12),
+          child: LineIcon(Glyph.close, size: 14, color: context.c.muted),
         ),
-      ],
-    ),
+      ),
+    ],
   );
 }
 
@@ -495,23 +479,27 @@ class _MerchantSheetState extends State<_MerchantSheet> {
                 const SizedBox(height: 16),
                 const Lbl('MARKET'),
                 const SizedBox(height: 8),
-                PaperCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 13),
-                  child: TextField(
-                    controller: _query,
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: 'Ara ya da yeni market yaz',
-                      hintStyle: TextStyle(
-                        fontSize: 13.5,
-                        color: context.c.muted,
-                      ),
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 13),
+                TextField(
+                  controller: _query,
+                  decoration: InputDecoration(
+                    hintText: 'Ara ya da yeni market yaz',
+                    hintStyle: TextStyle(
+                      fontSize: 13.5,
+                      color: context.c.muted,
                     ),
-                    style: TextStyle(fontSize: 13.5, color: context.c.ink),
-                    onChanged: (_) => setState(() {}),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.only(bottom: 9),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: context.c.line),
+                    ),
+                    // Odaklanınca çizgi koyulaşıyor: kutulu alanda bu işi
+                    // zemin yapıyordu, çizgide odak başka türlü görünmüyor.
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: context.c.ink),
+                    ),
                   ),
+                  style: TextStyle(fontSize: 13.5, color: context.c.ink),
+                  onChanged: (_) => setState(() {}),
                 ),
                 if (_canAdd) ...[
                   const SizedBox(height: 8),
@@ -552,37 +540,24 @@ class _MerchantSheetState extends State<_MerchantSheet> {
                     ),
                   )
                 else
-                  PaperCard(
-                    padding: EdgeInsets.zero,
-                    child: Column(
-                      children: [
-                        for (var i = 0; i < rows.length; i++) ...[
-                          if (i > 0) const Hairline(),
-                          Pressable(
-                            scale: .99,
-                            onTap: () => Navigator.of(context).pop(rows[i]),
-                            child: Container(
-                              color: context.c.card,
-                              width: double.infinity,
-                              padding: const EdgeInsets.fromLTRB(
-                                13,
-                                13,
-                                13,
-                                13,
-                              ),
-                              child: Text(
-                                rows[i].name,
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  color: context.c.ink,
-                                ),
-                              ),
-                            ),
+                  for (var i = 0; i < rows.length; i++) ...[
+                    if (i > 0) const Hairline(),
+                    Pressable(
+                      scale: .99,
+                      onTap: () => Navigator.of(context).pop(rows[i]),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        child: Text(
+                          rows[i].name,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: context.c.ink,
                           ),
-                        ],
-                      ],
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
               ],
             ),
           ),
@@ -658,37 +633,41 @@ class _LineSheetState extends State<_LineSheet> {
               const SizedBox(height: 16),
               const Lbl('FİŞTEKİ SATIR'),
               const SizedBox(height: 6),
-              PaperCard(
-                padding: const EdgeInsets.symmetric(horizontal: 13),
-                child: TextField(
-                  controller: _name,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 13),
+              TextField(
+                controller: _name,
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: const EdgeInsets.only(bottom: 9),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: context.c.line),
                   ),
-                  style: T.num12.copyWith(fontSize: 13),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: context.c.ink),
+                  ),
                 ),
+                style: T.num12.copyWith(fontSize: 13),
               ),
               const SizedBox(height: 12),
               const Lbl('TUTAR'),
               const SizedBox(height: 6),
-              PaperCard(
-                padding: const EdgeInsets.symmetric(horizontal: 13),
-                child: TextField(
-                  controller: _amount,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    isDense: true,
-                    hintText: '0,00',
-                    contentPadding: EdgeInsets.symmetric(vertical: 13),
-                  ),
-                  style: T.num12.copyWith(fontSize: 13),
-                  onSubmitted: (_) => _submit(),
+              TextField(
+                controller: _amount,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
                 ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: '0,00',
+                  contentPadding: const EdgeInsets.only(bottom: 9),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: context.c.line),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: context.c.ink),
+                  ),
+                ),
+                style: T.num12.copyWith(fontSize: 13),
+                onSubmitted: (_) => _submit(),
               ),
               const SizedBox(height: 14),
               PrimaryButton(label: 'Tamam', onTap: _submit),

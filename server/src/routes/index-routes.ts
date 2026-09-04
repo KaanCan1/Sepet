@@ -347,6 +347,7 @@ async function officialSeries(): Promise<
     name: string;
     isOfficial: boolean;
     yoyPct: number | null;
+    levels: Array<{ month: string; level: number }>;
   }>
 > {
   // Alan adları BURADA çevriliyor, çağıranda değil. İlk yazışta çevirme
@@ -366,11 +367,41 @@ async function officialSeries(): Promise<
        LEFT JOIN official_index_levels l ON l.series_id = s.id
       ORDER BY s.id, l.month DESC NULLS LAST`,
   );
+  // Grafikteki kesikli çizgi için ay ay seviye.
+  //
+  // Manşetteki yıllık yüzde buraya yetmiyor: yıllık değişim serisinden
+  // aylık bir yol geri türetilemez. Seviye ise mutlak olarak da
+  // gösterilmiyor — istemci iki seriyi ortak bir aya 100'lüyor, böylece
+  // TÜİK'in taban yılı ekranda hiç görünmüyor ve iki çizgi "başladığın
+  // aydan bugüne" sorusunu aynı ölçekte cevaplıyor.
+  //
+  // Yalnızca seviyesi olan aylar dönüyor. Elle girilen aylarda yüzde var
+  // ama seviye yok; o aylar çizgide boşluk bırakıyor, uydurulmuyor.
+  const levelRows = await query<{
+    code: string;
+    month: string;
+    level: number;
+  }>(
+    `SELECT s.code, to_char(l.month, 'YYYY-MM-DD') AS month, l.level
+       FROM official_index_levels l
+       JOIN official_series s ON s.id = l.series_id
+      WHERE l.level IS NOT NULL
+      ORDER BY s.code, l.month`,
+  );
+
+  const byCode = new Map<string, Array<{ month: string; level: number }>>();
+  for (const r of levelRows) {
+    const list = byCode.get(r.code) ?? [];
+    list.push({ month: r.month, level: r.level });
+    byCode.set(r.code, list);
+  }
+
   return rows.map((r) => ({
     code: r.code,
     publisher: r.publisher,
     name: r.name,
     isOfficial: r.is_official,
     yoyPct: r.yoy_pct,
+    levels: byCode.get(r.code) ?? [],
   }));
 }

@@ -2,6 +2,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { one, pool, query } from '../src/db.js';
+import { writeLevels } from '../src/official/refresh.js';
 import { canonicalId } from './fixtures/catalog-ref.js';
 
 const app = createApp();
@@ -743,6 +744,65 @@ describe('API', () => {
       );
       expect(july, 'ay tekil olmalı').toHaveLength(1);
       expect(july[0].yoyPct).toBe(34.1);
+    });
+
+    // Manşetteki yıllık yüzde grafiğe çizilemiyor: yıllık değişim
+    // serisinden aylık bir yol geri türetilemez. Kesikli TÜİK çizgisi için
+    // ay ay seviye gerekiyor ve EVDS onu zaten veriyordu — writeLevels
+    // yüzdeyi hesaplayıp seviyeyi atıyordu.
+    it('seviye de yazılıyor, elle girilen yüzde silinmiyor', async () => {
+      const { id } = await one<{ id: string }>(
+        `SELECT id FROM official_series WHERE code = 'TUIK_TUFE'`,
+      );
+
+      // Elle girilmiş bir ay: yüzdesi var, seviyesi yok.
+      await query(
+        `INSERT INTO official_index_levels (series_id, month, yoy_pct)
+         VALUES ($1, '2023-03-01', 55.5)
+         ON CONFLICT (series_id, month)
+         DO UPDATE SET yoy_pct = 55.5, level = NULL`,
+        [id],
+      );
+
+      await writeLevels(id, [
+        { month: '2023-01-01', level: 100 },
+        { month: '2023-02-01', level: 110 },
+        { month: '2023-03-01', level: 121 },
+      ]);
+
+      const rows = await query<{
+        month: string;
+        level: number;
+        yoy_pct: number | null;
+      }>(
+        `SELECT to_char(month, 'YYYY-MM-DD') AS month, level, yoy_pct
+           FROM official_index_levels
+          WHERE series_id = $1 AND month BETWEEN '2023-01-01' AND '2023-03-01'
+          ORDER BY month`,
+        [id],
+      );
+
+      expect(rows).toHaveLength(3);
+      expect(rows[2]!.level).toBe(121);
+      // On iki ay öncesi elde yok, yüzde uydurulmadı — ve elle girilmiş olan
+      // seviyesi yazılırken silinmedi.
+      expect(rows[2]!.yoy_pct).toBe(55.5);
+
+      // Aynı seviyeler endeks ucundan da çıkıyor: grafik onlardan çiziliyor.
+      const res = await request(app).get('/index').set(auth()).expect(200);
+      const tuik = res.body.official.find(
+        (o: { code: string }) => o.code === 'TUIK_TUFE',
+      );
+      const ocak = tuik.levels.find(
+        (l: { month: string }) => l.month === '2023-01-01',
+      );
+      expect(ocak.level).toBe(100);
+
+      await query(
+        `DELETE FROM official_index_levels
+          WHERE series_id = $1 AND month BETWEEN '2023-01-01' AND '2023-03-01'`,
+        [id],
+      );
     });
 
     it('saçma değeri reddediyor', async () => {

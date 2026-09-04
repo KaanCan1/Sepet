@@ -9,8 +9,6 @@ import '../state/products_cubit.dart';
 import '../widgets/data_view.dart';
 import '../widgets/atoms.dart';
 import '../widgets/chart.dart';
-import '../widgets/glass.dart';
-import '../widgets/icons.dart';
 import '../widgets/screen_frame.dart';
 
 /// 03 — Ürün geçmişi. Endeksin altındaki tek tek gözlemler; sayının nereden
@@ -33,18 +31,7 @@ class ProductScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenFrame(
-      leading: Pressable(
-        onTap: () => Navigator.of(context).pop(),
-        child: Padding(
-          padding: EdgeInsets.all(4),
-          child: LineIcon(
-            Glyph.back,
-            size: 17,
-            color: context.c.ink,
-            stroke: 1.6,
-          ),
-        ),
-      ),
+      showTopBar: false,
       slivers: [
         SliverToBoxAdapter(
           child: DataView<ProductDetailCubit, Product>(
@@ -76,11 +63,12 @@ class _Body extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 4),
-          const Lbl('SEPETİNDEKİ ÜRÜN'),
-          const SizedBox(height: 4),
-          Text(product.title, style: T.display),
-          const SizedBox(height: 4),
+          // Ürün adı orta başlıktan (T.display) ekran başlığına çıktı: bu
+          // ekranın konusu ürünün kendisi ve üstünde onu taşıyan bir bar
+          // yok artık. "SEPETİNDEKİ ÜRÜN" üst etiketi kalktı — aynı şeyi
+          // sayfanın altındaki "Bu ürün endekste ... temsil ediliyor" notu
+          // zaten ve daha iyi söylüyor.
+          LargeTitle(product.title, onBack: () => Navigator.of(context).pop()),
           Text(
             '${product.observations} GÖZLEM · '
             '${product.merchantCount} MARKET · ${product.monthSpan} AY',
@@ -110,7 +98,11 @@ class _Body extends StatelessWidget {
             LineChart(
               height: 110,
               series: [
-                ChartSeries(values: prices, color: context.c.ink, endDot: true),
+                ChartSeries(
+                  values: prices,
+                  color: context.c.ink,
+                  end: EndCap.dot,
+                ),
               ],
               marker: janIndex >= 0 ? janIndex : null,
               markerLabel: janIndex >= 0

@@ -1,0 +1,9 @@
+steps:
+  - echo: >-
+      5/5 — Videonun kapanışı: paylaşılabilir aylık kart ekranda duruyor.
+      Dokunma yok; bu segmentin tek işi kartı okunacak kadar tutmak. Ayrı
+      segment olmasının sebebi durum çubuğu: bekleme bir önceki segmentin
+      holdSeconds'ında olsaydı kayıt akışı aşar ve argent'ın akış sonundaki
+      `status_bar clear` çağrısı klibin içine düşerdi. Bekleme akışın
+      İÇİNDE olunca kayıt akışla birlikte bitiyor.
+  - wait: 2600

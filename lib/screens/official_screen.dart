@@ -11,7 +11,6 @@ import '../theme/tokens.dart';
 import '../widgets/atoms.dart';
 import '../widgets/data_view.dart';
 import '../widgets/glass.dart';
-import '../widgets/icons.dart';
 import '../widgets/screen_frame.dart';
 
 /// Karşılaştırma serilerinin elle girildiği ekran.
@@ -36,19 +35,7 @@ class OfficialScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenFrame(
-      title: 'Resmî veriler',
-      leading: Pressable(
-        onTap: () => Navigator.of(context).pop(),
-        child: Padding(
-          padding: EdgeInsets.all(4),
-          child: LineIcon(
-            Glyph.back,
-            size: 17,
-            color: context.c.ink,
-            stroke: 1.6,
-          ),
-        ),
-      ),
+      showTopBar: false,
       slivers: [
         SliverToBoxAdapter(
           child: DataView<OfficialCubit, List<OfficialSeries>>(
@@ -57,7 +44,10 @@ class OfficialScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 4),
+                  LargeTitle(
+                    'Resmî veriler',
+                    onBack: () => Navigator.of(context).pop(),
+                  ),
                   Text(
                     'TÜİK sayısını henüz otomatik çekmiyoruz. Uydurmak '
                     'yerine boş bırakıyoruz — buraya sen giriyorsun.',
@@ -134,10 +124,17 @@ class _RefreshRowState extends State<_RefreshRow> {
 
   @override
   Widget build(BuildContext context) {
+    // Kutu ve chevron yerine alt çizgili düz satır — ekrandaki diğer eylem
+    // satırlarıyla aynı. Chevron'un yerini sağdaki mono ipucu aldı: "ÇEK"
+    // ne olacağını chevron'dan daha açık söylüyor.
     return Pressable(
-      onTap: _run,
-      child: PaperCard(
-        padding: const EdgeInsets.fromLTRB(13, 11, 11, 11),
+      onTap: _busy ? null : _run,
+      scale: 1,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: context.c.line)),
+        ),
         child: Row(
           children: [
             Expanded(
@@ -156,7 +153,10 @@ class _RefreshRowState extends State<_RefreshRow> {
             if (_busy)
               const CupertinoLikeSpinner()
             else
-              LineIcon(Glyph.chevron, size: 15, color: context.c.muted),
+              Text(
+                'ÇEK',
+                style: T.label.copyWith(fontSize: 9, color: context.c.faint),
+              ),
           ],
         ),
       ),

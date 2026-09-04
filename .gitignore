@@ -72,3 +72,18 @@ android/key.properties
 
 # ASO çalışma çıktıları (aso-appstore-screenshots skill) — final görseller docs/screenshots/store/ altında
 /screenshots/
+
+# goldie çıktısı — üretilebilir
+goldie/out/
+
+# argent'ın ham ekran kayıtları. Önizleme klipleri buradan goldie/out'a
+# kopyalanıyor; burası çalışma alanı ve hızla büyüyor (klip başına ~4 MB).
+.argent/recordings/
+
+# Stüdyonun Tasarım panelinin yazdığı katman. Yanındaki config'i SESSİZCE
+# eziyor ve stüdyo her açılışta kendi varsayılanlarını buraya yazıyor:
+# Türkçe gliflerini düşüren sistem font yığını ve sade yerleşim yerine bir
+# kareyi ikiye bölen "editorial" şablonu. Bir kez commit'lenmiş, mağaza
+# karelerini bozmuştu (#67). Kalıcı bir tercih varsa goldie.config.ts'e
+# yazılmalı; burası çalışma alanı.
+goldie/goldie.design.json

@@ -1,10 +1,15 @@
 /**
  * Demo hesabı: 12 aylık fiş geçmişi.
  *
- * İki işe yarıyor. Biri geliştirme — Flutter'ı gerçek veriye bağlarken
+ * Üç işe yarıyor. Biri geliştirme — Flutter'ı gerçek veriye bağlarken
  * gösterecek bir şey olsun. Diğeri App Store incelemesi: boş kabuk gönderilen
  * uygulamalar "minimum functionality" gerekçesiyle geri dönüyor, inceleme
- * notuna dolu bir demo hesabın bilgileri yazılmalı.
+ * notuna dolu bir demo hesabın bilgileri yazılmalı. Üçüncüsü mağaza ekranları:
+ *
+ *   npm run seed                            demo@sepet.app   (inceleme)
+ *   npm run seed -- vitrin@sepet.app --vitrin                (mağaza ekranı)
+ *
+ * İkisi aynı sepeti üretiyor; tek fark bekleyen eşleşme satırları.
  *
  * FİYATLAR GERÇEK DEĞİL. Market sitelerinden fiyat çekilmiyor: Migros arama
  * sayfası fiyatı JavaScript'le basıyor, A101 otomatik erişime 403 veriyor.
@@ -17,7 +22,15 @@
 import { one, pool, query } from '../src/db.js';
 
 // Varsayılan demo hesabı; farklı bir adres için:  npm run seed -- ad@ornek.com
-const DEMO_EMAIL = process.argv[2] ?? 'demo@sepet.app';
+//
+// --vitrin: eşleşmemiş satır bırakmayan hesap. App Store ekranlarını üreten
+// goldie bu hesaba bakıyor; endeks ekranının tepesindeki "N kalem endekse
+// girmiyor" şeridi vitrinde ilk okunan üçüncü satır oluyordu. Uyarı doğru,
+// ama inceleme hesabıyla vitrin hesabının işi farklı: biri eşleşme akışını
+// göstermek, diğeri ekranı temiz göstermek zorunda.
+const ARGS = process.argv.slice(2);
+const VITRIN = ARGS.includes('--vitrin');
+const DEMO_EMAIL = ARGS.find((a) => !a.startsWith('--')) ?? 'demo@sepet.app';
 
 type Item = {
   group: string;
@@ -201,25 +214,48 @@ async function main(): Promise<void> {
       receiptCount++;
 
       for (const [i, l] of lines.entries()) {
-        // En son fişte iki satır bilerek "pending" bırakılıyor: uygulamadaki
-        // "eşleşme?" akışının demo hesapta da görünmesi için.
-        const pending = monthsAgo === 0 && (i === 1 || i === 6);
         await query(
           `INSERT INTO receipt_lines
              (receipt_id, line_no, raw_text, quantity, line_amount,
               canonical_product_id, status, match_confidence)
-           VALUES ($1, $2, $3, $4, $5, $6, $7::match_status, $8)`,
-          [
-            receipt.id, i + 1, l.raw, l.qty, l.amount,
-            pending ? null : l.productId,
-            pending ? 'pending' : 'auto',
-            pending ? 0.62 : 1,
-          ],
+           VALUES ($1, $2, $3, $4, $5, $6, 'auto'::match_status, 1)`,
+          [receipt.id, i + 1, l.raw, l.qty, l.amount, l.productId],
         );
         lineCount++;
       }
     }
   }
+
+  // Eşleşme kuyruğu boş kalmasın: en son fişin iki satırı "pending" bırakılıyor.
+  //
+  // Bu, satırlar eklenirken `monthsAgo === 0` koşuluyla yapılıyordu. O koşul
+  // ayın ilk günlerinde hiç tutmuyor: fişler ayın 6'sına ve 19'una düşüyor,
+  // gelecekteki gün için fiş üretilmiyor, dolayısıyla `monthsAgo === 0` hiç
+  // fiş doğurmuyordu. Ayın 1'inde kurulan demo hesabı eşleşme akışını hiç
+  // göstermiyor, 20'sinde kurulan gösteriyordu. Artık takvime değil, gerçekten
+  // yazılmış en son fişe bakılıyor.
+  //
+  // Satır tetikleyicisi (receipt_lines_sync_observation) status değişince
+  // fiyat gözlemini kendisi siliyor; endeks aşağıdaki refresh ile yeniden
+  // hesaplanıyor.
+  const pendingLines = VITRIN
+    ? 0
+    : (
+        await query(
+          `UPDATE receipt_lines l
+              SET status = 'pending'::match_status,
+                  canonical_product_id = NULL,
+                  match_confidence = 0.62
+             FROM receipts r
+            WHERE l.receipt_id = r.id
+              AND r.user_id = $1
+              AND r.id = (SELECT id FROM receipts WHERE user_id = $1
+                           ORDER BY purchased_at DESC, id DESC LIMIT 1)
+              AND l.line_no IN (2, 7)
+          RETURNING l.id`,
+          [user.id],
+        )
+      ).length;
 
   // Bir yıldır kullanılan hesapta bu eşleşmeler çoktan onaylanmış olurdu.
   // Alias'lar market bazlı: aynı ham metin farklı zincirde farklı ürün olabilir.
@@ -247,6 +283,7 @@ async function main(): Promise<void> {
   console.log(`  fiş            ${receiptCount}`);
   console.log(`  satır          ${lineCount}`);
   console.log(`  eşleşme kaydı  ${aliasCount}`);
+  console.log(`  bekleyen satır ${pendingLines}${VITRIN ? '  (--vitrin)' : ''}`);
   console.log(`  endeks         %${head?.change_pct} (${head?.window_months} aylık pencere)`);
   console.log('  not            fiyatlar tahmindir, market sitelerinden çekilmiyor');
 

@@ -164,7 +164,7 @@ class _List extends StatelessWidget {
             ChartSeries(
               values: top.levels,
               color: context.c.ink,
-              endDot: true,
+              end: EndCap.dot,
               fill: context.c.ink.withValues(alpha: context.c.areaFade),
             ),
           ],
@@ -294,7 +294,7 @@ class _DetailScreen extends StatelessWidget {
                       ChartSeries(
                         values: row.levels,
                         color: context.c.ink,
-                        endDot: true,
+                        end: EndCap.dot,
                       ),
                     ],
                   )

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
 import 'glass.dart';
+import 'icons.dart';
 import 'motion.dart';
 
 /// Küçük mono etiket. Metin ZATEN büyük harfle yazılır — Dart'ın
@@ -306,13 +307,27 @@ class BrandChip extends StatelessWidget {
 /// Ekranın büyük başlığı. Üst bar yerine geçiyor: cam bar içeriği
 /// bulanıklaştırıp yer kaplıyordu, oysa başlık kaydırılıp gidebilir.
 class LargeTitle extends StatelessWidget {
-  const LargeTitle(this.title, {super.key, this.trailing, this.onBack});
+  const LargeTitle(
+    this.title, {
+    super.key,
+    this.trailing,
+    this.onBack,
+    this.onClose,
+  });
 
   final String title;
 
   /// Sağdaki küçük mono etiket — ay, adet gibi.
   final String? trailing;
   final VoidCallback? onBack;
+
+  /// Kapatma ucu — yalnızca tam ekran modallarda.
+  ///
+  /// Geri okundan ayrı duruyor, çünkü ikisi aynı şeyi söylemiyor: '‹' bir
+  /// yığından bir adım geri, '✕' yığından tamamen çıkmak. Modalde geri oku
+  /// göstermek "üstteki ekrana dönüyorsun" der, oysa modal üstte değil
+  /// önde duruyor.
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -346,6 +361,23 @@ class LargeTitle extends StatelessWidget {
               fontSize: 9.5,
               letterSpacing: 1.5,
               color: context.c.faint,
+            ),
+          ),
+        if (onClose != null)
+          GestureDetector(
+            onTap: onClose,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              // Dokunma alanı görünen çarpıdan geniş: 44 pt'lik hedefe
+              // yaklaşıyor, çarpının kendisi ise başlığın ağırlığını
+              // bastırmayacak kadar ince kalıyor.
+              padding: const EdgeInsets.only(left: 12, top: 2, bottom: 6),
+              child: LineIcon(
+                Glyph.close,
+                size: 16,
+                color: context.c.muted,
+                stroke: 1.6,
+              ),
             ),
           ),
       ],
@@ -470,11 +502,20 @@ class _StatRowState extends State<StatRow> {
 /// Chevron yok — ipucu zaten "burada ne var" diyor ve bir ayarlar
 /// menüsünden ayırıyor.
 class ActionRow extends StatelessWidget {
-  const ActionRow({super.key, required this.label, this.hint, this.onTap});
+  const ActionRow({
+    super.key,
+    required this.label,
+    this.hint,
+    this.onTap,
+    this.danger = false,
+  });
 
   final String label;
   final String? hint;
   final VoidCallback? onTap;
+
+  /// Geri alınamayan eylem — satır zam kırmızısında yazılıyor.
+  final bool danger;
 
   @override
   Widget build(BuildContext context) {
@@ -490,9 +531,12 @@ class ActionRow extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(label, style: T.rowName.copyWith(color: c.ink)),
+              child: Text(
+                label,
+                style: T.rowName.copyWith(color: danger ? c.hot : c.ink),
+              ),
             ),
-            if (hint != null)
+            if (hint != null && hint!.isNotEmpty)
               Text(hint!, style: T.label.copyWith(fontSize: 9, color: c.faint)),
           ],
         ),

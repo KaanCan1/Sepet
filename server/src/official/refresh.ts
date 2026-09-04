@@ -47,22 +47,47 @@ export async function refreshOfficial(
   return writeLevels(seriesId, levels);
 }
 
-/** Seviyeleri yıllık değişime çevirip yazar. Testler bunu doğrudan çağırıyor. */
+/**
+ * Seviyeleri ve onlardan çıkan yıllık değişimi yazar. Testler bunu doğrudan
+ * çağırıyor.
+ *
+ * Seviye de saklanıyor, çünkü manşetteki yıllık yüzde grafiğe çizilemiyor:
+ * yıllık değişim serisinden aylık bir yol geri türetilemez. Grafikte iki
+ * çizgiyi yan yana koymak için TÜİK'in ay ay seviyesi gerekiyor.
+ *
+ * Saklanan seviye MUTLAK bir sayı olarak okunmamalı, yalnızca aynı serinin
+ * başka aylarıyla oranlanmalı. Taban yılı değiştiğinde (2003=100 → 2025=100)
+ * EVDS yeni bir seri kodu açıyor; kod güncellenene kadar eski tabandaki
+ * satırlar elde kalır ve iki tabanı birbirine bölen bir oran anlamsız olur.
+ * Grafik bu yüzden ham seviyeyi hiç göstermiyor, ortak bir aya 100'lüyor —
+ * ve yalnızca son aylara bakıyor; her tazeleme o pencereyi baştan yazıyor.
+ *
+ * Yıllık değişim seviyeden hesaplanıyor: EVDS'in ayrı yıllık serisi taban
+ * yılı değişiminde kopuyor, aynı serinin kendi içinde oranlamak kopmuyor.
+ * On iki ay öncesi elde yoksa o ay yüzdesiz yazılıyor — seviyesi var,
+ * yüzdesi yok; uydurulmuyor.
+ */
 export async function writeLevels(
   seriesId: string,
   levels: Level[],
 ): Promise<RefreshResult> {
-  const rows = yearlyChanges(levels);
-  if (rows.length === 0) return { written: 0 };
+  if (levels.length === 0) return { written: 0 };
 
-  for (const r of rows) {
+  const yoyByMonth = new Map(
+    yearlyChanges(levels).map((r) => [r.month, r.yoyPct]),
+  );
+
+  for (const l of levels) {
     await query(
-      `INSERT INTO official_index_levels (series_id, month, yoy_pct, published_at)
-       VALUES ($1, $2::date, $3, current_date)
+      `INSERT INTO official_index_levels (series_id, month, level, yoy_pct, published_at)
+       VALUES ($1, $2::date, $3, $4, current_date)
        ON CONFLICT (series_id, month)
-       DO UPDATE SET yoy_pct = EXCLUDED.yoy_pct,
+       -- coalesce şart: elle girilen bir ay, seviyesi yazılırken yüzdesini
+       -- kaybetmemeli. EVDS'ten yeni bir değer gelirse o kazanıyor.
+       DO UPDATE SET level = coalesce(EXCLUDED.level, official_index_levels.level),
+                     yoy_pct = coalesce(EXCLUDED.yoy_pct, official_index_levels.yoy_pct),
                      published_at = EXCLUDED.published_at`,
-      [seriesId, r.month, r.yoyPct],
+      [seriesId, l.month, l.level, yoyByMonth.get(l.month) ?? null],
     );
   }
 
@@ -71,5 +96,5 @@ export async function writeLevels(
        FROM official_index_levels WHERE series_id = $1`,
     [seriesId],
   );
-  return { written: rows.length, newestMonth: newest ?? undefined };
+  return { written: levels.length, newestMonth: newest ?? undefined };
 }

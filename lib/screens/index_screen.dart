@@ -89,6 +89,9 @@ class _Body extends StatelessWidget {
     // Değeri olmayan seri de gösteriliyor: tire koyup elle girilebileceğini
     // söylemek, satırı hiç çizmemekten iyi. Uydurmuyoruz ama saklamıyoruz da.
     final tuik = snapshot.official.firstOrNull;
+    // Bir kez hesaplanıyor: hem çizgi hem altındaki not aynı seriye bakıyor.
+    final tuikLine = _tuikLine(tuik);
+    final tuikSonAy = _tuikSonAy(tuikLine);
     final own = snapshot.changePct ?? 0;
     // TÜİK her zaman YILLIK değişim açıklıyor. Seninki 12 ay dolmadıysa
     // daha kısa bir pencere — manşetin üstündeki "SON 1 AY" bunu zaten
@@ -181,16 +184,47 @@ class _Body extends StatelessWidget {
             height: 116,
             series: [
               ChartSeries(
-                values: snapshot.levels,
+                values: _rebase(snapshot.levels),
                 color: c.ink,
                 width: 2.4,
-                endDot: true,
+                end: EndCap.dot,
                 fill: c.ink.withValues(alpha: c.areaFade),
               ),
+              if (tuikLine case final line?)
+                ChartSeries(
+                  values: line,
+                  color: c.ref,
+                  width: 1.6,
+                  dashed: true,
+                  // İçi boş halka: resmî çizgi kullanıcınınkinden erken
+                  // bitiyor ve işaretsiz kesilme çizim hatası gibi
+                  // okunuyordu.
+                  end: EndCap.ring,
+                ),
             ],
           ),
           const SizedBox(height: 6),
-          Printed(step: 3, child: _MonthAxis(count: snapshot.levels.length)),
+          Printed(step: 3, child: _MonthAxis(months: snapshot.months)),
+          // Kesikli çizgi neden erken bitiyor. Çizgiyi son bilinen değerden
+          // öteye uzatmak "o ay da böyleydi" demek olurdu; uzatmıyoruz ama
+          // sustuğumuzda da grafik eksik çizilmiş gibi duruyordu.
+          //
+          // Ay adı iki noktadan sonra, ek almadan yazılıyor: Türkçe'de
+          // "temmuzda / ağustosta / aralıkta" bulunma eki ünlü uyumuna ve
+          // ünsüz benzeşmesine göre değişiyor ve cümle içine gömülen bir ay
+          // adı bu ekleri doğru üretmeyi gerektirirdi.
+          if (tuikSonAy != null && tuikSonAy.isBefore(snapshot.months.last))
+            Printed(
+              step: 3,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  'Kesikli çizgi ${tuik!.publisher}\'in açıkladığı son ayda '
+                  'bitiyor: ${Fmt.monthLong(tuikSonAy)} ${tuikSonAy.year}.',
+                  style: T.body.copyWith(fontSize: 11, color: c.muted),
+                ),
+              ),
+            ),
           if (top.isNotEmpty) ...[
             const SizedBox(height: 30),
             Printed(
@@ -282,6 +316,70 @@ class _Body extends StatelessWidget {
     );
   }
 
+  /// İlk ayı 100 kabul eden seri.
+  ///
+  /// Tek seri için görüntüyü değiştirmiyor (doğrusal dönüşüm eğimi korur);
+  /// gerekçesi ikinci seri: TÜİK'in tabanı 2025=100, kullanıcınınki kendi ilk
+  /// ayı. Ham seviyeler yan yana konsa grafik iki farklı ölçeği tek eksene
+  /// bindirirdi. Ortak aya 100'lenince ikisi de aynı soruyu cevaplıyor:
+  /// "başladığın aydan bugüne ne kadar arttı."
+  List<double> _rebase(List<double> v) {
+    if (v.isEmpty) return v;
+    final base = v[_ortakBaslangic(v)];
+    if (base == 0) return v;
+    return [for (final x in v) x / base * 100];
+  }
+
+  /// Kullanıcının serisinde, TÜİK'in de seviyesi olan ilk ayın indeksi.
+  /// TÜİK yoksa 0 — o zaman tek çizgi var, taban da ilk ay.
+  int _ortakBaslangic(List<double> own) {
+    final t = snapshot.official.firstOrNull;
+    if (t == null || t.levels.isEmpty) return 0;
+    for (var i = 0; i < snapshot.months.length && i < own.length; i++) {
+      if (t.levels.containsKey(DataSource.monthKey(snapshot.months[i]))) {
+        return i;
+      }
+    }
+    return 0;
+  }
+
+  /// TÜİK serisi, kullanıcının aylarına hizalanmış ve aynı aya 100'lenmiş.
+  ///
+  /// Eksik ay null kalıyor: TÜİK genelde içinde bulunulan ayı henüz
+  /// açıklamamış olur ve çizgi orada biter. Komşusuna bağlamak "o ay da
+  /// böyleydi" demek olurdu.
+  ///
+  /// İki noktadan az kalıyorsa hiç çizilmiyor — tek nokta eğim göstermez.
+  List<double?>? _tuikLine(DataSource? t) {
+    if (t == null || t.levels.isEmpty || snapshot.months.isEmpty) return null;
+    final i0 = _ortakBaslangic(snapshot.levels);
+    final base = t.levels[DataSource.monthKey(snapshot.months[i0])];
+    if (base == null || base == 0) return null;
+
+    final out = <double?>[
+      for (final m in snapshot.months)
+        switch (t.levels[DataSource.monthKey(m)]) {
+          final double v => v / base * 100,
+          _ => null,
+        },
+    ];
+    return out.whereType<double>().length < 2 ? null : out;
+  }
+
+  /// Resmî serinin kullanıcının ekseni üzerindeki SON dolu ayı.
+  ///
+  /// Kullanıcının son ayından geriyse kesikli çizgi grafiğin ortasında
+  /// bitiyor demektir ve bunun ekranda bir karşılığı olmalı.
+  DateTime? _tuikSonAy(List<double?>? line) {
+    if (line == null) return null;
+    for (var i = line.length - 1; i >= 0; i--) {
+      if (line[i] != null && i < snapshot.months.length) {
+        return snapshot.months[i];
+      }
+    }
+    return null;
+  }
+
   /// "TÜİK'ten 3,6 puan altında" — kullanıcının asıl sorusunun cevabı.
   ///
   /// Yalnızca iki taraf da 12 aylık pencereye baktığında çağrılıyor.
@@ -294,21 +392,24 @@ class _Body extends StatelessWidget {
 
 /// Grafiğin altındaki ay ekseni. Beş etiket: ikisi uç, üçü arada.
 class _MonthAxis extends StatelessWidget {
-  const _MonthAxis({required this.count});
+  const _MonthAxis({required this.months});
 
-  final int count;
+  /// Serinin gerçek ayları. Eskiden yalnızca nokta sayısı geliyordu ve
+  /// etiketler "bugünden geriye say" ile tahmin ediliyordu — seri bu ayda
+  /// bitmiyorsa eksen sessizce kayıyordu.
+  final List<DateTime> months;
 
   @override
   Widget build(BuildContext context) {
+    final count = months.length;
     if (count < 2) return const SizedBox.shrink();
-    final now = DateTime.now();
     final picks = {0, count ~/ 4, count ~/ 2, count * 3 ~/ 4, count - 1};
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         for (final i in picks)
           Text(
-            Fmt.monthShort(DateTime(now.year, now.month - (count - 1 - i))),
+            Fmt.monthShort(months[i]),
             style: T.label.copyWith(fontSize: 8, color: context.c.faint),
           ),
       ],
@@ -501,31 +602,31 @@ class _SourcesCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        PaperCard(
-          child: Column(
-            children: [
-              if (showOwn)
-                SeriesRow(
-                  color: context.c.ink,
-                  name: 'Senin sepetin',
-                  value: Fmt.pct1(snapshot.changePct ?? 0),
-                ),
-              for (var i = 0; i < snapshot.official.length; i++) ...[
-                if (showOwn || i > 0) const Hairline(),
-                SeriesRow(
-                  color: snapshot.official[i].official
-                      ? context.c.ref
-                      : context.c.grey,
-                  name: snapshot.official[i].title,
-                  // Girilmemiş ay uydurulmuyor.
-                  value: snapshot.official[i].value == null
-                      ? '—'
-                      : Fmt.pct1(snapshot.official[i].value!),
-                ),
-              ],
-            ],
+        // Kutu yok — ayırma işini ince çizgi yapıyor. #59'da endeks ekranının
+        // dolu hâli sadeleşirken bu dal atlanmıştı: ilk açılışta, henüz hiç
+        // fiş yokken ekrandaki tek kutu buydu ve uygulamanın geri kalanıyla
+        // konuşmuyordu.
+        const Hairline(),
+        if (showOwn)
+          SeriesRow(
+            color: context.c.ink,
+            name: 'Senin sepetin',
+            value: Fmt.pct1(snapshot.changePct ?? 0),
           ),
-        ),
+        for (var i = 0; i < snapshot.official.length; i++) ...[
+          if (showOwn || i > 0) const Hairline(),
+          SeriesRow(
+            color: snapshot.official[i].official
+                ? context.c.ref
+                : context.c.grey,
+            name: snapshot.official[i].title,
+            // Girilmemiş ay uydurulmuyor.
+            value: snapshot.official[i].value == null
+                ? '—'
+                : Fmt.pct1(snapshot.official[i].value!),
+          ),
+        ],
+        const Hairline(),
         // Eksik seriyi adıyla söyleyip girişe götürüyor.
         if (missing.isNotEmpty)
           Padding(
