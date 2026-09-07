@@ -1,17 +1,28 @@
 #!/usr/bin/env bash
 #
-# App Preview kliplerini kaydeder ve goldie'nin çekim bildirimine yazar.
+# Mağaza varlıklarını üretir: beş ekran karesi ve beş App Preview klibi.
+# Sonuçları goldie'nin ham klasörüne ve çekim bildirimine yazar; ardından
+# `goldie frame` ve `goldie preview` bunlardan son çıktıyı üretiyor.
 #
 # NEDEN AYRI BİR BETİK. Durum çubuğunu asıl yöneten argent: flow-execute her
 # akıştan önce KOŞULSUZ kendi çubuğunu sabitliyor (`--time 9:37`, yalnızca
 # --wifiBars ve --cellularBars) ve akış bitince finally içinde
 # `simctl status_bar clear` çağırıyor. Kapatma bayrağı yok.
 #
-# İlk denemede video 09:37'de başlayıp 13:42'de bitiyordu ve sinyal gri
-# noktalara dönüyordu; sebebi buydu — goldie segmentin holdSeconds'ını KAYIT
-# İÇİNDE bekletiyor, yani argent'ın temizlemesi klibin son saniyelerine
-# düşüyordu. Çözüm zamanlama: klip akışın bittiği yerde bitiyor, bekleme
+# Bu iki davranış hem videoyu hem kareleri bozuyordu.
+#
+# VİDEO: klip akışın bitişini aşarsa argent'ın temizlemesi klibin son
+# saniyelerine düşüyor ve çubuk gerçek saate, sinyalsiz gri noktalara
+# dönüyordu. Çözüm zamanlama: klip akışın bittiği yerde bitiyor, bekleme
 # kendi segmentine alınıyor (bkz. store-preview-05-paylas).
+#
+# KARELER: goldie akıştan sonra kendi pin'ini atıp 400 ms sonra çekiyor.
+# Araya argent'ın `clear`'ı girdiği için wi-fi simgesi o 400 ms içinde
+# İÇERİ ANİMASYONUNDA oluyor ve karede bulanık gri bir blob çıkıyor —
+# beş karenin dördünde. Ölçüldü: oturmuş bir çubuğa aynı override'ı
+# uygulamak animasyonu tetiklemiyor, yani sorun goldie'nin 400 ms'i değil,
+# araya giren temizleme. Burada kare akıştan sonra ve pin oturduktan sonra
+# alınıyor.
 #
 # Buradaki pin argent'ınkini engellemiyor; argent yalnızca adını verdiği
 # alanları eziyor, dolayısıyla --wifiMode/--cellularMode/--dataNetwork
@@ -21,7 +32,7 @@
 # argent'ın kendi kaydediciyle alınıyor; değişen tek şey zamanlama. Sonra
 # `goldie preview` bu kliplerden videoyu üretiyor.
 #
-# Kullanım:  tool/onizleme-kaydet.sh
+# Kullanım:  tool/magaza-cek.sh
 # Önkoşul :  yerel sunucu ayakta, uygulama SEPET_DEMO_EMAIL=vitrin@sepet.app
 #            ile derlenip simülatöre kurulmuş olmalı (bkz. goldie.config.ts).
 set -euo pipefail
@@ -59,8 +70,44 @@ SEGMENTLER=(
   "paylas:store-preview-05-paylas:0"
 )
 
+# id:akış — goldie.config.ts'teki screenshot sahneleriyle aynı sıra
+KARELER=(
+  "endeks:store-01-endeks"
+  "fis:store-02-fis"
+  "kirilim:store-03-kirilim"
+  "urun:store-04-urun"
+  "kart:store-05-kart"
+)
+
 mkdir -p "$HAM"
 cd "$KOK"
+
+echo "ekran kareleri"
+for kayit in "${KARELER[@]}"; do
+  id="${kayit%%:*}"; akis="${kayit##*:}"
+  echo "  kare $id"
+  # Akış kendi başına uygulamayı sıfırdan kuruyor (launch adımı var).
+  # Çıktı yutulmuyor: argent hata gerekçesini stdout'a yazıyor ve /dev/null'a
+  # gönderilince betik sessizce ölüyordu.
+  if ! cikti="$(argent flow run "$akis" --device "$UDID" 2>&1)"; then
+    echo "$cikti" >&2
+    exit 1
+  fi
+  # Kare akıştan SONRA alınıyor: argent akış bitiminde çubuğu temizliyor,
+  # o yüzden pin buraya ve oturma payı da buraya.
+  pinle
+  sleep "$OTURMA"
+  xcrun simctl io "$UDID" screenshot "$HAM/$id.png" >/dev/null
+  # App Store 6.9" karesi tam 1320x2868 olmak zorunda; burada yakalanmazsa
+  # `goldie verify`ye kadar fark edilmiyor.
+  en="$(sips -g pixelWidth "$HAM/$id.png" | awk '/pixelWidth/ {print $2}')"
+  boy="$(sips -g pixelHeight "$HAM/$id.png" | awk '/pixelHeight/ {print $2}')"
+  [ "${en}x${boy}" = "1320x2868" ] || {
+    echo "    BEKLENMEYEN BOYUT: ${en}x${boy}"
+    exit 1
+  }
+  echo "    ${en}x${boy}"
+done
 
 echo "uygulama yeniden başlatılıyor"
 argent run restart-app --udid "$UDID" --bundleId "$BUNDLE" >/dev/null
@@ -77,7 +124,11 @@ for kayit in "${SEGMENTLER[@]}"; do
 
   argent run screen-recording-start --udid "$UDID" \
     --timeLimitSeconds 120 --trimStatic false --showTouches false >/dev/null
-  argent flow run "$akis" --device "$UDID" >/dev/null
+  if ! cikti="$(argent flow run "$akis" --device "$UDID" 2>&1)"; then
+    echo "$cikti" >&2
+    argent run screen-recording-stop --udid "$UDID" >/dev/null 2>&1 || true
+    exit 1
+  fi
   [ "$bekle" != "0" ] && sleep "$bekle"
   cikti="$(argent run screen-recording-stop --udid "$UDID" \
     | python3 -c 'import sys,json; print(json.load(sys.stdin)["video"])')"
@@ -115,4 +166,4 @@ toplam = sum(c["durationSeconds"] for c in m["preview"]["clips"])
 print(f"  toplam {toplam:.1f} sn  (Apple: 15-30)")
 PY
 
-echo "bitti — şimdi: GOLDIE_CONFIG=goldie/goldie.config.ts npx -y goldie@0 preview"
+echo "bitti — şimdi: goldie frame && goldie preview"
