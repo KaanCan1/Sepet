@@ -1491,6 +1491,31 @@ void main() {
     });
 
     // Listedeki bir market yeniden açılmasın: aynı ad iki kayıt üretmemeli.
+    // Şapkasız yazılan ad hem bulunmalı hem "yeni" sayılmamalı.
+    //
+    // "Şok" için düz toLowerCase 'şok' veriyor, kullanıcının yazdığı "sok"
+    // ise 'sok'; eşleşmiyorlardı. Sonuç: liste boşalıyor ve üstüne
+    // "sok olarak ekle" teklifi çıkıyordu. Oysa SUNUCU zaten mükerrer
+    // açmıyor — chain_code normalize_raw_text'ten geliyor ve o da şapkayı
+    // atıyor, yani "sok" gönderilse mevcut Şok dönerdi. Ekran var olan bir
+    // marketi yokmuş gibi gösteriyordu.
+    testWidgets('şapkasız yazılan market bulunuyor, yeniden eklenmiyor', (
+      tester,
+    ) async {
+      final api = FakeApi();
+      await tester.pumpWidget(ekran(api));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Seç'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'sok');
+      await tester.pumpAndSettle();
+
+      // Listede duruyor (arama kutusunda "sok" yazıyor, satırda "Şok").
+      expect(find.text('Şok'), findsOneWidget);
+      expect(find.textContaining('olarak ekle'), findsNothing);
+    });
+
     testWidgets('listede olan ad için ekleme satırı çıkmıyor', (tester) async {
       final api = FakeApi();
       await tester.pumpWidget(ekran(api));

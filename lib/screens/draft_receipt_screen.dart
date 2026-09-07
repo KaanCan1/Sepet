@@ -7,6 +7,7 @@ import '../data/api.dart';
 import '../data/fmt.dart';
 import '../data/models.dart';
 import '../data/receipt_parser.dart';
+import '../data/text_fold.dart';
 import '../theme/tokens.dart';
 import '../widgets/atoms.dart';
 import '../widgets/glass.dart';
@@ -415,21 +416,31 @@ class _MerchantSheetState extends State<_MerchantSheet> {
   String get _typed => _query.text.trim().replaceAll(RegExp(r'\s+'), ' ');
 
   List<Merchant> get _visible {
-    final q = _typed.toLowerCase();
+    // Düz toLowerCase Türkçe bilmiyor: 'I' -> 'i' veriyor (oysa 'ı' olmalı)
+    // ve 'İ' -> 'i' + birleştirici nokta veriyor. "ISTANBUL" yazan
+    // "İstanbul Market"i bulamıyordu. searchFold şapkaları da eşitliyor,
+    // yani "sok" da "Şok"u buluyor.
+    final q = searchFold(_typed);
     if (q.isEmpty) return widget.merchants;
     return widget.merchants
-        .where((m) => m.name.toLowerCase().contains(q))
+        .where((m) => searchFold(m.name).contains(q))
         .toList();
   }
 
   /// Yazılan ad zaten listedeyse ekleme satırı çıkmıyor: aynı market iki
-  /// kez açılmasın diye. Sunucu da aynı kontrolü yapıyor, bu yalnızca
-  /// kullanıcıya gereksiz bir seçenek göstermemek için.
+  /// kez açılmasın diye.
+  ///
+  /// Karşılaştırma searchFold ile, çünkü SUNUCUNUN kuralı da öyle:
+  /// chain_code `normalize_raw_text`ten üretiliyor ve o da hem büyütüyor
+  /// hem şapkaları atıyor (ıİğĞüÜşŞöÖçÇ -> IIGGUUSSOOCC). Yani sunucu için
+  /// "Şok" ile "Sok" aynı market ve ikincisi gönderilince mevcut olan
+  /// dönüyor. Düz toLowerCase burada hem Türkçe'de yanlıştı hem sunucudan
+  /// katıydı: var olan bir marketi "yeni ekle" diye sunuyordu.
+  ///
+  /// Yaklaşık bir kopya; son söz sunucunun ON CONFLICT'i.
   bool get _canAdd =>
       _typed.length >= 2 &&
-      !widget.merchants.any(
-        (m) => m.name.toLowerCase() == _typed.toLowerCase(),
-      );
+      !widget.merchants.any((m) => searchFold(m.name) == searchFold(_typed));
 
   Future<void> _add() async {
     setState(() {

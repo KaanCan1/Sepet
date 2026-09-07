@@ -129,6 +129,9 @@ class FakeApi extends Api {
     'GET /merchants': [
       {'id': 'm-a101', 'name': 'A101', 'chainCode': 'A101'},
       {'id': 'm-bim', 'name': 'BİM', 'chainCode': 'BIM'},
+      // Şapkalı ad: aramanın "sok" yazınca da bulması gerekiyor ve
+      // sunucunun mükerrer kuralı da (chain_code SOK) şapkayı atıyor.
+      {'id': 'm-sok', 'name': 'Şok', 'chainCode': 'SOK'},
     ],
     'POST /merchants': {
       'id': 'm-onur',

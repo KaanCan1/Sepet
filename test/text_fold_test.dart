@@ -1,25 +1,42 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sepet/data/text_fold.dart';
 
-// Arama kutusunda karşılaştırma bu katlamadan geçiyor. İki ayrı tuzak var
-// ve ikisi de sessizce "sonuç yok" veriyordu.
+// Arama kutusunda karşılaştırma bu katlamadan geçiyor. Her testin yanında
+// düz toLowerCase'in ne yaptığı da yazıyor: katlamanın gerçekten neyi
+// değiştirdiği testten okunsun, iddiadan değil.
 void main() {
   group('searchFold', () {
-    // Dart'ın toLowerCase()'i Türkçe bilmiyor: 'I' -> 'i' veriyor (oysa 'ı'
-    // olmalı) ve 'İ' -> 'i' + ayrı bir birleştirici nokta veriyor.
-    test('Türkçe büyük harfler doğru küçülüyor', () {
-      expect(searchFold('İstanbul'), 'istanbul');
-      expect(searchFold('ISTANBUL'), 'istanbul');
-      // Noktalı İ'nin arkasında birleştirici nokta kalmıyor.
-      expect(searchFold('İ').length, 1);
+    // Dart 'I' -> 'i' veriyor, oysa Türkçe'de 'ı' olmalı.
+    test("'I' harfi Türkçe küçülüyor", () {
+      expect(searchFold('IŞIK'), searchFold('ışık'));
+      // Düz toLowerCase bunu yapamıyor — testin var olma sebebi bu.
+      expect('IŞIK'.toLowerCase() == 'ışık'.toLowerCase(), isFalse);
     });
 
-    // Kimse arama kutusuna "yoğurt" yazmak için klavyesini değiştirmiyor.
+    // 'İ' için Dart zaten doğru davranıyor; burası bir gerileme testi.
+    test("'İ' zaten sorunsuzdu, öyle kalıyor", () {
+      expect(searchFold('İstanbul'), 'istanbul');
+      expect(searchFold('ISTANBUL'), 'istanbul');
+      expect('İstanbul'.toLowerCase() == 'ISTANBUL'.toLowerCase(), isTrue);
+    });
+
+    // Katlamanın ASIL işi bu: kimse arama kutusuna "yoğurt" yazmak için
+    // klavyesini değiştirmiyor.
     test('şapka ve noktalar aranırken fark etmiyor', () {
       expect(searchFold('Süt, tam yağlı'), 'sut, tam yagli');
       expect(searchFold('Çaykur'), 'caykur');
       expect(searchFold('YOĞURT'), 'yogurt');
       expect(searchFold('Kâğıt havlu'), 'kagit havlu');
+      // Hiçbiri düz toLowerCase ile eşleşmiyordu.
+      for (final (a, b) in [
+        ('Yoğurt', 'yogurt'),
+        ('Süt', 'sut'),
+        ('Çay', 'cay'),
+        ('Kâğıt', 'kagit'),
+      ]) {
+        expect(searchFold(a), searchFold(b), reason: '$a ~ $b');
+        expect(a.toLowerCase() == b.toLowerCase(), isFalse, reason: '$a ~ $b');
+      }
     });
 
     test('katlanmış metin kendi kendine eşit kalıyor', () {
