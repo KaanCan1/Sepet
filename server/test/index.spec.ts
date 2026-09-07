@@ -227,16 +227,40 @@ describe('Laspeyres endeksi', () => {
       unit: 'kilogram',
       sizeValue: 1,
     });
-    // Tek gözlem, 8 ay önce. Bayatlık sınırı 6 ay.
+    await addProduct(s, 'ekmek', {
+      name: 'Ekmek',
+      sizeLabel: '500 g',
+      unit: 'kilogram',
+      sizeValue: 0.5,
+    });
+    // Çay tek gözlem, 8 ay önce. Bayatlık sınırı 6 ay.
     await addReceipt(s, -8, [{ product: 'cay', amount: 200 }]);
+    // Ekmek bu ay da alınıyor: ızgara kullanıcının SON GÖZLEM ayına kadar
+    // uzuyor, yani çayın taşınacağı bir yer var. Kural tam olarak bu
+    // durumda anlam taşıyor — alışverişe devam ediyorsun ama çayı bıraktın.
+    await addReceipt(s, -8, [{ product: 'ekmek', amount: 30 }]);
+    await addReceipt(s, 0, [{ product: 'ekmek', amount: 40 }]);
     await refresh(s);
 
-    const months = await query<{ month: Date }>(
-      `SELECT month FROM monthly_product_prices WHERE user_id = $1 ORDER BY month`,
-      [s.userId],
+    const cay = await query<{ month: string }>(
+      `SELECT month FROM monthly_product_prices
+        WHERE user_id = $1 AND canonical_product_id = $2
+        ORDER BY month`,
+      [s.userId, s.products.cay],
     );
     // 8 ay önceki gözlemden itibaren 6 ay taşınır, sonrası üretilmez.
-    expect(months).toHaveLength(7); // gözlem ayı + 6 taşıma
+    expect(cay).toHaveLength(7); // gözlem ayı + 6 taşıma
+
+    // Çayın son satırı, gözleminden tam 6 ay sonrası.
+    expect(cay.at(-1)!.month).toBe(s.month(-2));
+
+    // Izgaranın ucu bu ay: ekmek bu ay gözlemli, yani seri oraya kadar
+    // uzuyor ve çayın düşmesi "veri bitti" değil, gerçekten bayatlama.
+    const son = await query<{ month: string }>(
+      `SELECT max(month) AS month FROM monthly_product_prices WHERE user_id = $1`,
+      [s.userId],
+    );
+    expect(son[0]!.month).toBe(s.month(0));
     await cleanup(s);
   });
 
