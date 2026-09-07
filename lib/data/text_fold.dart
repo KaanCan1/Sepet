@@ -1,16 +1,22 @@
 /// Aramada karşılaştırılacak metni sadeleştirir.
 ///
-/// İKİ AYRI SORUN ÇÖZÜLÜYOR.
+/// İKİ AYRI SORUN ÇÖZÜLÜYOR. İkisi de ölçülerek doğrulandı; Dart'ın
+/// `toLowerCase()`'iyle karşılaştırması aşağıda.
 ///
-/// Biri Dart'ın `toLowerCase()`'inin Türkçe bilmemesi: 'I' → 'i' veriyor
-/// (oysa 'ı' olmalı) ve 'İ' → 'i' + ayrı bir birleştirici nokta veriyor,
-/// yani dizginin uzunluğu bile değişiyor. Kullanıcı "ISTANBUL" yazınca
-/// "İstanbul" bulunamıyordu.
+/// ASIL OLAN ŞAPKALAR. Kimse arama kutusuna "yoğurt" yazmak için
+/// klavyesini değiştirmiyor. Düz `toLowerCase` ile "yogurt" Yoğurt'u,
+/// "sut" Süt'ü, "cay" Çay'ı, "kagit" Kâğıt'ı bulmuyor.
 ///
-/// Diğeri şapka ve noktalar: kimse arama kutusuna "yoğurt" yazmak için
-/// klavyesini değiştirmiyor. "yogurt" da "çay" yerine "cay" da bulmalı.
-/// Bu yüzden fark gözetmeyen bir tabana indiriliyor — sonuç ekranda
-/// gösterilmiyor, yalnızca karşılaştırmada kullanılıyor.
+/// İKİNCİSİ 'I' HARFİ. Dart 'I' → 'i' veriyor, oysa Türkçe'de 'ı' olmalı.
+/// Bu yüzden "IŞIK" ile "ışık" `toLowerCase` altında eşleşmiyor.
+///
+/// 'İ' İÇİN SORUN YOK: Dart 'İ' → tek karakterli 'i' veriyor, yani
+/// "ISTANBUL" ile "İstanbul" düz `toLowerCase` ile de eşleşiyor. (İlk
+/// yazışta buraya "birleştirici nokta kalıyor" diye yanlış bir gerekçe
+/// yazılmıştı; ölçünce öyle olmadığı çıktı.)
+///
+/// Katlama yalnızca karşılaştırmada; ekranda gösterilen metin olduğu gibi
+/// kalıyor.
 library;
 
 /// Türkçe büyük harflerin DOĞRU küçük karşılıkları. Dart bunları bilmiyor.
