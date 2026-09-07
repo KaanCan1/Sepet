@@ -75,9 +75,14 @@ void main() {
       await tester.pumpWidget(bootstrap(token: 'test-token'));
       await tester.pumpAndSettle();
 
-      // BigNumber zengin metin kullanıyor; find.text görmüyor.
+      // BigNumber sayarak geliyor, biçimlendirmeyi kendi yapıyor. Bekleyiş
+      // ekranda YAZAN sayı: sayma bittiğinde tam hedefe oturmalı, 20,7'de
+      // ya da 20,9'da değil.
       final big = tester.widget<BigNumber>(find.byType(BigNumber));
-      expect(big.value, '20,8');
+      expect(big.value, closeTo(20.8, 0.001));
+      // Zengin metin: yüzde işareti WidgetSpan, düz metinde yer tutucu
+      // karakter olarak duruyor — bu yüzden tam eşitlik değil, içerik.
+      expect(find.textContaining('20,8', findRichText: true), findsOneWidget);
       // 12 ay dolmadıysa etiket gerçek pencereyi söylüyor.
       expect(find.text('SON 2 AY'), findsOneWidget);
       expect(find.text('SON 12 AY'), findsNothing);
