@@ -128,6 +128,19 @@ class _FloatingTabBar extends StatefulWidget {
   State<_FloatingTabBar> createState() => _FloatingTabBarState();
 }
 
+/// Hapın kapsül kenarına bıraktığı dikey pay.
+const _hapPayi = 5.0;
+
+/// Hapın yarıçapı: dıştaki kapsülün yarıçapı eksi içeri payı.
+///
+/// İki eğri böyle EŞ MERKEZLİ oluyor — hap kapsülün içinde onunla aynı
+/// dili konuşuyor. Sabit 16 idi ve kapsül 29'ken köşeli bir dikdörtgen
+/// gibi duruyordu, iki ayrı şekil ailesi yan yanaydı.
+///
+/// 58/2 - 5 = 24, yani hap tam bir stadyum: kendi yüksekliğinin (58 - 2x5)
+/// yarısı. Yuvarlaklık tesadüf değil, geometrinin sonucu.
+const _hapYaricapi = kTabCapsuleHeight / 2 - _hapPayi;
+
 class _FloatingTabBarState extends State<_FloatingTabBar>
     with SingleTickerProviderStateMixin {
   /// Hapın yerleşmesi. Sürüklerken kullanılmıyor — parmak varken hap
@@ -243,13 +256,15 @@ class _FloatingTabBarState extends State<_FloatingTabBar>
                               children: [
                                 Positioned(
                                   left: konum * genislik + 2,
-                                  top: 5,
-                                  bottom: 5,
+                                  top: _hapPayi,
+                                  bottom: _hapPayi,
                                   width: genislik - 4,
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
                                       color: c.ink.withValues(alpha: .07),
-                                      borderRadius: BorderRadius.circular(16),
+                                      borderRadius: BorderRadius.circular(
+                                        _hapYaricapi,
+                                      ),
                                     ),
                                   ),
                                 ),
