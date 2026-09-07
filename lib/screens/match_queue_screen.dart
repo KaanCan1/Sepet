@@ -13,9 +13,10 @@ import 'receipt_detail_screen.dart';
 
 /// Eşleşme kuyruğu: onay bekleyen satırı olan fişler.
 ///
-/// Kamerayla yakalama henüz yok — cihaz üstü OCR sıradaki adım. Bu ekran o
-/// zamana kadar akışın ikinci yarısını çalıştırıyor: okunmuş ama emin
-/// olunamamış satırların çözülmesi.
+/// Fiş okuma otomatik, eşleştirme değil. Normalizasyon bir satırın hangi
+/// kanonik ürüne gittiğinden emin olamadığında soruyu buraya bırakıyor;
+/// böylece her satır için model çağırmak gerekmiyor ve yanlış bir eşleşme
+/// endeksi sessizce bozmuyor.
 class MatchQueueScreen extends StatelessWidget {
   const MatchQueueScreen({super.key});
 
@@ -38,8 +39,8 @@ class MatchQueueScreen extends StatelessWidget {
             empty: const EmptyState(
               title: 'Bekleyen eşleşme yok',
               body:
-                  'Bütün fiş satırları bir ürüne bağlandı. Kamerayla fiş '
-                  'okuma sıradaki adımda geliyor.',
+                  'Bütün fiş satırları bir ürüne bağlandı. Yeni bir fişte '
+                  'tanınmayan satır çıkarsa burada birikir.',
             ),
             builder: (context, all) {
               final receipts = all.where((r) => r.pendingCount > 0).toList();

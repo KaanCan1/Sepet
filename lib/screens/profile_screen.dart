@@ -118,8 +118,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 8),
                   ActionRow(
-                    label: 'Resmî verileri gir',
-                    hint: 'Elle',
+                    // "Elle" idi ve artık yanlış: seri TCMB EVDS'ten
+                    // çekiliyor, elle giriş yalnızca ulaşılamadığında ya da
+                    // eksik ay olduğunda devreye giriyor.
+                    label: 'Resmî veriler',
+                    hint: 'EVDS',
                     onTap: () =>
                         Navigator.of(context).push(OfficialScreen.route()),
                   ),
