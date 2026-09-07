@@ -49,8 +49,9 @@ class OfficialScreen extends StatelessWidget {
                     onBack: () => Navigator.of(context).pop(),
                   ),
                   Text(
-                    'TÜİK sayısını henüz otomatik çekmiyoruz. Uydurmak '
-                    'yerine boş bırakıyoruz — buraya sen giriyorsun.',
+                    'TÜİK TÜFE\'si TCMB EVDS\'ten çekiliyor. Ulaşılamazsa '
+                    'ya da bir ay orada yoksa elle girebilirsin — uydurmak '
+                    'yerine boş bırakıyoruz.',
                     style: TextStyle(
                       fontSize: 12,
                       height: 1.5,
