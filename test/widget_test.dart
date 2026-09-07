@@ -443,6 +443,39 @@ void main() {
     });
   });
 
+  // Sekme çubuğunda seçili zemin tek bir hap ve kapsül boyunca kayıyor.
+  // Sebebi hareketin kendisi: sekmeye basıp yana sürüklenince seçim parmakla
+  // birlikte akıyor. Ayrı ayrı kutular olsaydı geçiş yapılamazdı.
+  group('Sekme sürüklemesi', () {
+    testWidgets('yana sürüklemek sekme değiştiriyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sepetin'), findsOneWidget);
+
+      // Endeks'ten Ürünler'e: kapsül dört eşit parça, iki sekme genişliği
+      // kadar sağa.
+      final kapsul = tester.getRect(find.byKey(const Key('tab-0')));
+      await tester.dragFrom(kapsul.center, Offset(kapsul.width * 2, 0));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ürünler'), findsWidgets);
+      expect(find.text('Sepetin'), findsNothing);
+    });
+
+    testWidgets('dokunma hâlâ çalışıyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      // Sürükleme jesti eklenirken dokunma tanıyıcısı sekmelerden kapsüle
+      // taşındı; konum artık dokunulan noktadan hesaplanıyor.
+      await tester.tap(find.byKey(const Key('tab-3')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Profil'), findsWidgets);
+    });
+  });
+
   group('Fiş detayı', () {
     testWidgets('eşleşmemiş satır işaretli, eşleşen değil', (tester) async {
       await tester.pumpWidget(bootstrap(token: 'test-token'));
