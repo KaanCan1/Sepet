@@ -302,4 +302,19 @@ class Repository {
   }) => _api.post('/receipts/$receiptId/lines/$lineId/match', {
     'canonicalProductId': productId,
   });
+
+  /// Kaydedilmiş bir satırın tutarını ve miktarını düzeltir.
+  ///
+  /// Ham metin gönderilmiyor: fişte ne yazıyorsa o. Değişebilen, o metnin
+  /// hangi tutara ve kaç birime karşılık geldiği — OCR ikisini de yanlış
+  /// okuyabiliyor ve yanlış satır endeksi sessizce bozuyor.
+  Future<void> updateLine({
+    required String receiptId,
+    required String lineId,
+    required double amount,
+    required double quantity,
+  }) => _api.patch('/receipts/$receiptId/lines/$lineId', {
+    'lineAmount': amount,
+    'quantity': quantity,
+  });
 }

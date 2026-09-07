@@ -487,6 +487,64 @@ void main() {
       expect(find.textContaining('18 AĞU 2026'), findsOneWidget);
     });
 
+    // OCR tutarı yanlış okuyabiliyor ve otomatik eşleşme yanlış ürüne
+    // bağlayabiliyor. Taslakta düzeltiliyordu ama fiş kaydedilince o imkân
+    // kayboluyordu: dokunma yalnızca eşleşmemiş satırlarda açıktı.
+    testWidgets('çözülmüş satır düzeltilebiliyor', (tester) async {
+      final api = FakeApi();
+      await tester.pumpWidget(bootstrap(token: 'test-token', api: api));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-1')));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -260));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A101').first);
+      await tester.pumpAndSettle();
+
+      // Eşleşmiş satır: eskiden dokunulamıyordu.
+      await tester.tap(find.text('Süt, tam yağlı 1 litre'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('FİŞTEKİ SATIR'), findsOneWidget);
+      // Ham metin salt okunur; fişte ne yazıyorsa o.
+      expect(find.text('SUT TAM YAGLI 1L'), findsWidgets);
+
+      // Virgülü kaymış tutar düzeltiliyor.
+      await tester.enterText(find.byType(TextField).first, '1.167,00');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Kaydet'));
+      await tester.pumpAndSettle();
+
+      expect(api.calls, contains('PATCH /receipts/r1/lines/l1'));
+    });
+
+    testWidgets('düzeltme sayfasından ürün değiştirilebiliyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('tab-1')));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -260));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A101').first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Süt, tam yağlı 1 litre'));
+      await tester.pumpAndSettle();
+
+      // "DEĞİŞTİR" eşleştirme sayfasını açıyor: yanlış bağlanmış bir ürün
+      // de tutar kadar bozucu. "ÖNERİLENLER" yalnızca o sayfada var —
+      // "FİŞTEKİ SATIR" iki sayfada da geçtiği için ayırt etmiyor.
+      await tester.tap(find.text('DEĞİŞTİR'));
+      await tester.pumpAndSettle();
+
+      // Bu satırda marka ve grup belli, belirsiz olan boy — eşleştirme
+      // sayfası "HANGİ BOY?" kipinde açılıyor. "FİŞTEKİ SATIR" iki sayfada
+      // da geçtiği için ayırt etmiyor.
+      expect(find.text('HANGİ BOY?'), findsOneWidget);
+    });
+
     testWidgets('eşleşmiş satırda birim fiyat yazıyor', (tester) async {
       await tester.pumpWidget(bootstrap(token: 'test-token'));
       await tester.pumpAndSettle();
