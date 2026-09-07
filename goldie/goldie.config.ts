@@ -147,7 +147,7 @@ const config: GoldieConfig = {
     // kayıt akışın bitişini AŞARSA temizleme klibin içine düşüyor ve çubuk
     // gerçek saate, sinyalsiz gri noktalara dönüyor. holdSeconds tam olarak
     // bunu yapıyordu. Bekleme artık kendi segmentinde, kendi akışının içinde
-    // — bkz. tool/onizleme-kaydet.sh.
+    // — bkz. tool/magaza-cek.sh.
     {
       kind: "preview",
       id: "onizleme",

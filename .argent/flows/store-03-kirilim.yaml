@@ -13,13 +13,16 @@ steps:
   - await:
       idle: true
   - echo: >-
-      "EN ÇOK ARTAN" başlığının sağındaki "Tümü →" (0.908, 0.4785). Bu oran
-      0.576'ydı: endeks ekranının tepesindeki kırmızı "N kalem endekse
-      girmiyor" şeridi vitrin hesabıyla birlikte kalkınca altındaki her şey
-      yukarı kaydı ve eski oran "Selpak Kağıt havlu" satırına düşüp kırılım
-      yerine ürün ekranı yakalıyordu. Endeks ekranındaki her oran o şeridin
-      varlığına bağlı — hesap değişirse hepsi yeniden ölçülmeli.
-  - tap: { x: 0.908, y: 0.4785 }
+      "EN ÇOK ARTAN" başlığının sağındaki "Tümü →" (0.908, 0.5235).
+
+      Bu oran üçüncü kez değişiyor ve sebebi hep aynı: manşetin altına bir
+      şey eklenip çıkarıldığında altındaki HER ŞEY kayıyor. 0.576 idi,
+      kırmızı kapsam şeridi vitrin hesabıyla kalkınca 0.4785'e indi, sonra
+      iki satır eklenince 0.5235'e çıktı — "▲ N PUAN BU AY" (ölçülmemiş ay
+      düşünce görünür oldu) ve TÜİK çizgisinin nerede bittiğini söyleyen
+      not. Endeks ekranına dokunan her oranı, ekranın üst yarısı her
+      değiştiğinde "argent run describe" ile yeniden ölç.
+  - tap: { x: 0.908, y: 0.5235 }
   - wait: 2500
   - await:
       idle: true
