@@ -476,6 +476,92 @@ void main() {
     });
   });
 
+  // Vitrin hesabında 40 ürün var, gerçek kullanımda daha çok olacak. Liste
+  // birim fiyat değişimine göre sıralı ve süzme yoktu — belirli bir ürünü
+  // bulmanın tek yolu kaydırmaktı.
+  group('Ürün arama', () {
+    /// Eşiği aşacak kadar ürün üreten sahte yol.
+    Map<String, Object?> cokUrun() => {
+      ...FakeApi.defaultRoutes,
+      'GET /products': [
+        for (var i = 0; i < 14; i++)
+          {
+            'id': 'p$i',
+            'name': switch (i) {
+              0 => 'Sütaş Yoğurt',
+              1 => 'Pınar Yoğurt',
+              2 => 'Kâğıt havlu',
+              _ => 'Ürün $i',
+            },
+            'sizeLabel': '1 kg',
+            'observations': 4,
+            'merchantCount': 2,
+            'monthSpan': 6,
+            'changePct': 10.0,
+            'history': const [],
+          },
+      ],
+    };
+
+    Future<void> urunlerSekmesi(WidgetTester tester) async {
+      await tester.tap(find.byKey(const Key('tab-2')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('şapkasız ve büyük harfle aranan ürün bulunuyor', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        bootstrap(
+          token: 'test-token',
+          api: FakeApi(routes: cokUrun()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await urunlerSekmesi(tester);
+
+      expect(find.text('14 ÜRÜN'), findsOneWidget);
+
+      // Kimse arama kutusuna "yoğurt" yazmak için klavyesini değiştirmiyor.
+      await tester.enterText(find.byType(TextField).first, 'YOGURT');
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Sütaş Yoğurt'), findsOneWidget);
+      expect(find.textContaining('Pınar Yoğurt'), findsOneWidget);
+      expect(find.textContaining('Ürün 5'), findsNothing);
+      // Süzerken kaç ürün olduğu değil, kaçının kaldığı yazıyor.
+      expect(find.text('2/14'), findsOneWidget);
+    });
+
+    testWidgets('eşleşme yoksa sebebi yazıyor', (tester) async {
+      await tester.pumpWidget(
+        bootstrap(
+          token: 'test-token',
+          api: FakeApi(routes: cokUrun()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await urunlerSekmesi(tester);
+
+      await tester.enterText(find.byType(TextField).first, 'zzzz');
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('uyan ürün yok'), findsOneWidget);
+      expect(find.text('0/14'), findsOneWidget);
+    });
+
+    testWidgets('kısa listede arama kutusu çıkmıyor', (tester) async {
+      // Tek ürünün üstünde bir arama kutusu, aramayı kolaylaştırmak yerine
+      // ekranı meşgul ediyor.
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+      await urunlerSekmesi(tester);
+
+      expect(find.text('1 ÜRÜN'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+    });
+  });
+
   group('Fiş detayı', () {
     testWidgets('eşleşmemiş satır işaretli, eşleşen değil', (tester) async {
       await tester.pumpWidget(bootstrap(token: 'test-token'));
