@@ -198,11 +198,16 @@ describe('API', () => {
     const res = await request(app).get('/index').set(auth()).expect(200);
     // Altın senaryodaki ilk halka: %16.
     expect(res.body.headline.changePct).toBeCloseTo(16, 5);
-    // Bu ay alışveriş yok; fiyatlar taşınıyor ve seri bu aya kadar uzuyor.
-    // Taşınan ayın halkası 1,0 olduğu için seviye 116'da kalıyor.
-    expect(res.body.headline.windowMonths).toBe(2);
-    expect(res.body.series).toHaveLength(3);
-    expect(res.body.series.at(-1).momPct).toBeCloseTo(0, 5);
+    // Bu ay alışveriş yok, o yüzden seri bu aya UZAMIYOR: hiç gözlem
+    // olmayan ay ölçülmemiş aydır. Eskiden uzuyordu ve halkası 1,0 olan
+    // uydurma bir adım ekliyordu — grafiğin sonunda düz bir parça, manşette
+    // bir fazla ay. Bir fazla ay masum değil: windowMonths 12'ye ulaşınca
+    // TÜİK'le fark yazılıyor ve 11 aylık bir değişim yıllık bir oranla
+    // kıyaslanabiliyordu.
+    expect(res.body.headline.windowMonths).toBe(1);
+    expect(res.body.series).toHaveLength(2);
+    // Son nokta gerçekten ölçülmüş ayın kendisi.
+    expect(res.body.series.at(-1).momPct).toBeCloseTo(16, 5);
     // Resmî seriler katalogdan geliyor.
     expect(res.body.official.map((o: { code: string }) => o.code)).toContain(
       'TUIK_TUFE',
