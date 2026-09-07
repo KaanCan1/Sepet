@@ -267,6 +267,84 @@ describe('API', () => {
     expect(secondDetail.body.lines[0].canonical).toContain('Zeytinyağı');
   });
 
+  // OCR tutarı yanlış okuyabiliyor. Taslakta düzeltilebiliyordu ama
+  // kaydedildikten sonra tek çare fişi silmekti; yanlış bir satır endeksi
+  // sessizce bozuyor.
+  //
+  // Süt yerine çay: süt serisini başka bir test birebir sabitliyor (40 -> 50,
+  // iki nokta) ve buraya eklenen her gözlem onu kaydırıyor. Çaykur 1 kg'ın
+  // boyu tam 1, yani birim fiyat = tutar / miktar.
+  it('kaydedilmiş satırın tutarı düzeltilebiliyor', async () => {
+    const cayId = await canonicalId('Çay, siyah', 'Çaykur', '1 kg');
+    const ham = `CAY TEST ${Date.now()}`;
+    const created = await request(app)
+      .post('/receipts')
+      .set(auth())
+      .send({
+        merchantId,
+        purchasedAt: monthsAgo(0),
+        lines: [{ raw: ham, amount: 1167, quantity: 3 }],
+      })
+      .expect(201);
+
+    const detail = await request(app)
+      .get(`/receipts/${created.body.id}`)
+      .set(auth())
+      .expect(200);
+    const satir = detail.body.lines[0];
+
+    // Ürün açıkça bağlanıyor: gözlemin varlığı eşleştiricinin tahminine
+    // bırakılmıyor.
+    await request(app)
+      .post(`/receipts/${created.body.id}/lines/${satir.id}/match`)
+      .set(auth())
+      .send({ canonicalProductId: cayId })
+      .expect(200);
+
+    // Virgül kaymış: 1167 değil 116,70.
+    await request(app)
+      .patch(`/receipts/${created.body.id}/lines/${satir.id}`)
+      .set(auth())
+      .send({ lineAmount: 116.7, quantity: 3 })
+      .expect(200);
+
+    const sonra = await request(app)
+      .get(`/receipts/${created.body.id}`)
+      .set(auth())
+      .expect(200);
+    expect(sonra.body.lines[0].amount).toBeCloseTo(116.7, 2);
+
+    // Fiyat gözlemi de düzelmiş olmalı: 116,70 / 3 = 38,90.
+    const [gozlem] = await query<{ unit_price: string }>(
+      `SELECT unit_price FROM price_observations WHERE receipt_line_id = $1`,
+      [satir.id],
+    );
+    expect(Number(gozlem!.unit_price)).toBeCloseTo(38.9, 2);
+  });
+
+  it('geçersiz miktar reddediliyor', async () => {
+    const created = await request(app)
+      .post('/receipts')
+      .set(auth())
+      .send({
+        merchantId,
+        purchasedAt: monthsAgo(0),
+        lines: [{ raw: `CAY TEST ${Date.now()}B`, amount: 50 }],
+      })
+      .expect(201);
+    const detail = await request(app)
+      .get(`/receipts/${created.body.id}`)
+      .set(auth())
+      .expect(200);
+
+    // Birim fiyat miktara bölünüyor; sıfır sessizce sonsuz üretirdi.
+    await request(app)
+      .patch(`/receipts/${created.body.id}/lines/${detail.body.lines[0].id}`)
+      .set(auth())
+      .send({ lineAmount: 50, quantity: 0 })
+      .expect(400);
+  });
+
   it('ürün listesi ve geçmişi döner', async () => {
     const list = await request(app).get('/products').set(auth()).expect(200);
     const sut = list.body.find((p: { id: string }) => p.id === sutId);

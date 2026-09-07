@@ -248,6 +248,64 @@ receiptsRouter.post('/:id/lines/:lineId/match', async (req: AuthedRequest, res) 
 /// değil markete bağlı ve "şu ham metin şu üründür" bilgisi demo veriyle
 /// öğrenilmiş olsa da doğru; silmek ilk gerçek fişte gereksiz soru sordururdu.
 /**
+ * Kaydedilmiş bir satırın tutarını ve miktarını düzeltir.
+ *
+ * OCR tutarı yanlış okuyabiliyor ve taslak ekranında düzeltme imkânı var;
+ * kaydettikten sonra o imkân kayboluyordu. Tek çare fişi silip yeniden
+ * eklemekti — oysa yanlış bir satır endeksi sessizce bozuyor ve uygulamanın
+ * bütün iddiası o sayının kullanıcının kendi fişinden gelmesi.
+ *
+ * Ham metin DEĞİŞTİRİLMİYOR: fişte ne yazıyorsa o. Değişebilen, o metnin
+ * hangi tutara ve kaç birime karşılık geldiği.
+ *
+ * Fiyat gözlemi tetikleyiciyle kendiliğinden yeniden türüyor
+ * (receipt_lines_sync_observation, quantity ve line_amount'ı dinliyor);
+ * buradaki tek ek iş endeksi tazelemek.
+ */
+receiptsRouter.patch('/:id/lines/:lineId', async (req: AuthedRequest, res) => {
+  const { lineAmount, quantity } = req.body ?? {};
+
+  // Şema da kısıtlıyor ama oradan dönen hata 500 olurdu; sınır burada
+  // söyleniyor. Miktar sıfır olamaz: birim fiyat ona bölünüyor.
+  if (typeof lineAmount !== 'number' || !Number.isFinite(lineAmount) || lineAmount < 0) {
+    res.status(400).json({ error: 'lineAmount sıfır ya da daha büyük bir sayı olmalı' });
+    return;
+  }
+  if (typeof quantity !== 'number' || !Number.isFinite(quantity) || quantity <= 0) {
+    res.status(400).json({ error: 'quantity sıfırdan büyük olmalı' });
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Sahiplik kontrolü güncellemenin İÇİNDE: ayrı bir SELECT ile arada
+    // yarış olurdu.
+    const { rowCount } = await client.query(
+      `UPDATE receipt_lines l
+          SET line_amount = $1, quantity = $2
+         FROM receipts r
+        WHERE l.receipt_id = r.id
+          AND l.id = $3 AND r.id = $4 AND r.user_id = $5`,
+      [lineAmount, quantity, req.params.lineId, req.params.id, req.userId],
+    );
+    if (!rowCount) {
+      await client.query('ROLLBACK');
+      res.status(404).json({ error: 'Satır bulunamadı' });
+      return;
+    }
+    await client.query('SELECT refresh_user_index($1)', [req.userId]);
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+});
+
+/**
  * Tek fişi siler.
  *
  * Yanlışlıkla onaylanan bir fiş için tek çare "hepsini sil" olmamalı.

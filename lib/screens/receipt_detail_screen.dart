@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../data/api.dart';
 import '../data/repository.dart';
 import '../state/app_data.dart';
 import '../state/receipts_cubit.dart';
@@ -11,6 +12,7 @@ import '../theme/tokens.dart';
 import '../widgets/data_view.dart';
 import '../widgets/atoms.dart';
 import '../widgets/glass.dart';
+import '../widgets/line_sheet.dart';
 import '../widgets/match_sheet.dart';
 import '../widgets/motion.dart';
 import '../widgets/receipt_paper.dart';
@@ -46,6 +48,58 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
       if (!mounted) return;
       final done = await _resolve(line);
       if (!done) return;
+    }
+  }
+
+  /// Satıra dokunma. Eşleşmemiş satır doğrudan eşleştirmeye gidiyor —
+  /// orada yapılacak tek iş o. Çözülmüş satır ise düzeltme sayfasını
+  /// açıyor: tutar, miktar ve gerekirse ürünün kendisi.
+  Future<void> _openLine(ReceiptLine line) async {
+    if (line.needsMatch) {
+      await _resolve(line);
+      return;
+    }
+    final sonuc = await LineSheet.show(context, line);
+    if (sonuc == null || !mounted) return;
+    switch (sonuc) {
+      case LineRematch():
+        await _resolve(line);
+      case LineAmounts(:final amount, :final quantity):
+        await _updateAmounts(line, amount, quantity);
+    }
+  }
+
+  Future<void> _updateAmounts(
+    ReceiptLine line,
+    double amount,
+    double quantity,
+  ) async {
+    if (amount == line.amount && quantity == line.quantity) return;
+    final repo = context.read<Repository>();
+    final messenger = ScaffoldMessenger.of(context);
+    final c = context.c;
+    try {
+      await repo.updateLine(
+        receiptId: widget.receiptId,
+        lineId: line.id,
+        amount: amount,
+        quantity: quantity,
+      );
+      if (!mounted) return;
+      // Satır değişince hem fiş hem endeks bayatlıyor.
+      await context.read<ReceiptDetailCubit>().load(silent: true);
+      if (mounted) refreshUserData(context);
+    } on ApiException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          backgroundColor: c.ink,
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            e.message,
+            style: TextStyle(fontSize: 12.5, color: c.card),
+          ),
+        ),
+      );
     }
   }
 
@@ -131,9 +185,11 @@ class _ReceiptDetailScreenState extends State<ReceiptDetailScreen> {
                       if (i > 0) const Hairline(),
                       _LineRow(
                         line: receipt.lines[i],
-                        onTap: receipt.lines[i].needsMatch
-                            ? () => _resolve(receipt.lines[i])
-                            : null,
+                        // Artık her satır dokunulabilir. Eskiden yalnızca
+                        // eşleşmemişler açılıyordu; yanlış okunmuş bir tutar
+                        // ya da yanlış bağlanmış bir ürün kaydedildikten
+                        // sonra düzeltilemiyordu.
+                        onTap: () => _openLine(receipt.lines[i]),
                       ),
                     ],
                     if (pending > 0) ...[

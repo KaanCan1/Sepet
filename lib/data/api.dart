@@ -137,6 +137,14 @@ class Api {
     ),
   );
 
+  Future<dynamic> patch(String path, [Object? body]) => _send(
+    () => _client.patch(
+      Uri.parse('$baseUrl$path'),
+      headers: _headers,
+      body: body == null ? null : jsonEncode(body),
+    ),
+  );
+
   Future<dynamic> delete(String path) => _send(
     () => _client.delete(Uri.parse('$baseUrl$path'), headers: _headers),
   );
