@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/fmt.dart';
 import '../data/models.dart';
+import '../data/text_fold.dart';
 import '../theme/tokens.dart';
 import '../state/products_cubit.dart';
 import '../widgets/data_view.dart';
@@ -13,8 +14,34 @@ import '../widgets/screen_frame.dart';
 import 'product_screen.dart';
 
 /// Ürünler sekmesi — sepetteki kanonik ürünler ve değişimleri.
-class ProductsScreen extends StatelessWidget {
+class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
+
+  @override
+  State<ProductsScreen> createState() => _ProductsScreenState();
+}
+
+class _ProductsScreenState extends State<ProductsScreen> {
+  final _arama = TextEditingController();
+
+  /// Kutuya yazılanın katlanmış hâli. Her karede yeniden hesaplamamak için
+  /// burada duruyor.
+  String _sorgu = '';
+
+  @override
+  void dispose() {
+    _arama.dispose();
+    super.dispose();
+  }
+
+  /// Ad ve boy birlikte aranıyor: kullanıcı "sut 1 litre" de yazabiliyor,
+  /// "1 litre" de. Ayrı ayrı arasaydık ikincisi hiçbir şey bulmazdı.
+  List<Product> _suz(List<Product> hepsi) {
+    if (_sorgu.isEmpty) return hepsi;
+    return hepsi
+        .where((p) => searchFold('${p.name} ${p.sizeLabel}').contains(_sorgu))
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +60,7 @@ class ProductsScreen extends StatelessWidget {
             ),
             builder: (context, products) {
               final c = context.c;
+              final gorunen = _suz(products);
               return Padding(
                 padding: kGutter,
                 child: Column(
@@ -42,16 +70,41 @@ class ProductsScreen extends StatelessWidget {
                       step: 0,
                       child: LargeTitle(
                         'Ürünler',
-                        trailing: '${products.length} ÜRÜN',
+                        // Süzerken kaç ürün olduğu değil, kaçının kaldığı
+                        // önemli.
+                        trailing: _sorgu.isEmpty
+                            ? '${products.length} ÜRÜN'
+                            : '${gorunen.length}/${products.length}',
                       ),
                     ),
+                    // Arama kutusu yalnızca liste uzunken görünüyor. Beş
+                    // ürünün üstünde bir arama kutusu, aramayı kolaylaştırmak
+                    // yerine ekranı meşgul ediyor.
+                    if (products.length >= _aramaEsigi)
+                      Printed(
+                        step: 1,
+                        child: _AramaKutusu(
+                          controller: _arama,
+                          onChanged: (q) =>
+                              setState(() => _sorgu = searchFold(q.trim())),
+                        ),
+                      ),
                     Printed(
-                      step: 1,
+                      step: 2,
                       child: Lbl('BİRİM FİYAT DEĞİŞİMİNE GÖRE', color: c.faint),
                     ),
-                    for (final (i, p) in products.indexed)
+                    if (gorunen.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 26),
+                        child: Text(
+                          'Bu aramaya uyan ürün yok. Sepette yalnızca fişini '
+                          'eklediğin ürünler var.',
+                          style: T.body.copyWith(fontSize: 12, color: c.muted),
+                        ),
+                      ),
+                    for (final (i, p) in gorunen.indexed)
                       Printed(
-                        step: 2 + i,
+                        step: 3 + i,
                         child: _ProductRow(product: p),
                       ),
                   ],
@@ -61,6 +114,45 @@ class ProductsScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Arama kutusunun görünmeye başladığı ürün sayısı.
+///
+/// Altında kutu ekrana yük oluyor: liste zaten tek bakışta okunuyor.
+const _aramaEsigi = 12;
+
+/// Alt çizgili arama kutusu — uygulamanın diğer alanlarıyla aynı dil.
+class _AramaKutusu extends StatelessWidget {
+  const _AramaKutusu({required this.controller, required this.onChanged});
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: 'Ürün ara',
+          hintStyle: TextStyle(fontSize: 13.5, color: c.muted),
+          isDense: true,
+          contentPadding: const EdgeInsets.only(bottom: 9),
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: c.line),
+          ),
+          focusedBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: c.ink),
+          ),
+        ),
+        style: TextStyle(fontSize: 13.5, color: c.ink),
+      ),
     );
   }
 }
