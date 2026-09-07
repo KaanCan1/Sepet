@@ -99,6 +99,7 @@ class FakeApi extends Api {
     ],
     'DELETE /receipts': {'ok': true, 'deletedReceipts': 1},
     'DELETE /receipts/r1': {'ok': true},
+    'PATCH /receipts/r1/lines/l1': {'ok': true},
     'DELETE /receipts/r2': {'ok': true},
     'DELETE /account': {'ok': true},
     'GET /official': [
