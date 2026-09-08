@@ -446,6 +446,94 @@ void main() {
 
       expect(serilerinden(tester), hasLength(1));
     });
+
+    // Çizgi çizildikten sonra grafik tamamen ölüydü: bir ayın değerini
+    // öğrenmenin hiçbir yolu yoktu, ekranda yalnızca son ayın toplamı
+    // yazıyordu.
+    group('Gezinme', () {
+      /// [i]. ayın grafikteki yatay konumu. Boyacıdaki kenar payıyla aynı
+      /// hesap — ikisi ayrılırsa işaret parmaktan kayar.
+      Offset ayNoktasi(WidgetTester tester, int i, int span) {
+        final r = tester.getRect(find.byType(LineChart).first);
+        return Offset(
+          r.left + 5 + (r.width - 10) * (i / (span - 1)),
+          r.center.dy,
+        );
+      }
+
+      Future<void> hazirla(WidgetTester tester) async {
+        await tester.pumpWidget(
+          appWith(
+            levels: {
+              '2026-05-01': 120.0,
+              '2026-06-01': 124.0,
+              '2026-07-01': 128.0,
+              '2026-08-01': 132.0,
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('parmak grafikteyken o ayın değerleri okunuyor', (
+        tester,
+      ) async {
+        await hazirla(tester);
+
+        // Gezinmeden önce eksen kendisi: ay adları var, okuma yok.
+        expect(find.text('HAZ 2026'), findsNothing);
+
+        final g = await tester.startGesture(ayNoktasi(tester, 1, 4));
+        // Dokunma tanıyıcısı yatay sürüklemeyle aynı arenada; kararı
+        // vermesi için basılı geçen kısa süre gerekiyor.
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(find.text('HAZ 2026'), findsOneWidget);
+        // 108 / 100 — kullanıcının kendi serisi taban aya 100'lenmiş.
+        expect(find.text('SEN +8,0%'), findsOneWidget);
+        // 124 / 120 = 1,0333
+        expect(find.text('TÜİK +3,3%'), findsOneWidget);
+        // Boyacı da aynı ayı biliyor: kıl çizgi ve noktalar oraya gidiyor.
+        expect(tester.widget<LineChart>(find.byType(LineChart).first).scrub, 1);
+
+        await g.up();
+        await tester.pumpAndSettle();
+
+        // Bırakınca satır eksene geri dönüyor.
+        expect(find.text('HAZ 2026'), findsNothing);
+        expect(
+          tester.widget<LineChart>(find.byType(LineChart).first).scrub,
+          isNull,
+        );
+      });
+
+      // Resmî seri kullanıcının son aylarını henüz açıklamamış olabiliyor.
+      // Orada bir sayı uydurmak grafiğin bütün iddiasını bozardı.
+      testWidgets('açıklanmamış ayda tire yazıyor, sayı uydurmuyor', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          appWith(
+            levels: {
+              '2026-05-01': 120.0,
+              '2026-06-01': 124.0,
+              '2026-07-01': 128.0,
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final g = await tester.startGesture(ayNoktasi(tester, 3, 4));
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(find.text('AĞU 2026'), findsOneWidget);
+        expect(find.text('SEN +17,0%'), findsOneWidget);
+        expect(find.text('TÜİK —'), findsOneWidget);
+
+        await g.up();
+        await tester.pumpAndSettle();
+      });
+    });
   });
 
   // Sekme çubuğunda seçili zemin tek bir hap ve kapsül boyunca kayıyor.

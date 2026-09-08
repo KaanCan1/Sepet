@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../theme/tokens.dart';
@@ -43,6 +44,21 @@ class ChartSeries {
   final Color? fill;
 }
 
+/// Çizginin sol ve sağ kenardan payı.
+///
+/// Boyacı ile dokunma AYNI sayıyı kullanmak zorunda: parmağın hangi aya
+/// denk geldiğini ayrı bir hesap söyleseydi, gezinirken işaret parmaktan
+/// kayardı.
+const _inset = 5.0;
+
+/// Yatay konumun denk geldiği ay.
+int _ayIndeksi(double dx, double genislik, int span) {
+  if (span < 2) return 0;
+  final ic = genislik - _inset * 2;
+  if (ic <= 0) return 0;
+  return (((dx - _inset) / ic) * (span - 1)).round().clamp(0, span - 1);
+}
+
 /// Taslaktaki iki grafiğin ortak motoru: alt taban çizgisi, kesikli orta çizgi,
 /// üstünde bir veya birkaç seri. Dolgu yok — mürekkep sadece çizgide.
 class LineChart extends StatelessWidget {
@@ -54,6 +70,7 @@ class LineChart extends StatelessWidget {
     this.markerLabel,
     this.progress = 1,
     this.guides = true,
+    this.scrub,
   });
 
   final List<ChartSeries> series;
@@ -71,6 +88,10 @@ class LineChart extends StatelessWidget {
   /// kapatılıyor.
   final bool guides;
 
+  /// Parmağın durduğu ay. Dikey bir kıl çizgi ve her serinin o aydaki
+  /// noktası işaretleniyor.
+  final int? scrub;
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -83,6 +104,7 @@ class LineChart extends StatelessWidget {
           markerLabel,
           progress,
           guides,
+          scrub,
           context.c,
         ),
       ),
@@ -97,6 +119,7 @@ class _LinePainter extends CustomPainter {
     this.markerLabel,
     this.progress,
     this.guides,
+    this.scrub,
     this.colors,
   );
 
@@ -108,6 +131,7 @@ class _LinePainter extends CustomPainter {
   final String? markerLabel;
   final double progress;
   final bool guides;
+  final int? scrub;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -146,7 +170,7 @@ class _LinePainter extends CustomPainter {
     lo -= pad;
     hi += pad;
 
-    const inset = 5.0;
+    const inset = _inset;
     final top = 8.0;
     final bottom = size.height - 8;
 
@@ -234,6 +258,33 @@ class _LinePainter extends CustomPainter {
               );
           }
         }
+      }
+    }
+
+    // Parmağın durduğu ay: dikey kıl çizgi + her serinin o aydaki noktası.
+    //
+    // Çizgi grafiğin tepesinden tabanına iniyor, noktalara kadar değil:
+    // asıl söylediği "şu an bu aya bakıyorsun", iki serinin o aydaki
+    // değerleri de o çizginin üstünde. Kısa kesilseydi hangi ay olduğu
+    // değil hangi değer olduğu öne çıkardı.
+    if (scrub case final s? when progress > .98 && series.isNotEmpty) {
+      final x = span == 1
+          ? size.width / 2
+          : inset + (size.width - inset * 2) * (s / (span - 1));
+      canvas.drawLine(
+        Offset(x, top - 4),
+        Offset(x, size.height),
+        Paint()
+          ..color = colors.ink.withValues(alpha: .22)
+          ..strokeWidth = 1,
+      );
+      for (final seri in series) {
+        if (s >= seri.values.length || seri.values[s] == null) continue;
+        final p = at(seri.values, s);
+        // İçi zeminle doldurulup üstü çiziliyor: alan dolgusunun üstünde
+        // nokta bulanık kalmasın.
+        canvas.drawCircle(p, 3.2, Paint()..color = colors.card);
+        canvas.drawCircle(p, 3.2, Paint()..color = seri.color);
       }
     }
 
@@ -332,7 +383,8 @@ class _LinePainter extends CustomPainter {
       old.progress != progress ||
       old.series != series ||
       old.marker != marker ||
-      old.guides != guides;
+      old.guides != guides ||
+      old.scrub != scrub;
 }
 
 /// Çizgisi soldan sağa çizilen grafik.
@@ -344,6 +396,11 @@ class _LinePainter extends CustomPainter {
 ///
 /// Bir kez oynuyor. Aşağı çekip tazelemek çizgiyi baştan çizdirmiyor —
 /// tazeleme yeni bir zaman ekseni değil.
+///
+/// [onScrub] verilirse grafik gezinilebilir oluyor: parmak üstünde
+/// dolaştıkça hangi ayda durulduğu bildiriliyor, bırakınca null geliyor.
+/// Çizgi çizildikten sonra grafik tamamen ölüydü — bir ayın değerini
+/// öğrenmenin hiçbir yolu yoktu.
 class DrawnLineChart extends StatefulWidget {
   const DrawnLineChart({
     super.key,
@@ -353,6 +410,7 @@ class DrawnLineChart extends StatefulWidget {
     this.markerLabel,
     this.guides = true,
     this.delay = Duration.zero,
+    this.onScrub,
   });
 
   final List<ChartSeries> series;
@@ -365,6 +423,10 @@ class DrawnLineChart extends StatefulWidget {
   /// kart daha belirmeden çizilmeye başlamasın.
   final Duration delay;
 
+  /// Parmağın durduğu ay; bırakınca null. Verilmezse grafik dokunmaya
+  /// kapalı — satır içi kıvılcımlarda gezinecek bir şey yok.
+  final ValueChanged<int?>? onScrub;
+
   @override
   State<DrawnLineChart> createState() => _DrawnLineChartState();
 }
@@ -374,6 +436,9 @@ class _DrawnLineChartState extends State<DrawnLineChart>
   late final _c = AnimationController(vsync: this, duration: M.draw);
   late final _t = CurvedAnimation(parent: _c, curve: M.curve);
   Timer? _delay;
+
+  /// Parmağın durduğu ay. null = parmak grafiğin üstünde değil.
+  int? _scrub;
 
   @override
   void initState() {
@@ -391,26 +456,67 @@ class _DrawnLineChartState extends State<DrawnLineChart>
     super.dispose();
   }
 
+  /// Ortak zaman ekseninin uzunluğu — boyacıdaki `span` ile aynı.
+  int get _span => widget.series.fold<int>(
+    0,
+    (a, s) => s.values.length > a ? s.values.length : a,
+  );
+
+  void _gez(double dx, double genislik) {
+    // Çizgi daha çizilirken gezinmek yok: olmayan bir noktayı işaretlerdi.
+    if (_c.value < 1) return;
+    final i = _ayIndeksi(dx, genislik, _span);
+    if (i == _scrub) return;
+    // Aydan aya geçerken kısa bir dokunuş. Değerler grafiğin altında
+    // yazıyor; parmak hangi ayda olduğunu ekrana bakmadan da söylüyor.
+    HapticFeedback.selectionClick();
+    setState(() => _scrub = i);
+    widget.onScrub?.call(i);
+  }
+
+  void _birak() {
+    if (_scrub == null) return;
+    setState(() => _scrub = null);
+    widget.onScrub?.call(null);
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (M.off(context)) {
-      return LineChart(
-        series: widget.series,
-        height: widget.height,
-        marker: widget.marker,
-        markerLabel: widget.markerLabel,
-        guides: widget.guides,
-      );
-    }
-    return AnimatedBuilder(
-      animation: _t,
-      builder: (context, _) => LineChart(
-        series: widget.series,
-        height: widget.height,
-        marker: widget.marker,
-        markerLabel: widget.markerLabel,
-        guides: widget.guides,
-        progress: _t.value,
+    Widget grafik(double progress) => LineChart(
+      series: widget.series,
+      height: widget.height,
+      marker: widget.marker,
+      markerLabel: widget.markerLabel,
+      guides: widget.guides,
+      progress: progress,
+      scrub: _scrub,
+    );
+
+    final govde = M.off(context)
+        ? grafik(1)
+        : AnimatedBuilder(
+            animation: _t,
+            builder: (context, _) => grafik(_t.value),
+          );
+
+    if (widget.onScrub == null) return govde;
+
+    return LayoutBuilder(
+      builder: (context, kutu) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        // Basıp beklemek de gezinmenin başlangıcı: dokunma tanıyıcısı
+        // bırakılana kadar sürüyor, parmak kımıldamadan da işaret
+        // görünüyor. Yatay sürükleme ayrı tanınıyor — dikey hareket
+        // altındaki listeye gidiyor, yani grafiğin üstünden sayfa
+        // kaydırmak hâlâ mümkün.
+        onTapDown: (d) => _gez(d.localPosition.dx, kutu.maxWidth),
+        onTapUp: (_) => _birak(),
+        onTapCancel: _birak,
+        onHorizontalDragStart: (d) => _gez(d.localPosition.dx, kutu.maxWidth),
+        onHorizontalDragUpdate: (d) => _gez(d.localPosition.dx, kutu.maxWidth),
+        onHorizontalDragEnd: (_) => _birak(),
+        onHorizontalDragCancel: _birak,
+        child: govde,
       ),
     );
   }

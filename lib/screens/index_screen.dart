@@ -179,32 +179,12 @@ class _Body extends StatelessWidget {
             ),
           const SizedBox(height: 16),
           // Çizgi solmuyor, çiziliyor: yatay eksen zaman.
-          DrawnLineChart(
-            delay: M.stagger * 2,
-            height: 116,
-            series: [
-              ChartSeries(
-                values: _rebase(snapshot.levels),
-                color: c.ink,
-                width: 2.4,
-                end: EndCap.dot,
-                fill: c.ink.withValues(alpha: c.areaFade),
-              ),
-              if (tuikLine case final line?)
-                ChartSeries(
-                  values: line,
-                  color: c.ref,
-                  width: 1.6,
-                  dashed: true,
-                  // İçi boş halka: resmî çizgi kullanıcınınkinden erken
-                  // bitiyor ve işaretsiz kesilme çizim hatası gibi
-                  // okunuyordu.
-                  end: EndCap.ring,
-                ),
-            ],
+          _ScrubbableChart(
+            months: snapshot.months,
+            own: _rebase(snapshot.levels),
+            tuik: tuikLine,
+            tuikName: tuik?.publisher ?? 'TÜİK',
           ),
-          const SizedBox(height: 6),
-          Printed(step: 3, child: _MonthAxis(months: snapshot.months)),
           // Kesikli çizgi neden erken bitiyor. Çizgiyi son bilinen değerden
           // öteye uzatmak "o ay da böyleydi" demek olurdu; uzatmıyoruz ama
           // sustuğumuzda da grafik eksik çizilmiş gibi duruyordu.
@@ -391,6 +371,138 @@ class _Body extends StatelessWidget {
 }
 
 /// Grafiğin altındaki ay ekseni. Beş etiket: ikisi uç, üçü arada.
+/// Endeks grafiği ve altındaki ay ekseni.
+///
+/// Grafik çizildikten sonra tamamen ölüydü: bir ayın değerini öğrenmenin
+/// hiçbir yolu yoktu, ekranda yalnızca son ayın toplamı yazıyordu. Artık
+/// parmak grafiğin üstünde gezinebiliyor ve **ay ekseni satırı okumaya
+/// dönüşüyor** — yeni bir kutu, balon ya da satır açılmıyor, aynı yükseklik
+/// aynı yerde başka bir şey söylüyor. Bu yüzden gezinirken sayfa
+/// zıplamıyor.
+///
+/// Kendi durumu var: parmak gezerken saniyede altmış kez bütün endeks
+/// ekranını yeniden kurmanın anlamı yok.
+class _ScrubbableChart extends StatefulWidget {
+  const _ScrubbableChart({
+    required this.months,
+    required this.own,
+    required this.tuik,
+    required this.tuikName,
+  });
+
+  final List<DateTime> months;
+
+  /// Taban ayı 100 kabul edilmiş seviyeler. Okuma da bu tabana göre:
+  /// 124,1 → "+24,1%", yani manşetteki sayıyla aynı dil.
+  final List<double> own;
+  final List<double?>? tuik;
+  final String tuikName;
+
+  @override
+  State<_ScrubbableChart> createState() => _ScrubbableChartState();
+}
+
+class _ScrubbableChartState extends State<_ScrubbableChart> {
+  int? _ay;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DrawnLineChart(
+          delay: M.stagger * 2,
+          height: 116,
+          onScrub: (i) => setState(() => _ay = i),
+          series: [
+            ChartSeries(
+              values: widget.own,
+              color: c.ink,
+              width: 2.4,
+              end: EndCap.dot,
+              fill: c.ink.withValues(alpha: c.areaFade),
+            ),
+            if (widget.tuik case final line?)
+              ChartSeries(
+                values: line,
+                color: c.ref,
+                width: 1.6,
+                dashed: true,
+                // İçi boş halka: resmî çizgi kullanıcınınkinden erken
+                // bitiyor ve işaretsiz kesilme çizim hatası gibi
+                // okunuyordu.
+                end: EndCap.ring,
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Printed(
+          step: 3,
+          child: switch (_ay) {
+            null => _MonthAxis(months: widget.months),
+            final i => _Reading(
+              month: i < widget.months.length ? widget.months[i] : null,
+              own: i < widget.own.length ? widget.own[i] : null,
+              tuik: switch (widget.tuik) {
+                final t? when i < t.length => t[i],
+                _ => null,
+              },
+              tuikName: widget.tuikName,
+            ),
+          },
+        ),
+      ],
+    );
+  }
+}
+
+/// Gezinirken ay ekseninin yerini alan okuma satırı.
+///
+/// Ay ekseniyle aynı tipografi ve aynı yükseklik — satır değişiyor, yer
+/// değişmiyor. Değeri olmayan seri için tire yazıyor: resmî seri
+/// kullanıcının son aylarını henüz açıklamamış olabiliyor ve orada bir sayı
+/// uydurmak grafiğin bütün iddiasını bozardı.
+class _Reading extends StatelessWidget {
+  const _Reading({
+    required this.month,
+    required this.own,
+    required this.tuik,
+    required this.tuikName,
+  });
+
+  final DateTime? month;
+
+  /// Taban 100 kabul edilmiş seviyeler; okunan değer bunun 100'den farkı.
+  final double? own;
+  final double? tuik;
+  final String tuikName;
+
+  String _oku(double? seviye) =>
+      seviye == null ? '—' : Fmt.signedPct1(seviye - 100);
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.c;
+    final kucuk = T.label.copyWith(fontSize: 8);
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            month == null ? '' : '${Fmt.monthShort(month!)} ${month!.year}',
+            style: kucuk.copyWith(color: c.ink),
+          ),
+        ),
+        Text('SEN ${_oku(own)}', style: kucuk.copyWith(color: c.ink)),
+        const SizedBox(width: 12),
+        // Ad olduğu gibi yazılıyor: kaynak zaten büyük harfle geliyor ve
+        // Dart'ın toUpperCase'i Türkçe'de i → I yapıp noktayı düşürüyor.
+        Text('$tuikName ${_oku(tuik)}', style: kucuk.copyWith(color: c.ref)),
+      ],
+    );
+  }
+}
+
 class _MonthAxis extends StatelessWidget {
   const _MonthAxis({required this.months});
 
