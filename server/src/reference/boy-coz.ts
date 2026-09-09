@@ -22,6 +22,7 @@
  * kullanıcının kendi fişindeki tutar; referans yalnızca o tutarın hangi
  * pakete ait olduğunu söylüyor.
  */
+import type { PoolClient } from 'pg';
 import { query } from '../db.js';
 
 /** Referansın kaç gün eskisine bakılacağı. */
@@ -46,24 +47,36 @@ type Satir = {
   observed_on: string;
 };
 
-export async function boyCoz(opts: {
-  /** Boy dışında her şeyi tutan aday kalemlerin kimlikleri. */
-  adayIds: string[];
-  /** Fişteki birim fiyat: satır tutarı / miktar. */
-  birimFiyat: number;
-  merchantId: string;
-  /** Fişin tarihi (YYYY-AA-GG). */
-  tarih: string;
-  pencereGun?: number;
-}): Promise<BoyCozumu> {
+export async function boyCoz(
+  opts: {
+    /** Boy dışında her şeyi tutan aday kalemlerin kimlikleri. */
+    adayIds: string[];
+    /** Fişteki birim fiyat: satır tutarı / miktar. */
+    birimFiyat: number;
+    merchantId: string;
+    /** Fişin tarihi (YYYY-AA-GG). */
+    tarih: string;
+    pencereGun?: number;
+  },
+  /**
+   * Fiş kaydı tek işlemde yazılıyor. Çözüm de o işlemin İÇİNDEN okumalı,
+   * yoksa aynı istekte yazılan bir şeyi göremez ve daha kötüsü, işlem geri
+   * alınırsa çözüm dışarıda kalır.
+   */
+  client?: PoolClient,
+): Promise<BoyCozumu> {
   const { adayIds, birimFiyat, merchantId, tarih } = opts;
   if (adayIds.length < 2 || !(birimFiyat > 0)) {
     return { cozuldu: false, sebep: 'referans-yok' };
   }
 
   const pencere = opts.pencereGun ?? PENCERE_GUN;
+  const calistir = client
+    ? async (sql: string, params: unknown[]) =>
+        (await client.query<Satir>(sql, params)).rows
+    : (sql: string, params: unknown[]) => query<Satir>(sql, params);
 
-  const satirlar = await query<Satir>(
+  const satirlar = await calistir(
     `SELECT r.canonical_product_id, v.size_value::text, r.price::text,
             r.source_title, r.observed_on::text
        FROM reference_prices r

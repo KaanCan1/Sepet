@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth, type AuthedRequest } from '../auth.js';
 import { pool, query } from '../db.js';
 import { matchCatalog } from '../catalog-match.js';
+import { boyCoz, type BoyKaniti } from '../reference/boy-coz.js';
 import { isNonIndexLine } from '../non-index.js';
 
 export const receiptsRouter = Router();
@@ -52,7 +53,7 @@ receiptsRouter.get('/:id', async (req: AuthedRequest, res) => {
   const lines = await query(
     `SELECT l.id, l.line_no, l.raw_text, l.quantity, l.line_amount, l.status,
             cp.display_name AS name, cp.brand_name, cp.size_label, cp.unit,
-            o.unit_price
+            l.match_evidence, o.unit_price
        FROM receipt_lines l
        LEFT JOIN v_canonical_products cp ON cp.id = l.canonical_product_id
        LEFT JOIN price_observations o ON o.receipt_line_id = l.id
@@ -76,6 +77,9 @@ receiptsRouter.get('/:id', async (req: AuthedRequest, res) => {
       // display_name zaten marka + grup + boy; ayrıca boy eklenmiyor.
       canonical: l.name ?? null,
       brand: l.brand_name ?? null,
+      // Boyun neden o boy olduğu. Yalnızca fiyattan çözülen satırlarda dolu;
+      // uygulama bunu satırın altında gösteriyor, gizlemiyor.
+      evidence: l.match_evidence ?? null,
       unitPrice: l.unit_price === null ? null : Number(l.unit_price),
       unit: l.unit ?? null,
     })),
@@ -144,11 +148,39 @@ receiptsRouter.post('/', async (req: AuthedRequest, res) => {
       // doğru cevabı yok.
       const nonIndex = !productId && isNonIndexLine(line.raw);
 
+      let evidence: BoyKaniti | null = null;
+
       if (!productId && !nonIndex) {
         const outcome = await matchCatalog(line.raw, 5, client);
         if (outcome.auto) {
           productId = outcome.auto.id;
           confidence = outcome.auto.score;
+        } else if (outcome.sizeAmbiguous) {
+          // Marka ve grup kesin, eksik olan tek şey boy. Fiş boyu basmıyor
+          // ama FİYATI basıyor; zincirin yayımladığı fiyatla kuruşu kuruşuna
+          // tutuyorsa boy tahmin edilmiş olmuyor, kanıtlanmış oluyor.
+          //
+          // Tutmuyorsa hiçbir şey değişmiyor: satır pending kalıyor ve soru
+          // eskisi gibi kullanıcıya gidiyor.
+          const miktar = Number(line.quantity ?? 1);
+          const birimFiyat = miktar > 0 ? Number(line.amount) / miktar : 0;
+          const cozum = await boyCoz(
+            {
+              adayIds: outcome.candidates.map((c) => c.id),
+              birimFiyat,
+              merchantId,
+              tarih: String(purchasedAt).slice(0, 10),
+            },
+            client,
+          );
+          if (cozum.cozuldu) {
+            productId = cozum.kanit.canonicalProductId;
+            // Puan katalog eşleşmesinin puanı; kanıt fiyattan geliyor ama
+            // adayı katalog buldu.
+            confidence = outcome.candidates.find((c) => c.id === productId)
+              ?.score ?? null;
+            evidence = cozum.kanit;
+          }
         }
       }
 
@@ -157,8 +189,8 @@ receiptsRouter.post('/', async (req: AuthedRequest, res) => {
       await client.query(
         `INSERT INTO receipt_lines
            (receipt_id, line_no, raw_text, quantity, line_amount,
-            canonical_product_id, status, match_confidence)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::match_status, $8)`,
+            canonical_product_id, status, match_confidence, match_evidence)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::match_status, $8, $9::jsonb)`,
         [
           receiptId,
           i + 1,
@@ -168,6 +200,7 @@ receiptsRouter.post('/', async (req: AuthedRequest, res) => {
           productId,
           status,
           confidence,
+          evidence ? JSON.stringify(evidence) : null,
         ],
       );
     }
