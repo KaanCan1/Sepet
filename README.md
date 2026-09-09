@@ -112,6 +112,33 @@ Sözleşme belgelenmemiş; EVDS uygulamasının kendi paketinden çıkarılıp
 gerçek anahtarla doğrulandı ve [`test/evds.spec.ts`](server/test/evds.spec.ts)
 ile sabitlendi.
 
+### Referans fiyatlar
+
+Yazarkasa gramaj basmıyor. `MIGROS T.YAGLI YOGU.` satırında marka ve ürün
+çözülüyor ama boy çözülmüyor — 500 g da olabilir 3 kg da. Fiş **fiyat**
+basıyor ve zincirler her boyun fiyatını yayımlıyor; ikisi kuruşu kuruşuna
+tutuyorsa boy tahmin edilmiş olmuyor, kanıtlanmış oluyor.
+
+Kaynak **[marketfiyati.org.tr](https://marketfiyati.org.tr)** — TÜBİTAK
+BİLGEM'in, Ticaret Bakanlığı ve Merkez Bankası iş birliğiyle yürüttüğü
+hizmet. Yayımlanmış bir API sözleşmesi yok, hız sınırı bilinmiyor: çağrılar
+yalnızca çekim işinden yapılıyor, aralarında bekleniyor ve sonuçlar
+veritabanına yazılıyor. Eşleştirme üçüncü bir tarafın ayakta olmasına
+bağlanmıyor.
+
+Çekim **günlük**, çünkü kaynak yalnızca bugünkü fiyatı yayımlıyor: geçmiş
+sorulamıyor ve toplanmayan günün verisi kalıcı olarak kayıp. TÜİK'ten farkı
+bu — orada gecikmenin bedeli yok, burada var. İlerleme aile bazında
+tutuluyor (`reference_fetch_log`), böylece yarıda kesilen çekim bir sonraki
+açılışta kaldığı yerden sürüyor.
+
+`REFERENCE_FETCH=false` ile kapatılıyor; CI'da varsayılan olarak kapalı.
+Elle tetiklemek için `npm run reference`.
+
+**Bu fiyatlar endekse girmiyor.** Ayrı tabloda duruyorlar ve yalnızca "hangi
+boy?" sorusunu cevaplıyorlar. Endekse giren tek sayı kullanıcının kendi
+fişindeki tutar.
+
 ## Projenin kalbi: `eşleşme?`
 
 <img src="docs/screenshots/eslesme.png" width="230" align="right" alt="Eşleşme onayı alt sayfası">

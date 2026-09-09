@@ -2,7 +2,7 @@
  * Ortam değişkenleri tek yerde okunur ve doğrulanır — eksik bir sır, çalışma
  * anında değil açılışta patlasın.
  */
-const dev = (process.env.NODE_ENV ?? 'development') !== 'production';
+const dev = (process.env.NODE_ENV ?? "development") !== "production";
 
 /**
  * Çalışan sürümün commit'i.
@@ -16,7 +16,7 @@ const dev = (process.env.NODE_ENV ?? 'development') !== 'production';
  * dönüyor. Dağıtımın geçip geçmediği tahminle konuşuluyordu.
  */
 function commitOku(): string | null {
-  const ham = process.env.RENDER_GIT_COMMIT ?? process.env.GIT_COMMIT ?? '';
+  const ham = process.env.RENDER_GIT_COMMIT ?? process.env.GIT_COMMIT ?? "";
   const temiz = ham.trim();
   // Kısa hâli yeterli ve göze okunur; tam SHA'yı arayan zaten depoya bakar.
   return temiz ? temiz.slice(0, 7) : null;
@@ -27,12 +27,11 @@ export const env = {
   commit: commitOku(),
   // 3000 sıklıkla dolu oluyor; Sepet 4000'de.
   port: Number(process.env.PORT ?? 4000),
-  databaseUrl:
-    process.env.DATABASE_URL ?? 'postgres://localhost:5432/sepet',
-  jwtSecret: process.env.JWT_SECRET ?? (dev ? 'dev-secret-degistir' : ''),
+  databaseUrl: process.env.DATABASE_URL ?? "postgres://localhost:5432/sepet",
+  jwtSecret: process.env.JWT_SECRET ?? (dev ? "dev-secret-degistir" : ""),
   /** Sağlayıcısız giriş. Geliştirmede herkese, üretimde yalnızca listedekilere. */
   devLoginEnabled:
-    (process.env.DEV_LOGIN ?? (dev ? 'true' : 'false')) === 'true',
+    (process.env.DEV_LOGIN ?? (dev ? "true" : "false")) === "true",
 
   /**
    * Üretimde sağlayıcısız girişe izin verilen adresler.
@@ -41,10 +40,27 @@ export const env = {
    * yolu bu uç. Üretimde herkese açık bırakmak isteyen herkese hesap açmak
    * demek olurdu; liste boşsa uç kapalı.
    */
-  devLoginAllowlist: (process.env.DEV_LOGIN_EMAILS ?? '')
-    .split(',')
+  devLoginAllowlist: (process.env.DEV_LOGIN_EMAILS ?? "")
+    .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean),
+
+  /**
+   * Referans fiyatların günlük anlık görüntüsü açık mı.
+   *
+   * Varsayılan AÇIK, ama CI'da kapalı. Sebebi: çekim marketfiyati.org.tr'ye
+   * yüzlerce istek atıyor ve orası kamuya açık, sözleşmesiz bir kamu
+   * hizmeti. Her dal itişinde oraya yüklenmek kabul edilemez; üstelik CI'nın
+   * geçip geçmemesi üçüncü bir tarafın ayakta olmasına bağlanmış olurdu.
+   *
+   * Üretimde açık olması gerekiyor çünkü kaynak yalnızca BUGÜNKÜ fiyatı
+   * yayımlıyor: toplanmayan günün verisi kalıcı olarak kayıp. Bunu elle
+   * açılması gereken bir bayrak yapmak, unutulduğu her günü kaybetmek
+   * demekti.
+   */
+  referenceFetch:
+    (process.env.REFERENCE_FETCH ?? (process.env.CI ? "false" : "true")) ===
+    "true",
 };
 
 /// Eksik yapılandırmayı tek seferde bildirir.
@@ -55,27 +71,27 @@ export const env = {
 const problems: string[] = [];
 
 if (!env.jwtSecret) {
-  problems.push('JWT_SECRET tanımlı değil.');
+  problems.push("JWT_SECRET tanımlı değil.");
 }
 
 if (!process.env.DATABASE_URL) {
   problems.push(
-    'DATABASE_URL tanımlı değil. Neon bağlantı dizesini Render panelinde ' +
-      'Environment altına gir (sslmode=require ile birlikte).',
+    "DATABASE_URL tanımlı değil. Neon bağlantı dizesini Render panelinde " +
+      "Environment altına gir (sslmode=require ile birlikte).",
   );
 }
 
 if (!env.isDev && env.devLoginEnabled && env.devLoginAllowlist.length === 0) {
   problems.push(
-    'DEV_LOGIN açık ama DEV_LOGIN_EMAILS boş. Gerçek Apple/Google akışı ' +
-      'gelene kadar girişin tek yolu bu uç; kimlerin girebileceği ' +
-      'belirtilmezse uç herkese açık olurdu. Kendi e-postanı gir.',
+    "DEV_LOGIN açık ama DEV_LOGIN_EMAILS boş. Gerçek Apple/Google akışı " +
+      "gelene kadar girişin tek yolu bu uç; kimlerin girebileceği " +
+      "belirtilmezse uç herkese açık olurdu. Kendi e-postanı gir.",
   );
 }
 
 if (problems.length > 0) {
   throw new Error(
     `Sunucu başlatılamadı — eksik yapılandırma:\n` +
-      problems.map((p) => `  • ${p}`).join('\n'),
+      problems.map((p) => `  • ${p}`).join("\n"),
   );
 }

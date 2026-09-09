@@ -186,6 +186,14 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       NODE_ENV: production
+      # Referans fiyat çekimi CI'da kapalı. Açık olsaydı her dal itişinde
+      # marketfiyati.org.tr'ye yüzlerce istek giderdi — orası kamuya açık,
+      # sözleşmesiz bir kamu hizmeti. Üstelik CI'nın geçmesi üçüncü bir
+      # tarafın ayakta olmasına bağlanmış olurdu.
+      #
+      # env.ts zaten CI değişkenine bakıp kapatıyor; burada açıkça yazmak
+      # niyeti iş akışını okuyan için görünür kılıyor.
+      REFERENCE_FETCH: 'false'
       DATABASE_URL: postgres://sepet:sepet@localhost:5432/sepet?sslmode=disable
       JWT_SECRET: ci-testi-icin-gecici-anahtar
       DEV_LOGIN: 'true'
