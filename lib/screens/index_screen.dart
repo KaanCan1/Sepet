@@ -122,7 +122,7 @@ class _Body extends StatelessWidget {
                 ),
                 Lbl(_windowLabel, color: c.faint),
                 const SizedBox(height: 4),
-                BigNumber(Fmt.dec1(own)),
+                BigNumber(own),
                 if (delta != null && delta.abs() >= 0.05) ...[
                   const SizedBox(height: 5),
                   Text(

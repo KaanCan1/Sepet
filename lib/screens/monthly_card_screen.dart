@@ -236,7 +236,7 @@ class _ShareCard extends StatelessWidget {
             style: T.label.copyWith(fontSize: 9, letterSpacing: 1.26),
           ),
           const SizedBox(height: 10),
-          BigNumber(Fmt.dec1(snapshot.changePct ?? 0), size: 52),
+          BigNumber(snapshot.changePct ?? 0, size: 52),
           const SizedBox(height: 2),
           const Lbl('BENİM SEPETİM'),
           const SizedBox(height: 8),

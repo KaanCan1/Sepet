@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/fmt.dart';
 import '../theme/tokens.dart';
 import 'glass.dart';
 import 'icons.dart';
@@ -191,40 +192,105 @@ class LedgerRow extends StatelessWidget {
 }
 
 /// Serif başlık + üst simge sayı ("47,2%").
-class BigNumber extends StatelessWidget {
+///
+/// Sayı SAYARAK geliyor: sıfırdan hedefe, grafiğin çizilme süresinde
+/// ([M.draw]) ve aynı eğriyle. İkisi birlikte bitiyor çünkü ikisi aynı şeyi
+/// anlatıyor — biri zaman ekseninde yayarak, öbürü tek sayıda toplayarak.
+/// Ekranın kahramanı bu sayı; hazır belirdiğinde sayfanın en ölü parçası
+/// oluyordu.
+///
+/// Değer sonradan değişirse (aşağı çekip tazeleme) sıfırdan değil, o an
+/// yazan sayıdan yürüyor: kullanıcı neyin ne kadar oynadığını görüyor.
+///
+/// Genişlik için yer tutucu YOK. Basamak sayısı yolun en başında
+/// değişiyor — easeOutCubic ile 31,9'un 10'u geçmesi 720 ms'nin ilk
+/// 90 ms'i — yüzde işaretinin o tek kaymasını göz yakalamıyor.
+class BigNumber extends StatefulWidget {
   const BigNumber(this.value, {super.key, this.size = 52, this.color});
-  final String value;
+
+  /// Yüzde değeri. Biçimlendirmeyi widget yapıyor: sayarken her karede
+  /// yeniden biçimlenmesi gerekiyor, dışarıdan hazır metin alamaz.
+  final double value;
   final double size;
 
   /// Verilmezse mürekkep rengi.
   final Color? color;
 
   @override
+  State<BigNumber> createState() => _BigNumberState();
+}
+
+class _BigNumberState extends State<BigNumber>
+    with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: M.draw);
+  late Animation<double> _sayac = AlwaysStoppedAnimation(widget.value);
+  bool _basladi = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // MediaQuery initState'te okunamıyor; sayma da bu yüzden burada
+    // başlıyor. Yalnızca ilk kez.
+    if (_basladi) return;
+    _basladi = true;
+    if (!M.off(context)) _say(0);
+  }
+
+  @override
+  void didUpdateWidget(BigNumber eski) {
+    super.didUpdateWidget(eski);
+    if (eski.value == widget.value) return;
+    if (M.off(context)) {
+      setState(() => _sayac = AlwaysStoppedAnimation(widget.value));
+    } else {
+      _say(_sayac.value);
+    }
+  }
+
+  void _say(double nereden) {
+    _sayac = Tween(
+      begin: nereden,
+      end: widget.value,
+    ).animate(CurvedAnimation(parent: _c, curve: M.curve));
+    _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final ink = color ?? context.c.ink;
-    return Text.rich(
-      TextSpan(
-        children: [
-          TextSpan(text: value),
-          // vertical-align: super — TextStyle'da baseline kaydırma yok,
-          // WidgetSpan'ı metnin tepesine hizalıyoruz.
-          WidgetSpan(
-            alignment: PlaceholderAlignment.top,
-            child: Padding(
-              padding: EdgeInsets.only(top: size * .15),
-              child: Text(
-                '%',
-                style: T.bigNumber.copyWith(
-                  fontSize: size * .43,
-                  color: ink,
-                  height: 1,
-                ),
-              ),
-            ),
+    final ink = widget.color ?? context.c.ink;
+    final size = widget.size;
+
+    return AnimatedBuilder(
+      animation: _sayac,
+      // Yüzde işareti sayıdan bağımsız: her karede yeniden kurulmuyor.
+      child: Padding(
+        padding: EdgeInsets.only(top: size * .15),
+        child: Text(
+          '%',
+          style: T.bigNumber.copyWith(
+            fontSize: size * .43,
+            color: ink,
+            height: 1,
           ),
-        ],
+        ),
       ),
-      style: T.bigNumber.copyWith(fontSize: size, color: ink),
+      builder: (context, yuzde) => Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: Fmt.dec1(_sayac.value)),
+            // vertical-align: super — TextStyle'da baseline kaydırma yok,
+            // WidgetSpan'ı metnin tepesine hizalıyoruz.
+            WidgetSpan(alignment: PlaceholderAlignment.top, child: yuzde!),
+          ],
+        ),
+        style: T.bigNumber.copyWith(fontSize: size, color: ink),
+      ),
     );
   }
 }

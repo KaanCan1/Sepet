@@ -275,7 +275,7 @@ class _DetailScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(row.name, style: T.display),
                 const SizedBox(height: 10),
-                BigNumber(Fmt.dec1(row.changePct), size: 44),
+                BigNumber(row.changePct, size: 44),
                 const SizedBox(height: 2),
                 Text(
                   'Taban ay 100 kabul edilerek, ${row.series.length} aylık '
