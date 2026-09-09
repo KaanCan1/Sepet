@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -29,16 +30,42 @@ class Shell extends StatefulWidget {
   State<Shell> createState() => _ShellState();
 }
 
-class _ShellState extends State<Shell> {
-  /// Hangi sekmenin açık olduğu. Tek bir widget'ın içinde doğup ölen geçici
-  /// durum — Bloc'a taşınacak bir şey değil, yeri burası.
-  int _tab = 0;
+class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
+  /// Sekme konumu: 0 ilk sekme, 3 sonuncu, aradaki her ondalık geçişin
+  /// kendisi.
+  ///
+  /// Bu sayı ARTIK KABUĞUN, sekme çubuğunun değil. Sebebi tek: hapı ve
+  /// altındaki ekranı aynı sayı sürsün. Konum çubuğun içinde kalırken hap
+  /// parmakla akıyor ama gövde sert kesiyordu — hareketin yarısı yapılmış
+  /// oluyordu. İkisinin ortak atası burası, paylaşılan durumun yeri de
+  /// burası.
+  ///
+  /// `ValueNotifier`, `setState` değil: sürükleme sırasında saniyede altmış
+  /// kez bütün kabuğu yeniden kurmanın anlamı yok, yalnızca konumu
+  /// dinleyen iki küçük ağaç yeniden kuruluyor.
+  final _konum = ValueNotifier(0.0);
+
+  /// Bırakınca hapın hedefe yürümesi. Parmak ekrandayken çalışmıyor —
+  /// o sırada konumu doğrudan parmak yazıyor.
+  late final _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 260),
+  );
+  Animation<double>? _yerlesme;
+
+  /// Parmak ekranda mı. Bırakmayı bir kez işlemek için.
+  bool _suruklemede = false;
 
   StreamSubscription<void>? _cardTaps;
 
   @override
   void initState() {
     super.initState();
+    _c.addListener(() {
+      final y = _yerlesme;
+      if (y != null) _konum.value = y.value;
+    });
+
     // Sekme cubit'lerinin ilk yüklemesi. Kabuk yalnızca oturum açıkken var,
     // dolayısıyla burada çağırmak "giriş yapıldı" demekle aynı şey; cubit'ler
     // kurulurken yüklenselerdi jeton gelmeden istek atıp 401 alırlardı.
@@ -69,7 +96,43 @@ class _ShellState extends State<Shell> {
   @override
   void dispose() {
     _cardTaps?.cancel();
+    _c.dispose();
+    _konum.dispose();
     super.dispose();
+  }
+
+  /// Hapı [hedef] sekmeye yürütüyor.
+  void _yerlestir(double hedef) {
+    if (M.off(context)) {
+      _konum.value = hedef;
+      return;
+    }
+    _yerlesme = Tween(
+      begin: _konum.value,
+      end: hedef,
+    ).animate(CurvedAnimation(parent: _c, curve: M.curve));
+    _c.forward(from: 0);
+  }
+
+  void _dokun(int i) {
+    _c.stop();
+    _yerlestir(i.toDouble());
+  }
+
+  void _surukle(double birim) {
+    final onceki = _konum.value.round();
+    _c.stop();
+    _suruklemede = true;
+    _konum.value = birim;
+    // Sınırı geçerken kısa bir dokunuş. Sürüklerken göz haptadır, hangi
+    // sekmeye girildiği ekrandan değil parmaktan anlaşılıyor.
+    if (birim.round() != onceki) HapticFeedback.selectionClick();
+  }
+
+  void _birak() {
+    if (!_suruklemede) return;
+    _suruklemede = false;
+    _yerlestir(_konum.value.round().toDouble());
   }
 
   @override
@@ -80,24 +143,101 @@ class _ShellState extends State<Shell> {
       extendBody: true,
       body: Stack(
         children: [
-          IndexedStack(
-            index: _tab,
-            children: const [
-              IndexScreen(),
-              ReceiptsScreen(),
-              ProductsScreen(),
-              ProfileScreen(),
-            ],
+          ValueListenableBuilder<double>(
+            valueListenable: _konum,
+            builder: (context, konum, _) =>
+                _Govde(konum: konum, hareket: !M.off(context)),
           ),
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: _FloatingTabBar(
-              index: _tab,
-              onTap: (i) => setState(() => _tab = i),
+              konum: _konum,
+              onTap: _dokun,
+              onSurukle: _surukle,
+              onBirak: _birak,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Sekmelerin gövdesi — konumla birlikte kayan ve çözülen ekranlar.
+///
+/// Dört ekran da ağaçta kalıyor. Sebebi kaydırma konumları ve bir kez oynayan
+/// giriş animasyonları: sekmeden çıkıp dönünce liste başa sarmasın, satırlar
+/// yeniden basılmasın. Ama yalnızca ikisi ÇİZİLİYOR — konumun iki yanındaki
+/// komşular; kalanlar [Offstage] ile hem boyamanın hem yerleşimin dışında.
+class _Govde extends StatelessWidget {
+  const _Govde({required this.konum, required this.hareket});
+
+  /// Kabuğun sekme konumu. Tam sayı yerleşmiş sekme, ondalık geçiş.
+  final double konum;
+
+  /// "Hareketi Azalt" kapalıysa true. Kapalıyken kayma da çözülme de yok:
+  /// yerleşmiş sekme doğrudan görünüyor.
+  final bool hareket;
+
+  static const _ekranlar = [
+    IndexScreen(),
+    ReceiptsScreen(),
+    ProductsScreen(),
+    ProfileScreen(),
+  ];
+
+  /// Bir sekmelik kaymanın ekran genişliğine oranı.
+  ///
+  /// 1 değil, çünkü çubuk üzerinde üç sekmelik sürükleme parmağın altında
+  /// birkaç santim; gövde birebir izleseydi o birkaç santimde üç ekran boyu
+  /// yol alır, geçiş değil savrulma olurdu. Bu oranda hareket parmağı
+  /// İŞARET ediyor, taklit etmiyor.
+  static const _kayma = .32;
+
+  /// Çözülmenin eğrisi. Konum doğrusal — parmağı birebir izliyor — ama
+  /// opaklık değil.
+  ///
+  /// Sebebi ölçüldü: iki ekran da yoğun metin, doğrusal çözülmede orta
+  /// bölgede uzun süre yarı yarıya üst üste biniyorlar ve ortaya iki
+  /// sayfanın birbirine karıştığı okunmaz bir kare çıkıyor. Bu eğri o
+  /// bölgeyi sıkıştırıyor: yolun onda dördünde gelen ekran hâlâ %13'te,
+  /// onda altısında %87'de. Karışma var ama göz onu yakalamıyor.
+  static const _cozulme = Curves.easeInOutQuart;
+
+  @override
+  Widget build(BuildContext context) {
+    // Alttaki katman tam opak, üstteki çözülerek geliyor. Sıra hep artan
+    // olmak zorunda: Stack çocuklarını sırayla boyuyor ve dört ekranın
+    // tipleri farklı, yer değiştirselerdi eşleşme tutmaz, ekranlar
+    // durumlarıyla birlikte yeniden kurulurdu.
+    final int alt = hareket
+        ? konum.floor().clamp(0, _ekranlar.length - 1).toInt()
+        : konum.round();
+    final double t = hareket ? konum - alt : 0;
+
+    return LayoutBuilder(
+      builder: (context, kutu) => Stack(
+        children: [
+          for (final (i, ekran) in _ekranlar.indexed)
+            Positioned.fill(
+              child: Offstage(
+                // Üstteki katman t sıfırken hiç görünmüyor; yerleşmiş
+                // sekmede tek katman çiziliyor.
+                offstage: i != alt && !(i == alt + 1 && t > 0),
+                child: Transform.translate(
+                  offset: Offset(
+                    hareket ? (i - konum) * kutu.maxWidth * _kayma : 0,
+                    0,
+                  ),
+                  child: Opacity(
+                    opacity: i == alt ? 1 : _cozulme.transform(t),
+                    child: ekran,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -111,11 +251,24 @@ class _ShellState extends State<Shell> {
 /// tutup yana sürüklenince seçim parmakla birlikte akıyor, iOS'un kendi
 /// sekme çubuğundaki gibi. Ayrı ayrı kutular olsaydı geçiş yapılamazdı —
 /// biri sönerken diğeri yanardı, arada bir şey hareket etmezdi.
-class _FloatingTabBar extends StatefulWidget {
-  const _FloatingTabBar({required this.index, required this.onTap});
+///
+/// Konumu artık kendi tutmuyor: aynı sayı gövdeyi de sürdüğü için yeri
+/// ikisinin ortak atası olan [Shell]. Burada kalan iş, yatay konumu sekme
+/// birimine çevirip yukarı bildirmek.
+class _FloatingTabBar extends StatelessWidget {
+  const _FloatingTabBar({
+    required this.konum,
+    required this.onTap,
+    required this.onSurukle,
+    required this.onBirak,
+  });
 
-  final int index;
+  final ValueListenable<double> konum;
   final ValueChanged<int> onTap;
+
+  /// Parmağın o anki konumu, sekme birimi cinsinden — ondalık olabiliyor.
+  final ValueChanged<double> onSurukle;
+  final VoidCallback onBirak;
 
   static const items = [
     (Glyph.home, 'Endeks'),
@@ -124,95 +277,9 @@ class _FloatingTabBar extends StatefulWidget {
     (Glyph.person, 'Profil'),
   ];
 
-  @override
-  State<_FloatingTabBar> createState() => _FloatingTabBarState();
-}
-
-/// Hapın kapsül kenarına bıraktığı dikey pay.
-const _hapPayi = 5.0;
-
-/// Hapın yarıçapı: dıştaki kapsülün yarıçapı eksi içeri payı.
-///
-/// İki eğri böyle EŞ MERKEZLİ oluyor — hap kapsülün içinde onunla aynı
-/// dili konuşuyor. Sabit 16 idi ve kapsül 29'ken köşeli bir dikdörtgen
-/// gibi duruyordu, iki ayrı şekil ailesi yan yanaydı.
-///
-/// 58/2 - 5 = 24, yani hap tam bir stadyum: kendi yüksekliğinin (58 - 2x5)
-/// yarısı. Yuvarlaklık tesadüf değil, geometrinin sonucu.
-const _hapYaricapi = kTabCapsuleHeight / 2 - _hapPayi;
-
-class _FloatingTabBarState extends State<_FloatingTabBar>
-    with SingleTickerProviderStateMixin {
-  /// Hapın yerleşmesi. Sürüklerken kullanılmıyor — parmak varken hap
-  /// parmağın yerinde duruyor, animasyon yalnızca bırakınca devreye giriyor.
-  late final _c = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 260),
-  );
-  late Animation<double> _yerlesme = AlwaysStoppedAnimation(
-    widget.index.toDouble(),
-  );
-
-  /// Parmak ekrandayken hapın sekme birimi cinsinden konumu. null = sürükleme
-  /// yok.
-  double? _surukleme;
-
-  /// Hapın o anki konumu: 0 ilk sekme, 3 sonuncu. Ondalık olabiliyor —
-  /// aradaki her değer geçişin kendisi.
-  double get _konum => _surukleme ?? _yerlesme.value;
-
-  @override
-  void didUpdateWidget(_FloatingTabBar eski) {
-    super.didUpdateWidget(eski);
-    // Sekme dışarıdan değiştiyse (dokunma ya da başka bir yol) hap oraya
-    // yürüsün. Sürükleme sürerken karışmıyor.
-    if (eski.index != widget.index && _surukleme == null) {
-      _yerlestir(widget.index.toDouble());
-    }
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  void _yerlestir(double hedef) {
-    if (M.off(context)) {
-      setState(() => _yerlesme = AlwaysStoppedAnimation(hedef));
-      return;
-    }
-    _yerlesme = Tween(
-      begin: _konum,
-      end: hedef,
-    ).animate(CurvedAnimation(parent: _c, curve: M.curve));
-    _c.forward(from: 0);
-  }
-
   /// Yatay konumu sekme birimine çeviriyor.
   double _birim(double dx, double genislik) =>
-      (dx / genislik - .5).clamp(0, _FloatingTabBar.items.length - 1);
-
-  void _surukle(double dx, double genislik) {
-    final yeni = _birim(dx, genislik);
-    final oncekiSekme = _konum.round();
-    setState(() => _surukleme = yeni);
-    final sekme = yeni.round();
-    if (sekme != oncekiSekme) {
-      // Sınırı geçerken kısa bir dokunuş. Sürüklerken göz haptadır, hangi
-      // sekmeye girildiği ekrandan değil parmaktan anlaşılıyor.
-      HapticFeedback.selectionClick();
-      widget.onTap(sekme);
-    }
-  }
-
-  void _birak() {
-    if (_surukleme == null) return;
-    final hedef = _surukleme!.round();
-    setState(() => _surukleme = null);
-    _yerlestir(hedef.toDouble());
-    if (hedef != widget.index) widget.onTap(hedef);
-  }
+      (dx / genislik - .5).clamp(0, items.length - 1);
 
   @override
   Widget build(BuildContext context) {
@@ -233,63 +300,59 @@ class _FloatingTabBarState extends State<_FloatingTabBar>
                   padding: const EdgeInsets.symmetric(horizontal: 5),
                   child: LayoutBuilder(
                     builder: (context, kutu) {
-                      final genislik =
-                          kutu.maxWidth / _FloatingTabBar.items.length;
+                      final genislik = kutu.maxWidth / items.length;
                       return GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTapUp: (d) => widget.onTap(
-                          _birim(d.localPosition.dx, genislik).round(),
-                        ),
+                        onTapUp: (d) =>
+                            onTap(_birim(d.localPosition.dx, genislik).round()),
                         // Sürükleme basılı tutmayı beklemiyor: iOS'ta da
                         // parmak yana kaydığı an hap takip ediyor.
                         onHorizontalDragStart: (d) =>
-                            _surukle(d.localPosition.dx, genislik),
+                            onSurukle(_birim(d.localPosition.dx, genislik)),
                         onHorizontalDragUpdate: (d) =>
-                            _surukle(d.localPosition.dx, genislik),
-                        onHorizontalDragEnd: (_) => _birak(),
-                        onHorizontalDragCancel: _birak,
-                        child: AnimatedBuilder(
-                          animation: _c,
-                          builder: (context, _) {
-                            final konum = _konum;
-                            return Stack(
-                              children: [
-                                Positioned(
-                                  left: konum * genislik + 2,
-                                  top: _hapPayi,
-                                  bottom: _hapPayi,
-                                  width: genislik - 4,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      color: c.ink.withValues(alpha: .07),
-                                      borderRadius: BorderRadius.circular(
-                                        _hapYaricapi,
-                                      ),
+                            onSurukle(_birim(d.localPosition.dx, genislik)),
+                        onHorizontalDragEnd: (_) => onBirak(),
+                        onHorizontalDragCancel: onBirak,
+                        child: ValueListenableBuilder<double>(
+                          valueListenable: konum,
+                          builder: (context, k, _) => Stack(
+                            children: [
+                              Positioned(
+                                left: k * genislik + 2,
+                                top: _hapPayi,
+                                bottom: _hapPayi,
+                                width: genislik - 4,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: c.ink.withValues(alpha: .07),
+                                    borderRadius: BorderRadius.circular(
+                                      _hapYaricapi,
                                     ),
                                   ),
                                 ),
-                                Row(
-                                  children: [
-                                    for (final (i, item)
-                                        in _FloatingTabBar.items.indexed)
-                                      Expanded(
-                                        child: _Tab(
-                                          key: Key('tab-$i'),
-                                          glyph: item.$1,
-                                          label: item.$2,
-                                          // Hap yaklaştıkça sekme
-                                          // koyulaşıyor: geçiş sırasında iki
-                                          // sekme birden yarı yanık oluyor
-                                          // ve hareket okunur hâle geliyor.
-                                          yakinlik: (1 - (i - konum).abs())
-                                              .clamp(0.0, 1.0),
+                              ),
+                              Row(
+                                children: [
+                                  for (final (i, item) in items.indexed)
+                                    Expanded(
+                                      child: _Tab(
+                                        key: Key('tab-$i'),
+                                        glyph: item.$1,
+                                        label: item.$2,
+                                        // Hap yaklaştıkça sekme koyulaşıyor:
+                                        // geçiş sırasında iki sekme birden
+                                        // yarı yanık oluyor ve hareket
+                                        // okunur hâle geliyor.
+                                        yakinlik: (1 - (i - k).abs()).clamp(
+                                          0.0,
+                                          1.0,
                                         ),
                                       ),
-                                  ],
-                                ),
-                              ],
-                            );
-                          },
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -342,6 +405,19 @@ class _FloatingTabBarState extends State<_FloatingTabBar>
     );
   }
 }
+
+/// Hapın kapsül kenarına bıraktığı dikey pay.
+const _hapPayi = 5.0;
+
+/// Hapın yarıçapı: dıştaki kapsülün yarıçapı eksi içeri payı.
+///
+/// İki eğri böyle EŞ MERKEZLİ oluyor — hap kapsülün içinde onunla aynı
+/// dili konuşuyor. Sabit 16 idi ve kapsül 29'ken köşeli bir dikdörtgen
+/// gibi duruyordu, iki ayrı şekil ailesi yan yanaydı.
+///
+/// 58/2 - 5 = 24, yani hap tam bir stadyum: kendi yüksekliğinin (58 - 2x5)
+/// yarısı. Yuvarlaklık tesadüf değil, geometrinin sonucu.
+const _hapYaricapi = kTabCapsuleHeight / 2 - _hapPayi;
 
 /// Tek sekme: simge + etiket. Zemini yok — seçili hap üstteki katmanda,
 /// kapsül boyunca kayan tek bir parça.

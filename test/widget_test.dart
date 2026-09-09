@@ -474,6 +474,32 @@ void main() {
 
       expect(find.text('Profil'), findsWidgets);
     });
+
+    // Hapı süren sayı gövdeyi de sürüyor. Önceden konum sekme çubuğunun
+    // içinde kalıyordu: hap parmakla akıyor ama altındaki ekran sert
+    // kesiyordu. Bu iki bekleyiş ("kayıyor" ve "iki ekran birden") eski
+    // IndexedStack'te ikisi de tutmuyordu.
+    testWidgets('geçiş sırasında gövde de kayıyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      final durgun = tester.getTopLeft(find.text('Sepetin')).dx;
+
+      await tester.tap(find.byKey(const Key('tab-1')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 130));
+
+      // Giden ekran sola kaymış durumda.
+      expect(tester.getTopLeft(find.text('Sepetin')).dx, lessThan(durgun));
+      // Ve gelen ekran aynı anda sahnede: geçişin kendisi görünüyor.
+      // 'Fişler' hem sekme etiketi hem ekranın başlığı.
+      expect(find.text('Fişler'), findsNWidgets(2));
+
+      // Yerleşince tek katman kalıyor ve kayma sıfırlanıyor.
+      await tester.pumpAndSettle();
+      expect(find.text('Sepetin'), findsNothing);
+      expect(find.text('Fişler'), findsNWidgets(2));
+    });
   });
 
   // Vitrin hesabında 40 ürün var, gerçek kullanımda daha çok olacak. Liste
