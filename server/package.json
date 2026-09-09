@@ -16,6 +16,7 @@
     "deploy:prepare": "npm run migrate:up && npm run catalog",
     "catalog": "tsx scripts/load-catalog.ts",
     "official": "tsx scripts/fetch-official.ts",
+    "reference": "tsx scripts/fetch-reference-prices.ts",
     "typecheck": "tsc --noEmit",
     "match-eval": "tsx scripts/match-eval.ts"
   },
