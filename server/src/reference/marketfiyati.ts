@@ -31,6 +31,8 @@ export type ReferenceItem = {
   brand: string | null;
   /** "400 GR", "1 LT", null olabiliyor. */
   sizeText: string | null;
+  /** Kaynağın kendi kategorisi: "Süt", "Konserve", "Pet Shop". */
+  mainCategory: string | null;
   /** chain_code -> fiyat. Yalnızca tanıdığımız zincirler. */
   prices: Map<string, number>;
   /** Kaynağın fiyatı indekslediği gün. */
@@ -48,6 +50,7 @@ type RawItem = {
   title?: string;
   brand?: string | null;
   refinedVolumeOrWeight?: string | null;
+  main_category?: string | null;
   productDepotInfoList?: RawDepot[];
 };
 
@@ -113,6 +116,7 @@ export async function searchReference(
       title: item.title,
       brand: item.brand ?? null,
       sizeText: item.refinedVolumeOrWeight ?? null,
+      mainCategory: item.main_category ?? null,
       prices,
       observedOn,
     });

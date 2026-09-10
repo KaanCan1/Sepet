@@ -59,6 +59,38 @@ export function kaynakBoyu(
   return null;
 }
 
+/** Havuzda saklanan boy: hem değeri hem birimi. */
+export type SerbestBoy = { deger: number; birim: 'kilogram' | 'litre' | 'adet' };
+
+/**
+ * Kaynaktaki boyu, BİZİM grubumuzu bilmeden okur.
+ *
+ * [kaynakBoyu] hangi birime çevireceğini dışarıdan alıyor — sepetteki
+ * kalemin grubu söylüyor. Havuzda öyle bir kalem yok: ürün henüz hiçbir
+ * gruba bağlı değil, birim de metnin kendisinden çıkarılmak zorunda.
+ *
+ * Ekler zaten birbirini dışlıyor: GR/KG kilogram, ML/LT litre, ADET/LI adet.
+ * Bir metinde ikisi birden geçerse (nadiren, "Süt 1 Lt 6'lı" gibi) aşağıdaki
+ * sıra karar veriyor ve bu bir tercih: ağırlık ve hacim, paket adedinden
+ * daha çok "ne kadar ürün" sorusunun cevabı.
+ */
+export function kaynakBoyuSerbest(
+  sizeText: string | null,
+  title: string,
+): SerbestBoy | null {
+  const birimler = ['kilogram', 'litre', 'adet'] as const;
+  // Kaynağın kendi boy alanı başlıktan güvenilir: başlıkta reklam metni de
+  // olabiliyor ("2 Al 1 Öde"), boy alanında olmuyor.
+  for (const metin of [sizeText, title]) {
+    if (!metin) continue;
+    for (const birim of birimler) {
+      const deger = kaynakBoyu(metin, metin, birim);
+      if (deger !== null) return { deger, birim };
+    }
+  }
+  return null;
+}
+
 /**
  * Marka aynı mı? Kaynak "Taciroğlu" yazıyor, bizde "Tacıroğlu" — sadeleştirme
  * ikisini de TACIROGLU yapıyor.
