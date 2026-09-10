@@ -5,6 +5,7 @@ import { matchCatalog } from '../catalog-match.js';
 import { boyCoz, type BoyKaniti } from '../reference/boy-coz.js';
 import { matchPool } from '../reference/havuz-eslestir.js';
 import { isNonIndexLine } from '../non-index.js';
+import { aliasCoz, aliasOyVer } from '../alias.js';
 
 export const receiptsRouter = Router();
 receiptsRouter.use(requireAuth);
@@ -132,15 +133,17 @@ receiptsRouter.post('/', async (req: AuthedRequest, res) => {
 
     for (const [i, line] of (lines as LineBody[]).entries()) {
       // Bilinen eşleşme var mı? Varsa soru sorma.
-      const { rows: alias } = await client.query<{ canonical_product_id: string }>(
-        `SELECT canonical_product_id FROM product_aliases
-          WHERE merchant_id = $1
-            AND raw_text_normalized = normalize_raw_text($2)`,
-        [merchantId, line.raw],
-      );
-      let productId =
-        line.canonicalProductId ?? alias[0]?.canonical_product_id ?? null;
-      let confidence: number | null = productId && alias[0] ? 1 : null;
+      //
+      // Önce kullanıcının kendi cevabı, sonra mutabakat. Sıra kasıtlı:
+      // mutabakat çoğunluğun bildiği, kendi oyu senin gördüğün. Kendi
+      // fişinde seninki kazanıyor — paketi eline alan sensin.
+      const alias = await aliasCoz(client, {
+        merchantId,
+        raw: line.raw,
+        userId: req.userId!,
+      });
+      let productId = line.canonicalProductId ?? alias?.canonicalProductId ?? null;
+      let confidence: number | null = productId && alias ? 1 : null;
 
       // Alias yoksa katalogda bulanık aranıyor. Yazarkasa ürün adını kesiyor
       // ("MIGROS T.YAGLI YOGU."), birebir arama bunu hiç bulamıyordu.
@@ -287,15 +290,15 @@ receiptsRouter.post('/:id/lines/:lineId/match', async (req: AuthedRequest, res) 
         WHERE id = $2`,
       [canonicalProductId, req.params.lineId],
     );
-    await client.query(
-      `INSERT INTO product_aliases
-         (merchant_id, raw_text_normalized, canonical_product_id)
-       VALUES ($1, normalize_raw_text($2), $3)
-       ON CONFLICT (merchant_id, raw_text_normalized)
-       DO UPDATE SET canonical_product_id = EXCLUDED.canonical_product_id,
-                     confirmations = product_aliases.confirmations + 1`,
-      [line.merchant_id, line.raw_text, canonicalProductId],
-    );
+    // Cevap OY olarak yazılıyor, doğrudan alias olarak değil. Tek kişinin
+    // cevabı herkesin gerçeği olmuyor; mutabakat oluşursa paylaşılan alias
+    // buradan türüyor.
+    await aliasOyVer(client, {
+      merchantId: line.merchant_id,
+      raw: line.raw_text,
+      userId: req.userId!,
+      canonicalProductId,
+    });
     await client.query('SELECT refresh_user_index($1)', [req.userId]);
     await client.query('COMMIT');
   } catch (err) {
@@ -314,9 +317,14 @@ receiptsRouter.post('/:id/lines/:lineId/match', async (req: AuthedRequest, res) 
 /// hesap, izinler ve öğrenilmiş eşleşmeler kalsın, ama endeks sıfırdan
 /// kendi harcamanla kurulsun.
 ///
-/// Öğrenilmiş eşleşmeler (product_aliases) BİLEREK duruyor. Onlar kullanıcıya
-/// değil markete bağlı ve "şu ham metin şu üründür" bilgisi demo veriyle
-/// öğrenilmiş olsa da doğru; silmek ilk gerçek fişte gereksiz soru sordururdu.
+/// Öğrenilmiş eşleşmeler (alias_votes ve ondan türeyen product_aliases)
+/// BİLEREK duruyor. "Şu ham metin şu üründür" bilgisi markete bağlı ve demo
+/// veriyle öğrenilmiş olsa da doğru; silmek ilk gerçek fişte gereksiz soru
+/// sordururdu.
+///
+/// Hesabın kendisi silinince oylar da gidiyor (alias_votes.user_id üzerinde
+/// ON DELETE CASCADE) — orada silinen şey kişisel veri, burada silinen şey
+/// yalnızca harcama geçmişi. İki uç, iki farklı soruya cevap veriyor.
 /**
  * Kaydedilmiş bir satırın tutarını ve miktarını düzeltir.
  *
