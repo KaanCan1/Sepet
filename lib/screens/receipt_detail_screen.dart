@@ -312,10 +312,13 @@ class _LineRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    line.canonical ?? line.displayName,
+                    line.title,
                     style: TextStyle(
                       fontSize: 11,
-                      color: line.canonical == null
+                      // Havuzdan gelen ad da mürekkeple yazılıyor: ürün
+                      // tanınmış durumda, soluk göstermek "bilmiyorum"
+                      // demek olurdu.
+                      color: line.canonical == null && line.poolTitle == null
                           ? context.c.muted
                           : context.c.ink,
                     ),
@@ -377,6 +380,8 @@ class _LineRow extends StatelessWidget {
   /// Adın altındaki tek satır: satırın neden dikkat istediği ya da istemediği.
   static String _hint(ReceiptLine line) {
     if (line.isExcluded) return 'endeks dışı';
+    // Sorulmuyor ama sebebi "bilmiyorum" değil: ürün tanındı, sepette yok.
+    if (line.isOffBasket) return 'endekse girmiyor';
     if (line.needsMatch) return 'eşleşme bekliyor';
     return line.rawLine;
   }

@@ -3,6 +3,7 @@ import { requireAuth, type AuthedRequest } from '../auth.js';
 import { pool, query } from '../db.js';
 import { matchCatalog } from '../catalog-match.js';
 import { boyCoz, type BoyKaniti } from '../reference/boy-coz.js';
+import { matchPool } from '../reference/havuz-eslestir.js';
 import { isNonIndexLine } from '../non-index.js';
 
 export const receiptsRouter = Router();
@@ -53,9 +54,11 @@ receiptsRouter.get('/:id', async (req: AuthedRequest, res) => {
   const lines = await query(
     `SELECT l.id, l.line_no, l.raw_text, l.quantity, l.line_amount, l.status,
             cp.display_name AS name, cp.brand_name, cp.size_label, cp.unit,
+            pp.title AS pool_title,
             l.match_evidence, o.unit_price
        FROM receipt_lines l
        LEFT JOIN v_canonical_products cp ON cp.id = l.canonical_product_id
+       LEFT JOIN pool_products pp ON pp.id = l.pool_product_id
        LEFT JOIN price_observations o ON o.receipt_line_id = l.id
       WHERE l.receipt_id = $1
       ORDER BY l.line_no`,
@@ -76,6 +79,9 @@ receiptsRouter.get('/:id', async (req: AuthedRequest, res) => {
       status: l.status,
       // display_name zaten marka + grup + boy; ayrıca boy eklenmiyor.
       canonical: l.name ?? null,
+      // Sepette karşılığı olmayan satırın adı buradan geliyor: kullanıcı
+      // "VIVA HAVLU GLI" yerine "Viva Kağıt Havlu 6 Adet" okuyor.
+      poolTitle: l.pool_title ?? null,
       brand: l.brand_name ?? null,
       // Boyun neden o boy olduğu. Yalnızca fiyattan çözülen satırlarda dolu;
       // uygulama bunu satırın altında gösteriyor, gizlemiyor.
@@ -149,8 +155,31 @@ receiptsRouter.post('/', async (req: AuthedRequest, res) => {
       const nonIndex = !productId && isNonIndexLine(line.raw);
 
       let evidence: BoyKaniti | null = null;
+      let poolId: string | null = null;
+      // Havuzda tanındı ama sepette karşılığı yok: soru sorulmayacak,
+      // çünkü sorulacak bir şey yok.
+      let offBasket = false;
 
+      // HAVUZ ÖNCE. Sepet doksan altı grup; havuz zincirlerin sattığı her
+      // şey. Havuzdaki kalem başlığıyla ve GRAMAJIYLA geliyor, yani fişin
+      // basmadığı bilgiyi taşıyor — sepet eşleştirmesinin "hangi boy?" diye
+      // sorduğu yerde havuz çoğu zaman cevabı zaten biliyor.
       if (!productId && !nonIndex) {
+        const havuz = await matchPool(line.raw, 6, client);
+        if (havuz.auto) {
+          poolId = havuz.auto.id;
+          if (havuz.auto.canonicalProductId) {
+            productId = havuz.auto.canonicalProductId;
+            confidence = havuz.auto.score;
+          } else {
+            // Ürün tanındı, sepette yok. Bu bir başarısızlık değil: sepet
+            // ağırlıklı ve sabit, elli bin kalemle şişirilemez.
+            offBasket = true;
+          }
+        }
+      }
+
+      if (!productId && !nonIndex && !offBasket) {
         const outcome = await matchCatalog(line.raw, 5, client);
         if (outcome.auto) {
           productId = outcome.auto.id;
@@ -184,13 +213,20 @@ receiptsRouter.post('/', async (req: AuthedRequest, res) => {
         }
       }
 
-      const status = productId ? 'auto' : nonIndex ? 'excluded' : 'pending';
+      const status = productId
+        ? 'auto'
+        : nonIndex
+          ? 'excluded'
+          : offBasket
+            ? 'off_basket'
+            : 'pending';
 
       await client.query(
         `INSERT INTO receipt_lines
            (receipt_id, line_no, raw_text, quantity, line_amount,
-            canonical_product_id, status, match_confidence, match_evidence)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::match_status, $8, $9::jsonb)`,
+            canonical_product_id, status, match_confidence, match_evidence,
+            pool_product_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::match_status, $8, $9::jsonb, $10)`,
         [
           receiptId,
           i + 1,
@@ -201,6 +237,7 @@ receiptsRouter.post('/', async (req: AuthedRequest, res) => {
           status,
           confidence,
           evidence ? JSON.stringify(evidence) : null,
+          poolId,
         ],
       );
     }
