@@ -194,6 +194,18 @@ class FakeApi extends Api {
             'observedOn': '2026-08-18',
           },
         },
+        // Havuzda tanınan ama sepette karşılığı olmayan ürün. Kasa
+        // poşetinden farkı: o "ürün değil", bu "ürün ama sepette değil".
+        {
+          'id': 'l5',
+          'lineNo': 5,
+          'raw': 'ULKER GOFRET 36G',
+          'quantity': 1,
+          'amount': 12.5,
+          'status': 'off_basket',
+          'canonical': null,
+          'poolTitle': 'Ülker Çikolatalı Gofret 36 Gr',
+        },
         // Kasa poşeti: ürün değil, endekse girmiyor ve sorulmuyor.
         {
           'id': 'l3',

@@ -273,6 +273,7 @@ class ReceiptLine {
     this.unitPrice,
     this.unit,
     this.evidence,
+    this.poolTitle,
   });
 
   final String id;
@@ -306,8 +307,25 @@ class ReceiptLine {
   /// bozulmuş olur.
   final SizeEvidence? evidence;
 
+  /// Havuzdaki ürünün adı. Sepette karşılığı olmayan satırın ekranda
+  /// göründüğü ad: "VIVA HAVLU GLI" değil "Viva Kağıt Havlu 6 Adet".
+  final String? poolTitle;
+
   /// Kasa poşeti gibi ürün olmayan kalem. Endekse girmiyor ve sorulmuyor.
   bool get isExcluded => status == 'excluded';
+
+  /// Ürün TANINDI ama endekse girmiyor.
+  ///
+  /// [isExcluded] ile karıştırılmamalı: o "bu bir ürün değil" (kasa poşeti),
+  /// bu "bu bir ürün ama benim sepetimde değil" (çikolatalı gofret). Sepet
+  /// ağırlıklı ve sabit bir TÜFE sepeti; her ürünü içine almıyor ve
+  /// almaması da doğru.
+  ///
+  /// İkisi de sorulmuyor ama sebepleri ayrı, kullanıcıya da ayrı söyleniyor.
+  bool get isOffBasket => status == 'off_basket';
+
+  /// Ekranda görünecek ad — sırayla: sepetteki kalem, havuzdaki ürün, fiş.
+  String get title => canonical ?? poolTitle ?? displayName;
 
   /// "SUT TAM YAGLI 1L · x3"
   /// Kısaltmaları açılmış hâli — bkz. [ProductName].
@@ -329,6 +347,7 @@ class ReceiptLine {
     status: (j['status'] ?? 'auto') as String,
     unitPrice: (j['unitPrice'] as num?)?.toDouble(),
     unit: j['unit'] as String?,
+    poolTitle: j['poolTitle'] as String?,
     evidence: switch (j['evidence']) {
       final Map<String, dynamic> e => SizeEvidence.fromJson(e),
       _ => null,

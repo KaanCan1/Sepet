@@ -705,6 +705,28 @@ void main() {
       expect(find.text('endeks dışı'), findsOneWidget);
     });
 
+    // Havuz, sepette karşılığı olmayan ürünü de tanıyor. O satır bugüne
+    // kadar sonsuza kadar "eşleşme bekliyor" kalıyordu: sorulan sorunun
+    // cevabı katalogda yoktu.
+    testWidgets('sepet dışı ürün adıyla görünüyor, soru sorulmadan', (
+      tester,
+    ) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -260));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A101').first);
+      await tester.pumpAndSettle();
+
+      // Ham fiş metni değil, havuzdaki ürünün adı.
+      expect(find.text('Ülker Çikolatalı Gofret 36 Gr'), findsOneWidget);
+      // "eşleşme bekliyor" değil: sorulacak bir şey yok.
+      expect(find.text('endekse girmiyor'), findsOneWidget);
+      // Ve kasa poşetiyle aynı kutuya konmuyor.
+      expect(find.text('endeks dışı'), findsOneWidget);
+    });
+
     // Yazarkasa gramaj basmıyor. Boy, ödenen fiyatın zincirin yayımladığı
     // fiyatla birebir tutmasından çıkarılıyor — ve bu SESSİZCE olamaz:
     // ekranda bir gramaj belirip nereden geldiği söylenmezse "gramaj asla
