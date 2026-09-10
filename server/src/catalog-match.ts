@@ -150,7 +150,19 @@ export function decide(
   //
   //   Paketli mi?  Kasada tartılan kalemde (domates, açık kıyma) boy yok.
   //   Fişte var mı? Yazıyorsa sormak kullanıcıyı bildiği şeyle meşgul eder.
+  //   Ürün belli mi? "Yalnızca boy belirsiz" demek, marka ve grubun KESİN
+  //                  olduğunu iddia etmek. O iddia, otomatik bağlamanınkinden
+  //                  zayıf olamaz — aynı eşik.
+  //
+  // Üçüncüsü ölçülerek eklendi. "TACIROGLI TAM YAGLI" satırı — gerçekte bir
+  // peynir — 0,432 puanla "Tacıroğlu Süt, tam yağlı"yı başa koyuyor ve boy
+  // sorusu açılıyordu: kullanıcıya SÜTÜN hangi boyu olduğu soruluyordu.
+  // Sorunun öncülü yanlış, dolayısıyla cevabı da olamaz.
+  //
+  // Meşru boy soruları yüksek puanda: "TAM BUGDAY EKMEK" 0,958. Eşik ikisini
+  // temiz ayırıyor.
   const sizeAmbiguous =
+    top.score >= threshold &&
     !isBulk(top.sizeLabel) &&
     !sizeStated(raw, top.unit, top.sizeValue, top.sizeLabel);
 
