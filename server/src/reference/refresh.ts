@@ -11,10 +11,15 @@
  * uyuyabiliyor. Günlük ([reference_fetch_log]) bu yüzden aile bazında —
  * bir sonraki açılış yalnızca kalanları deniyor.
  */
-import type { PoolClient } from 'pg';
+import type { PoolClient, QueryResultRow } from 'pg';
 import { pool, query } from '../db.js';
 import { searchReference } from './marketfiyati.js';
-import { boyTutuyorMu, kaynakBoyu, markaTutuyorMu } from './eslestir.js';
+import {
+  boyTutuyorMu,
+  kaynakBoyu,
+  kaynakBoyuSerbest,
+  markaTutuyorMu,
+} from './eslestir.js';
 
 const KAYNAK = 'marketfiyati.org.tr';
 
@@ -78,9 +83,14 @@ async function tekAile(
   fetchImpl: typeof fetch,
   client?: PoolClient,
 ): Promise<{ sonuc: Sonuc; yazilan: number }> {
+  // Her iki yol da SATIR DİZİSİ döndürüyor. Ayrışmışlardı — istemcili yol
+  // pg'nin `{ rows }` sonucunu, istemcisiz yol dizinin kendisini veriyordu —
+  // ve havuz yazımı ilk çalıştırmada bu yüzden patladı.
   const calistir = client
-    ? (sql: string, params: unknown[]) => client.query(sql, params)
-    : (sql: string, params: unknown[]) => query(sql, params);
+    ? async <T extends QueryResultRow>(sql: string, params: unknown[]) =>
+        (await client.query<T>(sql, params)).rows
+    : <T extends QueryResultRow>(sql: string, params: unknown[]) =>
+        query<T>(sql, params);
 
   let items;
   try {
@@ -93,6 +103,43 @@ async function tekAile(
 
   if (items.length === 0) return { sonuc: 'sonuc-yok', yazilan: 0 };
 
+  // HAVUZ: kaynağın gördüğü her kalem, sepetimizde karşılığı olsun olmasın.
+  //
+  // Bu satırlar bedava geliyordu ve atılıyordu: çekim zaten her kalemi eline
+  // alıp yalnızca marka ve boyu tutanları saklıyordu. Oysa tutmayanlar da
+  // gerçek ürünler ve kullanıcının fişinde onlar da var — havuzun bütün
+  // varlık sebebi o satırları TANIYABİLMEK.
+  const poolIds = new Map<string, string>();
+  for (const item of items) {
+    const boy = kaynakBoyuSerbest(item.sizeText, item.title);
+    const rows = await calistir<{ id: string }>(
+      `INSERT INTO pool_products
+         (source, source_ref, title, brand_text, size_text,
+          size_value, unit, main_category)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::product_unit, $8)
+       ON CONFLICT (source, source_ref)
+       DO UPDATE SET title = EXCLUDED.title,
+                     brand_text = EXCLUDED.brand_text,
+                     size_text = EXCLUDED.size_text,
+                     size_value = EXCLUDED.size_value,
+                     unit = EXCLUDED.unit,
+                     main_category = EXCLUDED.main_category,
+                     last_seen_on = current_date
+       RETURNING id`,
+      [
+        KAYNAK,
+        item.ref,
+        item.title,
+        item.brand,
+        item.sizeText,
+        boy?.deger ?? null,
+        boy?.birim ?? null,
+        item.mainCategory,
+      ],
+    );
+    if (rows[0]) poolIds.set(item.ref, rows[0].id);
+  }
+
   let markaTutan = 0;
   let yazilan = 0;
 
@@ -103,6 +150,17 @@ async function tekAile(
       markaTutan++;
       const kaynakBoy = kaynakBoyu(item.sizeText, item.title, kalem.unit);
       if (kaynakBoy === null || !boyTutuyorMu(bizimBoy, kaynakBoy)) continue;
+
+      // KÖPRÜ: marka ve boy tuttu, yani bu kaynak kalemi sepetteki kalemin
+      // ta kendisi. Bağlantı burada kuruluyor çünkü karar zaten burada
+      // veriliyor — ayrı bir eşleme adımı aynı kararı ikinci kez verirdi.
+      const poolId = poolIds.get(item.ref);
+      if (poolId) {
+        await calistir(
+          `UPDATE pool_products SET canonical_product_id = $1 WHERE id = $2`,
+          [kalem.id, poolId],
+        );
+      }
 
       for (const [chain, fiyat] of item.prices) {
         const merchantId = chainIds.get(chain);
