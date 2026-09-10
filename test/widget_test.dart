@@ -705,6 +705,41 @@ void main() {
       expect(find.text('endeks dışı'), findsOneWidget);
     });
 
+    // Yazarkasa gramaj basmıyor. Boy, ödenen fiyatın zincirin yayımladığı
+    // fiyatla birebir tutmasından çıkarılıyor — ve bu SESSİZCE olamaz:
+    // ekranda bir gramaj belirip nereden geldiği söylenmezse "gramaj asla
+    // tahmin edilmez" kuralı teknik olarak korunmuş, kullanıcı açısından
+    // bozulmuş olur.
+    testWidgets('fiyattan çözülen boy kanıtıyla gösteriliyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -260));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A101').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text("Viva Kağıt havlu 6'lı"), findsOneWidget);
+      expect(
+        find.text('boy fiyattan · Viva Kağıt Havlu 6 Adet'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('kanıtı olmayan satırda o satır hiç çıkmıyor', (tester) async {
+      await tester.pumpWidget(bootstrap(token: 'test-token'));
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -260));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A101').first);
+      await tester.pumpAndSettle();
+
+      // Boy fişte yazıyorsa ("SUT TAM YAGLI 1L") çözücüye hiç gidilmiyor;
+      // gereksiz bir açıklama satırı da çıkmıyor.
+      expect(find.textContaining('boy fiyattan'), findsOneWidget);
+    });
+
     // Fiş "116,70" basıyor ama "38,90 / litre" basmıyor — ve paketler
     // farklı boyda olduğu için karşılaştırılabilir tek fiyat bu. Endeks
     // olgunlaşmasa da kullanıcının ilk fişinde eline geçen yeni bilgi.
@@ -799,7 +834,14 @@ void main() {
       expect(find.text('38,90 / litre'), findsOneWidget);
       // Eşleşmemiş satırda uydurulmuyor: sayı gözlemden geliyor, satırdan
       // hesaplanmıyor.
-      expect(find.textContaining(' / adet'), findsNothing);
+      //
+      // Bekleyen satır YUMURTA 30'lu, 184,50. Türetilseydi ya tutarın
+      // kendisi ya da otuza bölümü yazardı; ikisi de yok. Eskiden bu
+      // "hiçbir yerde ' / adet' geçmesin" diye yazılmıştı — o dolaylı
+      // iddia, adet biriminde EŞLEŞMİŞ bir satır fikstüre girdiğinde
+      // yanlış yere düştü.
+      expect(find.textContaining('184,50 /'), findsNothing);
+      expect(find.textContaining('6,15 /'), findsNothing);
     });
 
     testWidgets('gramaj belirsizse yalnızca boy soruluyor', (tester) async {

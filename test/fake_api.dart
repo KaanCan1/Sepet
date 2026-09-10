@@ -175,6 +175,25 @@ class FakeApi extends Api {
           'status': 'pending',
           'canonical': null,
         },
+        // Boyu fişte yazmayan, fiyattan çözülmüş satır. Kanıt ekranda
+        // gösterilmeli: bir gramaj belirip nereden geldiği söylenmezse
+        // "gramaj asla tahmin edilmez" kuralı kullanıcı açısından bozulur.
+        {
+          'id': 'l4',
+          'lineNo': 4,
+          'raw': 'VIVA HAVLU GLI',
+          'quantity': 1,
+          'amount': 89.95,
+          'status': 'auto',
+          'canonical': "Viva Kağıt havlu 6'lı",
+          'unitPrice': 14.99,
+          'unit': 'adet',
+          'evidence': {
+            'sourceTitle': 'Viva Kağıt Havlu 6 Adet',
+            'price': 89.95,
+            'observedOn': '2026-08-18',
+          },
+        },
         // Kasa poşeti: ürün değil, endekse girmiyor ve sorulmuyor.
         {
           'id': 'l3',

@@ -272,6 +272,7 @@ class ReceiptLine {
     this.status = 'auto',
     this.unitPrice,
     this.unit,
+    this.evidence,
   });
 
   final String id;
@@ -297,6 +298,14 @@ class ReceiptLine {
   /// Grubun kanonik birimi: litre, kilogram, adet.
   final String? unit;
 
+  /// Boyun neden o boy olduğu. Yalnızca fişte gramaj yazmadığı hâlde
+  /// fiyattan çözülen satırlarda dolu.
+  ///
+  /// Ekranda gösteriliyor, gizlenmiyor: bir gramaj belirip nereden geldiği
+  /// söylenmezse "gramaj asla tahmin edilmez" kuralı kullanıcı açısından
+  /// bozulmuş olur.
+  final SizeEvidence? evidence;
+
   /// Kasa poşeti gibi ürün olmayan kalem. Endekse girmiyor ve sorulmuyor.
   bool get isExcluded => status == 'excluded';
 
@@ -320,6 +329,34 @@ class ReceiptLine {
     status: (j['status'] ?? 'auto') as String,
     unitPrice: (j['unitPrice'] as num?)?.toDouble(),
     unit: j['unit'] as String?,
+    evidence: switch (j['evidence']) {
+      final Map<String, dynamic> e => SizeEvidence.fromJson(e),
+      _ => null,
+    },
+  );
+}
+
+/// Paket boyunun fiyattan çözüldüğünün kanıtı.
+///
+/// Yazarkasa gramaj basmıyor ama fiyat basıyor; zincirin yayımladığı fiyatla
+/// kuruşu kuruşuna tutuyorsa boy tahmin edilmiş olmuyor, kanıtlanmış oluyor.
+/// Bu sınıf o kanıtı taşıyor ki ekranda gösterilebilsin.
+class SizeEvidence {
+  const SizeEvidence({
+    required this.sourceTitle,
+    required this.price,
+    required this.observedOn,
+  });
+
+  /// Kaynaktaki ürün başlığı: "Viva Kağıt Havlu 6 Adet".
+  final String sourceTitle;
+  final double price;
+  final DateTime observedOn;
+
+  static SizeEvidence fromJson(Map<String, dynamic> j) => SizeEvidence(
+    sourceTitle: j['sourceTitle'] as String,
+    price: (j['price'] as num).toDouble(),
+    observedOn: DateTime.parse(j['observedOn'] as String),
   );
 }
 

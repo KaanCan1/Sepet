@@ -322,6 +322,22 @@ class _LineRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(_hint(line), style: _hintStyle(context, line)),
+                  // Fişte gramaj yazmıyordu; boy, ödenen fiyatın zincirin
+                  // yayımladığı fiyatla birebir tutmasından çıkarıldı.
+                  //
+                  // Sessizce yapılsaydı ekranda bir gramaj belirir ve nereden
+                  // geldiği söylenmezdi — "gramaj asla tahmin edilmez" kuralı
+                  // teknik olarak korunmuş, kullanıcı açısından bozulmuş
+                  // olurdu. Kaynağın başlığı yazıyor ki doğrulanabilsin.
+                  if (line.evidence case final e?) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'boy fiyattan · ${e.sourceTitle}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: T.raw.copyWith(color: context.c.ref),
+                    ),
+                  ],
                 ],
               ),
             ),
