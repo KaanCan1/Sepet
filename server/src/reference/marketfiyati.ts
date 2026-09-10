@@ -70,8 +70,10 @@ function indexGunu(text: string | undefined): string | null {
 export async function searchReference(
   keywords: string,
   size = 20,
+  /** Testler ağa çıkmasın diye. [refreshOfficial] ile aynı dikiş. */
+  fetchImpl: typeof fetch = fetch,
 ): Promise<ReferenceItem[]> {
-  const res = await fetch(`${BASE}/search`, {
+  const res = await fetchImpl(`${BASE}/search`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
