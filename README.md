@@ -139,6 +139,27 @@ Elle tetiklemek için `npm run reference`.
 boy?" sorusunu cevaplıyorlar. Endekse giren tek sayı kullanıcının kendi
 fişindeki tutar.
 
+### Öğrenilmiş eşleşmeler
+
+Kullanıcı bir satırı çözdüğünde cevabı saklanıyor: `MIGROS T.YAGLI YOGU.`
+bir kez çözülünce o satır bir daha sorulmuyor. Bilgi markete bağlı, kişiye
+değil — aynı ham metni kim tararsa tarasın aynı ürün.
+
+Ama tek bir cevap **herkesin gerçeği olmuyor**. Yanlış bir alias sessizce
+yanlış enflasyon üretiyor (yanlış ürün → yanlış birim fiyat → yanlış endeks)
+ve satır ekranda "eşleşmiş" göründüğü için kullanıcı hatayı fark edemiyor
+bile. Cevaplar bu yüzden **oy** olarak tutuluyor (`alias_votes`, kullanıcı
+başına tek oy) ve iki katman var:
+
+- **Kendi oyun** kendi fişinde her zaman kazanıyor — paketi eline alan sen.
+- **Mutabakat** başkalarının satırlarında kullanılıyor: en az iki kullanıcı
+  aynı ürünü söylemeli ve ikincisinden kesin fazla olmalı. Anlaşmazlıkta
+  paylaşılan alias düşüyor ve üçüncü kişiye soruluyor.
+
+Eşik bugün pratikte hiç mutabakat oluşturmuyor (tek kullanıcı var) ve bu bir
+kayıp değil: herkes kendi cevabını zaten alıyor. Eşiğin değeri kullanıcı
+sayısı arttığında, yani zehirlenmenin mümkün olduğu anda ortaya çıkıyor.
+
 ## Projenin kalbi: `eşleşme?`
 
 <img src="docs/screenshots/eslesme.png" width="230" align="right" alt="Eşleşme onayı alt sayfası">
